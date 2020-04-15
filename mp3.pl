@@ -2,15 +2,13 @@
 
 use strict;
 
+my $did_output = 0;
+
+# XXX add encoding (mp3, etc)
 
 my $filename = shift;
 
 writeJson($filename);
-
-my $did_output = 0;
-
-# XXX add file type
-# XXX add sha1 hash
 
 sub writeJson {
   my ($filename) = @_;
@@ -59,6 +57,9 @@ sub writeJson {
     $outputs->{Album} = $2;
     $outputs->{TrackNumber} = $3;
     $outputs->{Title} = $4;
+  } elsif ($json_filename =~ m~^([^./=]+)=([^=]+)[.]~) {
+    $outputs->{Artist} = $1;
+    $outputs->{Title} = $2;
   }
   for my $key (keys %$outputs) {
     outputString($output, $key, $outputs->{$key});
