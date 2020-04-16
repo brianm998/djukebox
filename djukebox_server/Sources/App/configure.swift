@@ -1,10 +1,26 @@
 import Vapor
 
-public class TrackFinder {
+public protocol TrackFinderType {
+    func track(forHash sha1Hash: String) -> (AudioTrack, String)?
+    func filePath(forHash sha1Hash: String) -> String?
+    func audioTrack(forHash sha1Hash: String) -> AudioTrack?
+    func find(app: Application)
+    var tracks: [String: (AudioTrack, [URL])] { get }
+}
 
-    var tracks: [String: (AudioTrack, [URL])] = [:]
+public class TrackFinder: TrackFinderType {
 
-    func filePath(forHash sha1Hash: String) -> String? {
+    public var tracks: [String: (AudioTrack, [URL])] = [:]
+
+    public func track(forHash sha1Hash: String) -> (AudioTrack, String)? {
+        if let (track, urls) = tracks[sha1Hash] {
+            return (track, urls[0].path)
+        } else {
+            return nil
+        }
+    }
+    
+    public func filePath(forHash sha1Hash: String) -> String? {
         if let (_, urls) = tracks[sha1Hash] {
             return urls[0].path
         } else {
@@ -12,7 +28,7 @@ public class TrackFinder {
         }
     }
     
-    func audioTrack(forHash sha1Hash: String) -> AudioTrack? {
+    public func audioTrack(forHash sha1Hash: String) -> AudioTrack? {
         if let (audioTrack, _) = tracks[sha1Hash] {
             return audioTrack
         } else {
@@ -20,7 +36,7 @@ public class TrackFinder {
         }
     }
     
-    func find(app: Application) {
+    public func find(app: Application) {
         find(at: URL(fileURLWithPath: "/mnt/tree/mp3/Yes"))
     }
 
@@ -57,39 +73,74 @@ public class TrackFinder {
 
 let trackFinder = TrackFinder()
 
-@discardableResult public func play(filename: String) throws -> Process {
-    // linux: aplay, osx: afplay
-    var player: String = "afplay" 
-    #if os(Linux)
-    player = "aplay"
-    #endif
-    let process = Process()
-    try shellOut(to: player,
-                 arguments: ["\"\(filename)\""],
-                 process: process)
-    return process
+public class AudioPlayer {
+
+    let dispatchQueue = DispatchQueue(label: "djukebox-audio-player")
+
+    var isPlaying = false
+
+    var trackQueue: [String] = []
+    
+    let trackFinder: TrackFinderType
+
+    init(trackFinder: TrackFinderType) {
+        self.trackFinder = trackFinder
+    }
+
+    func play(sha1Hash: String) {
+        // XXX look up this hash beforehand, and throw error if not found?
+        trackQueue.append(sha1Hash)
+        serviceQueue()
+    }
+
+    func serviceQueue() {
+        guard trackQueue.count > 0 else { return }
+        guard !isPlaying else { return }
+
+        let nextTrackHash = trackQueue.removeFirst()
+        
+        isPlaying = true
+        dispatchQueue.async {
+            do {
+                if let (audioTrack, filename) = self.trackFinder.track(forHash: nextTrackHash) {
+                    print("playing \(audioTrack.Title)")
+                    try self.play(filename: filename)
+                } else {
+                    //throw "no track exists for hash \(sha1Hash)"
+                    // XXX throw missing value for hash
+                }
+            } catch {
+                print("error \(error)")
+            }
+            self.isPlaying = false
+            self.serviceQueue()
+        }
+
+    }
+    
+    @discardableResult public func play(filename: String) throws -> Process {
+        // linux: aplay, osx: afplay
+        var player: String = "afplay" 
+        #if os(Linux)
+        player = "aplay"
+        #endif
+        let process = Process()
+        try shellOut(to: player,
+                     arguments: ["\"\(filename)\""],
+                     process: process)
+        return process
+    }
 }
+
+let audioPlayer = AudioPlayer(trackFinder: trackFinder)
 
 // configures your application
 public func configure(_ app: Application) throws {
 
-    //trackFinder.find(app: app)
+    trackFinder.find(app: app)
 
-    let dir = "/mnt/root/mp3/Zero_Gravity/Space_Does_Not_Care"
-
-    let track1 = "Zero_Gravity=Space_Does_Not_Care=08=Precognition.mp3"
-    let track2 = "Zero_Gravity=Space_Does_Not_Care=04=Interferon.mp3"
-    
-
-    do {
-        print("playing \(track1)")
-        try play(filename: "\(dir)/\(track1)")
-        print("playing \(track2)")
-        try play(filename: "\(dir)/\(track2)")
-    } catch {
-        print("DOH \(error)")
-    }
-
+    //player.play(sha1Hash: "5e5a84c8657360dedf90664e1d615dcaa1fa4e21") // masquerade
+    //player.play(sha1Hash: "6d9bf1732f616acab5adfbf4e27c08b037235e8b") // i would have waited forever
 
     print("test finder has found \(trackFinder.tracks.count) tracks")
     

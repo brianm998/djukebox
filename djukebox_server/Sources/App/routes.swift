@@ -1,6 +1,6 @@
 import Vapor
 
-struct AudioTrack: Content {
+public struct AudioTrack: Content {
     let Artist: String
     let Album: String?
     let Title: String
@@ -37,6 +37,17 @@ func routes(_ app: Application) throws {
             return audioTrack
         } else {
             throw Abort(.notFound)
+        }
+    }
+
+    app.get("play", ":sha1") { req -> Response in
+        if let hash = req.parameters.get("sha1"),
+            let _ = trackFinder.audioTrack(forHash: hash)
+        {
+            audioPlayer.play(sha1Hash: hash)
+            return Response(status: .ok)
+        } else {
+            return Response(status: .notFound)
         }
     }
 }
