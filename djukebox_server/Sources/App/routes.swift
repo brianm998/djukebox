@@ -1,6 +1,6 @@
 import Vapor
 
-struct AudioTrack: Content {
+struct AudioTrack: Content, Hashable {
     let Artist: String
     let Album: String?
     let Title: String
@@ -16,10 +16,7 @@ struct AudioTrack: Content {
 
 func routes(_ app: Application) throws {
     app.get { req -> AudioTrack in
-        let fuck = try req.fileio.collectFile(at: "/mnt/root/foo").wait()
-        let foo = fuck.description
-        //let fuck = try req.fileio().read(file: "/tmp/root/file").wait()
-        return .init(Artist: foo,
+        return .init(Artist: "foo",
                      Album: "me",
                      Title: "me",
                      Filename: "me",
@@ -33,7 +30,16 @@ func routes(_ app: Application) throws {
     
     }
 
-    app.get("hello") { req -> String in
-        return "Hello, world!"
+    app.get("tracks") { req -> [AudioTrack] in
+        return Array(trackFinder.tracks.keys)
+    }
+    
+    /*
+     XXX get it working so that it can serve a track by SHA1 hash
+     */
+     
+    app.get("track") { req -> Response in
+        let filename = "/mnt/root/mp3/Yes/Relayer/Yes=Relayer=01=The_Gates_of_Delirium.mp3"
+        return req.fileio.streamFile(at: filename)
     }
 }

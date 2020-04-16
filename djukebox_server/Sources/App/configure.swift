@@ -13,7 +13,7 @@ extension Data {
 
 public class TrackFinder {
 
-    var tracks: [AudioTrack] = []
+    var tracks: [AudioTrack: [URL]] = [:]
     
     func find(at url: URL) {
         do {
@@ -25,7 +25,19 @@ public class TrackFinder {
                     let decoder = JSONDecoder()
                     let data = try Data(contentsOf: url)
                     let audioTrack = try decoder.decode(AudioTrack.self, from: data)
-                    tracks.append(audioTrack)
+
+                    let trackUrl = url.deletingLastPathComponent()
+                      .appendingPathComponent(audioTrack.Filename, isDirectory: false)
+
+                    if try trackUrl.checkResourceIsReachable() {
+                        if var existingTracks = tracks[audioTrack] {
+                            existingTracks.append(trackUrl)
+                        } else {
+                            tracks[audioTrack] = [trackUrl]
+                        }
+                    } else {
+                        print("FAILED ON \(trackUrl)")
+                    }
                 }
             }
         } catch {
@@ -34,7 +46,7 @@ public class TrackFinder {
     }
     
     func find(app: Application) {
-        find(at: URL(fileURLWithPath: "/mnt/tree/mp3"))
+        find(at: URL(fileURLWithPath: "/mnt/tree/mp3/Yes"))
     }
 }
 
