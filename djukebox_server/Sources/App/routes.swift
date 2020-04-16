@@ -50,4 +50,19 @@ func routes(_ app: Application) throws {
             return Response(status: .notFound)
         }
     }
+
+    app.get("stop") { req -> Response in
+        audioPlayer.stopCurrent()
+        return Response(status: .ok)
+    }
+
+    app.get("pause") { req -> Response in
+        audioPlayer.pause()
+        return Response(status: .ok)
+    }
+
+    app.get("resume") { req -> Response in
+        audioPlayer.resume()
+        return Response(status: .ok)
+    }
 }

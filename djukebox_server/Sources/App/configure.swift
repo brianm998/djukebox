@@ -93,6 +93,39 @@ public class AudioPlayer {
         serviceQueue()
     }
 
+    func stopCurrent() {
+        if let process = self.process,
+           process.isRunning
+        {
+            process.terminate()
+            self.process = nil
+        }
+    }
+    
+    func pause() {
+        print("calling pause")
+        if let process = self.process,
+           process.isRunning
+        {
+            print("calling suspend on pid \(process.processIdentifier)")
+            if process.suspend() {
+                print("suspended properly?")
+            } else {
+                print("not suspended properly?")
+            }
+        } else {
+            print("no process")
+        }
+    }
+    
+    func resume() {
+        if let process = self.process,
+           process.isRunning
+        {
+            process.resume()
+        }
+    }
+    
     func serviceQueue() {
         guard trackQueue.count > 0 else { return }
         guard !isPlaying else { return }
@@ -117,18 +150,20 @@ public class AudioPlayer {
         }
 
     }
+
+    fileprivate var process: Process?
     
-    @discardableResult public func play(filename: String) throws -> Process {
+    fileprivate func play(filename: String) throws {
         // linux: aplay, osx: afplay
         var player: String = "afplay" 
         #if os(Linux)
         player = "aplay"
         #endif
-        let process = Process()
+        let newProcess = Process()
+        self.process = newProcess
         try shellOut(to: player,
                      arguments: ["\"\(filename)\""],
-                     process: process)
-        return process
+                     process: newProcess)
     }
 }
 
@@ -138,9 +173,6 @@ let audioPlayer = AudioPlayer(trackFinder: trackFinder)
 public func configure(_ app: Application) throws {
 
     trackFinder.find(app: app)
-
-    //player.play(sha1Hash: "5e5a84c8657360dedf90664e1d615dcaa1fa4e21") // masquerade
-    //player.play(sha1Hash: "6d9bf1732f616acab5adfbf4e27c08b037235e8b") // i would have waited forever
 
     print("test finder has found \(trackFinder.tracks.count) tracks")
     

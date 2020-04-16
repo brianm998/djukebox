@@ -34,7 +34,8 @@ import Dispatch
     outputHandle: FileHandle? = nil,
     errorHandle: FileHandle? = nil
 ) throws -> String {
-    let command = "cd \(path.escapingSpaces) && \(command) \(arguments.joined(separator: " "))"
+    //let command = "cd \(path.escapingSpaces) && \(command) \(arguments.joined(separator: " "))"
+    let command = "\(command) \(arguments.joined(separator: " "))"
 
     return try process.launchBash(
         with: command,
