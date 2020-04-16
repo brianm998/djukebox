@@ -4,7 +4,7 @@ public protocol TrackFinderType {
     func track(forHash sha1Hash: String) -> (AudioTrack, String)?
     func filePath(forHash sha1Hash: String) -> String?
     func audioTrack(forHash sha1Hash: String) -> AudioTrack?
-    func find(app: Application)
+    func find(atFilePath path: String)
     var tracks: [String: (AudioTrack, [URL])] { get }
 }
 
@@ -36,8 +36,8 @@ public class TrackFinder: TrackFinderType {
         }
     }
     
-    public func find(app: Application) {
-        find(at: URL(fileURLWithPath: "/mnt/tree/mp3/Yes"))
+    public func find(atFilePath path: String) {
+        find(at: URL(fileURLWithPath: path))
     }
 
     fileprivate func find(at url: URL) {

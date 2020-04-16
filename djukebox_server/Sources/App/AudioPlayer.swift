@@ -1,28 +1,46 @@
 import Vapor
 
-public class AudioPlayer {
+public protocol AudioPlayerType {
+    var isPlaying: Bool { get }
+    var trackQueue: [String] { get }
+    var playingTrack: AudioTrack? { get }
+    func play(sha1Hash: String)
+    func skip() 
+    func pause() 
+    func resume()
+    func clearQueue()
+}
+
+public class AudioPlayer: AudioPlayerType {
 
     let dispatchQueue = DispatchQueue(label: "djukebox-audio-player")
 
-    var isPlaying = false
+    public var isPlaying = false
 
-    var trackQueue: [String] = []
+    public var trackQueue: [String] = []
     
     let trackFinder: TrackFinderType
 
-    var playingTrack: AudioTrack? 
+    public var playingTrack: AudioTrack? 
+
+    fileprivate var process: Process?
     
     init(trackFinder: TrackFinderType) {
         self.trackFinder = trackFinder
     }
 
-    func play(sha1Hash: String) {
+    public func clearQueue() {
+        trackQueue = []
+    }
+    
+    public func play(sha1Hash: String) {
         // XXX look up this hash beforehand, and throw error if not found?
         trackQueue.append(sha1Hash)
         serviceQueue()
     }
 
-    func stopCurrent() {
+    // skips the currently playing song, removing it from the playlist
+    public func skip() {
         if let process = self.process,
            process.isRunning
         {
@@ -30,8 +48,8 @@ public class AudioPlayer {
             self.process = nil
         }
     }
-    
-    func pause() {
+
+    public func pause() {
         print("calling pause")
         if let process = self.process,
            process.isRunning
@@ -47,7 +65,7 @@ public class AudioPlayer {
         }
     }
     
-    func resume() {
+    public func resume() {
         if let process = self.process,
            process.isRunning
         {
@@ -81,8 +99,6 @@ public class AudioPlayer {
         }
     }
 
-    fileprivate var process: Process?
-    
     fileprivate func play(filename: String) throws {
         // linux: aplay, osx: afplay
         var player: String = "afplay" 

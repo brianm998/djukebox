@@ -52,7 +52,13 @@ func routes(_ app: Application) throws {
     }
 
     app.get("stop") { req -> Response in
-        audioPlayer.stopCurrent()
+        audioPlayer.clearQueue()
+        audioPlayer.skip()
+        return Response(status: .ok)
+    }
+
+    app.get("skip") { req -> Response in
+        audioPlayer.skip()
         return Response(status: .ok)
     }
 
