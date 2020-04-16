@@ -83,6 +83,8 @@ public class AudioPlayer {
     
     let trackFinder: TrackFinderType
 
+    var playingTrack: AudioTrack? 
+    
     init(trackFinder: TrackFinderType) {
         self.trackFinder = trackFinder
     }
@@ -125,12 +127,13 @@ public class AudioPlayer {
             process.resume()
         }
     }
-    
-    func serviceQueue() {
+
+    fileprivate func serviceQueue() {
         guard trackQueue.count > 0 else { return }
         guard !isPlaying else { return }
 
         let nextTrackHash = trackQueue.removeFirst()
+        self.playingTrack = trackFinder.audioTrack(forHash: nextTrackHash)
         
         isPlaying = true
         dispatchQueue.async {
@@ -145,10 +148,10 @@ public class AudioPlayer {
             } catch {
                 print("error \(error)")
             }
+            self.playingTrack = nil
             self.isPlaying = false
             self.serviceQueue()
         }
-
     }
 
     fileprivate var process: Process?

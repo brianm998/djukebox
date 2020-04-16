@@ -65,4 +65,17 @@ func routes(_ app: Application) throws {
         audioPlayer.resume()
         return Response(status: .ok)
     }
+
+    app.get("queue") { req -> [AudioTrack] in
+        var tracks: [AudioTrack] = []
+        if let playingTrack = audioPlayer.playingTrack {
+            tracks.append(playingTrack)
+        }
+        for trackHash in audioPlayer.trackQueue {
+            if let track = trackFinder.audioTrack(forHash: trackHash) {
+                tracks.append(track)
+            }
+        }
+        return tracks
+    }
 }
