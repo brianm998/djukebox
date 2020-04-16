@@ -1,6 +1,6 @@
 import Vapor
 
-struct AudioTrack: Content, Hashable {
+struct AudioTrack: Content {
     let Artist: String
     let Album: String?
     let Title: String
@@ -15,31 +15,28 @@ struct AudioTrack: Content, Hashable {
 }
 
 func routes(_ app: Application) throws {
-    app.get { req -> AudioTrack in
-        return .init(Artist: "foo",
-                     Album: "me",
-                     Title: "me",
-                     Filename: "me",
-                     SHA1: "me",
-                     Duration: "me",
-                     AudioBitrate: "me",
-                     SampleRate: "me",
-                     TrackNumber: "me",
-                     Genre: "me",
-                     OriginalDate: "never")
-    
-    }
 
     app.get("tracks") { req -> [AudioTrack] in
-        return Array(trackFinder.tracks.keys)
+        return trackFinder.tracks.values.map { (track, _) in return track }
     }
     
-    /*
-     XXX get it working so that it can serve a track by SHA1 hash
-     */
-     
-    app.get("track") { req -> Response in
-        let filename = "/mnt/root/mp3/Yes/Relayer/Yes=Relayer=01=The_Gates_of_Delirium.mp3"
-        return req.fileio.streamFile(at: filename)
+    app.get("track", ":sha1") { req -> Response in
+        if let hash = req.parameters.get("sha1"),
+           let filepath = trackFinder.filePath(forHash: hash)
+        {
+            return req.fileio.streamFile(at: filepath)
+        } else {
+            throw Abort(.notFound)
+        }
+    }
+
+    app.get("info", ":sha1") { req -> AudioTrack in
+        if let hash = req.parameters.get("sha1"),
+           let audioTrack = trackFinder.audioTrack(forHash: hash)
+        {
+            return audioTrack
+        } else {
+            throw Abort(.notFound)
+        }
     }
 }
