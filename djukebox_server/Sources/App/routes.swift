@@ -51,6 +51,13 @@ func routes(_ app: Application) throws {
         }
     }
 
+    app.get("rand") { req -> Response in
+        let random = Int.random(in: 0..<trackFinder.tracks.count)
+        let hash = Array(trackFinder.tracks.keys)[random]
+        audioPlayer.play(sha1Hash: hash)
+        return Response(status: .ok)
+    }
+
     app.get("stop") { req -> Response in
         audioPlayer.clearQueue()
         audioPlayer.skip()
