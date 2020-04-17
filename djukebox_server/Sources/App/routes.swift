@@ -23,8 +23,8 @@ func routes(_ app: Application) throws {
     }
 
     // stream a track by hash
-    // curl localhost:8080/track/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
-    app.get("track", ":sha1") { req -> Response in
+    // curl localhost:8080/stream/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
+    app.get("stream", ":sha1") { req -> Response in
         if let hash = req.parameters.get("sha1"),
            let filepath = trackFinder.filePath(forHash: hash)
         {
@@ -61,11 +61,15 @@ func routes(_ app: Application) throws {
 
     // Play a randomly selected track.
     // curl localhost:8080/rand
-    app.get("rand") { req -> Response in
+    app.get("rand") { req -> AudioTrack in
         let random = Int.random(in: 0..<trackFinder.tracks.count)
         let hash = Array(trackFinder.tracks.keys)[random]
         audioPlayer.play(sha1Hash: hash)
-        return Response(status: .ok)
+        if let audioTrack = trackFinder.audioTrack(forHash: hash) {
+            return audioTrack
+        } else {
+            throw Abort(.notFound)
+        }
     }
 
     // Stop all playing, clearing the playing queue
