@@ -69,7 +69,7 @@ public class AudioPlayer: AudioPlayerType {
         if let process = self.process,
            process.isRunning
         {
-            process.resume()
+            _ = process.resume()
         }
     }
 
