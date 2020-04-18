@@ -23,7 +23,6 @@ class AuthController {
         self.trackFinder = trackFinder
     }
 
-
     // curl -H "auth: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425" http://localhost:8080/rand
     func auth<T>(request req: Request, closure: () throws -> T) throws -> T {
         for header in req.headers {
@@ -82,11 +81,11 @@ func routes(_ app: Application) throws {
 
     // Play a track by hash.
     // curl localhost:8080/play/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
-    app.get("play", ":sha1") { req -> Response in
+    app.get("play", ":sha1") { req -> AudioTrack in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.track(from: req) { track, _ in
             audioPlayer.play(sha1Hash: track.SHA1)
-            return Response(status: .ok)
+            return track
         }
     }
 
