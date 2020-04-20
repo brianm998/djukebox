@@ -27,12 +27,97 @@ public class QueueFetcher: ObservableObject {
                 }
             }
         }
+    }
+}
+
+public class TrackFetcher: ObservableObject {
+    var allTracks: [AudioTrack] = []
+
+    @Published var artists: [AudioTrack] = []
+    @Published var albums: [AudioTrack] = []
+    @Published var tracks: [AudioTrack] = []
+    
+    let server: ServerType
+    
+    init(withServer server: ServerType) {
+        self.server = server
+        server.listTracks() { tracks, error in
+            if let tracks = tracks {
+                var artistMap: [String:AudioTrack] = [:]
+                for track in tracks {
+                    artistMap[track.Artist] = track
+                }
+                DispatchQueue.main.async {
+                    self.allTracks = tracks
+                    self.artists = Array(artistMap.values).sorted()
+                }
+            }
+        }
+    }
+
+    func showTracks(for audioTrack: AudioTrack) {
+        var tracks: [AudioTrack] = []
+
+        let desiredArtist = audioTrack.Artist
+        let desiredAlbum = audioTrack.Album
+
+        if let desiredAlbum = desiredAlbum {
+            for track in allTracks {
+                if track.Artist == desiredArtist,
+                   track.Album == desiredAlbum
+                {
+                    tracks.append(track)
+                }
+            }
+        } else {
+            // XXX still need to support no album
+        }
         
+        DispatchQueue.main.async {
+            self.tracks = tracks.sorted()
+        }
+    }
+    
+    func showAlbums(forArtist artist: String) {
+        print("for artist \(artist)")
+        var albums: [String] = []
+
+        var albumMap: [String:AudioTrack] = [:]
+
+        for track in allTracks {
+            if track.Artist == artist {
+                if let album = track.Album {
+                    albumMap[album] = track
+                }
+            }
+        }
+        DispatchQueue.main.async {
+            self.albums = Array(albumMap.values).sorted()
+        }
     }
 }
 
 // XXX copied from the server
-public class AudioTrack: Decodable, Identifiable {
+public class AudioTrack: Decodable, Identifiable, Comparable {
+    public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
+        if lhs.Artist == rhs.Artist {
+            // dig in deeper
+            if let lhsAlbum = lhs.Album,
+               let rhsAlbum = rhs.Album
+            {
+                return lhsAlbum < rhsAlbum
+            } else {
+                return lhs.Title < rhs.Title
+            }
+        } else {
+            return lhs.Artist < rhs.Artist
+        }
+    }
+    
+    public static func == (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
+        return lhs.SHA1 == rhs.SHA1
+    }
+    
     let Artist: String
     let Album: String?
     let Title: String
@@ -183,8 +268,8 @@ class ServerConnection: ServerType {
 
 
 let server: ServerType = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
-let fetcher = QueueFetcher(withServer: server)
-var globalSillyString = "start"
+let queueFetcher = QueueFetcher(withServer: server)
+let trackFetcher = TrackFetcher(withServer: server)
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -193,30 +278,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view that provides the window contents.
-        let contentView = ContentView(fetcher: fetcher)
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
-            fetcher.refreshQueue()
+        let contentView = ContentView(queueFetcher: queueFetcher, trackFetcher: trackFetcher)
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            queueFetcher.refreshQueue()
         }
-        /*
-        server.listTracks() { audioTracks, error in
-            if let audioTracks = audioTracks {
-                print("got \(audioTracks.count) audio tracks")
-                print("audioTracks[0] \(audioTracks[0])")
-            } else {
-                print("no tracks :(")
-            }
-
-            server.playRandomTrack() { audioTrack, error in
-                if let error = error {
-                    print("DOH")
-                } else {
-                    print("enqueued: \(audioTrack)")
-                    server.listPlayingQueue() { audioTracks, error in
-                        print("queue: \(audioTracks)")
-                    }
-                }
-            }
-        }*/
 
         // Create the window and set the content view. 
         window = NSWindow(
