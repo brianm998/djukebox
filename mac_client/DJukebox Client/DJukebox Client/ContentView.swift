@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-//    @ObservedObject var currentTrack: AudioTrack
+    @ObservedObject var fetcher: QueueFetcher
     
     var body: some View {
         HStack {
@@ -37,6 +37,17 @@ struct ContentView: View {
                     Text("Stop")
                 }
                 Button(action: {
+                           server.skipCurrentTrack() { audioTrack, error in
+                               if let error = error {
+                                   print("DOH")
+                               } else {
+                                   print("enqueued: \(audioTrack)")
+                               }
+                           }
+                       }) {
+                    Text("Skip")
+                }
+                Button(action: {
                            server.pausePlaying() { audioTrack, error in
                                if let error = error {
                                    print("DOH")
@@ -58,11 +69,13 @@ struct ContentView: View {
                        }) {
                     Text("Resume")
                 }
-                
             }
-            Text("line1\nline2\nline3")
-            //Text(sillyString)
-              .font(.headline)
+            List(fetcher.tracks) { track in
+                HStack(alignment: .center) {
+                    Text(track.Artist)
+                    Text(track.Title)
+                }
+            }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -70,7 +83,7 @@ struct ContentView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()/*currentTrack: AudioTrack(Artist: "foo",
+        ContentView(fetcher: fetcher)/*currentTrack: AudioTrack(Artist: "foo",
                                              Album: "me",
                                              Title: "me",
                                              Filename: "me",

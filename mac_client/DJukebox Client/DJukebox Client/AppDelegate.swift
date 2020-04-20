@@ -9,8 +9,30 @@ import Cocoa
 import SwiftUI
 import CryptoKit
 
+public class QueueFetcher: ObservableObject {
+    @Published var tracks: [AudioTrack] = []
+
+    let server: ServerType
+    
+    init(withServer server: ServerType) {
+        self.server = server
+        refreshQueue()
+    }
+
+    func refreshQueue() {
+        server.listPlayingQueue() { tracks, error in
+            if let tracks = tracks {
+                DispatchQueue.main.async {
+                    self.tracks = tracks
+                }
+            }
+        }
+        
+    }
+}
+
 // XXX copied from the server
-public struct AudioTrack: Decodable/*, ObservedObject<AudioTrack>*/ {
+public class AudioTrack: Decodable, Identifiable {
     let Artist: String
     let Album: String?
     let Title: String
@@ -159,7 +181,9 @@ class ServerConnection: ServerType {
     }
 }
 
+
 let server: ServerType = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
+let fetcher = QueueFetcher(withServer: server)
 var globalSillyString = "start"
 
 @NSApplicationMain
@@ -169,8 +193,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view that provides the window contents.
-        let contentView = ContentView(/*currentTrack: nil*/)
-        
+        let contentView = ContentView(fetcher: fetcher)
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            fetcher.refreshQueue()
+        }
         /*
         server.listTracks() { audioTracks, error in
             if let audioTracks = audioTracks {
