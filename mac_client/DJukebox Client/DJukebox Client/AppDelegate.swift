@@ -10,7 +10,7 @@ import SwiftUI
 import CryptoKit
 
 // XXX copied from the server
-public struct AudioTrack: Decodable {
+public struct AudioTrack: Decodable/*, ObservedObject<AudioTrack>*/ {
     let Artist: String
     let Album: String?
     let Title: String
@@ -53,7 +53,7 @@ class ServerConnection: ServerType {
         if let url = URL(string: "\(serverUrl)/\(path)") {
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            request.setValue(authHeaderValue, forHTTPHeaderField:"auth")
+            request.setValue(authHeaderValue, forHTTPHeaderField:"Authorization")
             request.timeoutInterval = 60.0
             
             URLSession.shared.dataTask(with: request) { data, response, error in
@@ -72,7 +72,7 @@ class ServerConnection: ServerType {
         if let url = URL(string: "\(serverUrl)/\(path)") {
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            request.setValue(authHeaderValue, forHTTPHeaderField:"auth")
+            request.setValue(authHeaderValue, forHTTPHeaderField:"Authorization")
             request.timeoutInterval = 60.0
             
             URLSession.shared.dataTask(with: request) { data, response, error in
@@ -159,6 +159,8 @@ class ServerConnection: ServerType {
     }
 }
 
+let server: ServerType = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
+var globalSillyString = "start"
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -167,10 +169,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view that provides the window contents.
-        let contentView = ContentView()
-
-        let server: ServerType = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
+        let contentView = ContentView(/*currentTrack: nil*/)
         
+        /*
         server.listTracks() { audioTracks, error in
             if let audioTracks = audioTracks {
                 print("got \(audioTracks.count) audio tracks")
@@ -189,7 +190,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 }
             }
-        }
+        }*/
 
         // Create the window and set the content view. 
         window = NSWindow(
@@ -205,7 +206,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
     }
-
-
 }
 

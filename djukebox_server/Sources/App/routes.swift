@@ -26,7 +26,7 @@ class AuthController {
     // curl -H "auth: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425" http://localhost:8080/rand
     func auth<T>(request req: Request, closure: () throws -> T) throws -> T {
         for header in req.headers {
-            if header.name == "auth" {
+            if header.name == "Authorization" {
                 if SHA512.hash(data: Data(config.Password.utf8)).hexEncodedString() == header.value {
                     return try closure()
                 }
