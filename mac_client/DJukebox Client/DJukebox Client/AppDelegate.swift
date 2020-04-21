@@ -136,7 +136,16 @@ public class AudioTrack: Decodable, Identifiable, Comparable, Hashable {
             if let lhsAlbum = lhs.Album,
                let rhsAlbum = rhs.Album
             {
-                return lhsAlbum < rhsAlbum
+                if lhsAlbum == rhsAlbum,
+                   let lhsTrackNumberStr = lhs.TrackNumber,
+                   let rhsTrackNumberStr = rhs.TrackNumber,
+                   let lhsTrackNumber = Int(lhsTrackNumberStr),
+                   let rhsTrackNumber = Int(rhsTrackNumberStr)
+                {
+                    return lhsTrackNumber < rhsTrackNumber
+                } else {
+                    return lhsAlbum < rhsAlbum
+                }
             } else {
                 return lhs.Title < rhs.Title
             }
