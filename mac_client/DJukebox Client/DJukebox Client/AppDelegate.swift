@@ -36,6 +36,9 @@ public class TrackFetcher: ObservableObject {
             if let tracks = tracks {
                 var artistMap: [String:AudioTrack] = [:]
                 for track in tracks {
+                    if track.Album == nil {
+                        print("artist \(track.Artist) has orphaned tracks")
+                    }
                     artistMap[track.Artist] = track
                 }
                 DispatchQueue.main.async {
@@ -64,7 +67,8 @@ public class TrackFetcher: ObservableObject {
             }
         }
     }
-    
+
+    // show all tracks for the artist/album combo in the passed AudioTrack
     func showTracks(for audioTrack: AudioTrack) {
         var tracks: [AudioTrack] = []
 
@@ -80,7 +84,13 @@ public class TrackFetcher: ObservableObject {
                 }
             }
         } else {
-            // XXX still need to support no album
+            for track in allTracks {
+                if track.Artist == desiredArtist,
+                   track.Album == nil
+                {
+                    tracks.append(track)
+                }
+            }
         }
         
         DispatchQueue.main.async {
@@ -99,10 +109,15 @@ public class TrackFetcher: ObservableObject {
 
         var albumMap: [String:AudioTrack] = [:]
 
+        let singles = "Singles"
+        
         for track in allTracks {
             if track.Artist == artist {
                 if let album = track.Album {
                     albumMap[album] = track
+                } else {
+                    albumMap[singles] = track
+                    print("missing album for track \(track.Artist) \(track.Title)")
                 }
             }
         }
