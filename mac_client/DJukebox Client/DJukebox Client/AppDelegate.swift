@@ -170,7 +170,6 @@ protocol ServerType {
     func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void)
     func listPlayingQueue(closure: @escaping ([AudioTrack]?, Error?) -> Void)
     func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)
-    func skipCurrentTrack(closure: @escaping (Bool, Error?) -> Void)
     func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) 
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void)
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void)
@@ -288,11 +287,6 @@ class ServerConnection: ServerType {
     func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
         self.requestJson(atPath: "rand", closure: closure)
     }
-
-    func skipCurrentTrack(closure: @escaping (Bool, Error?) -> Void) {
-        self.request(path: "skip", closure: closure)
-    }
-
     func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {
         self.request(path: "stop", closure: closure)
     }

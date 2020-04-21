@@ -40,19 +40,6 @@ struct ButtonStack: View {
                   .frame(width: buttonWidth)
             }
             Button(action: {
-                       server.skipCurrentTrack() { audioTrack, error in
-                           if let error = error {
-                               print("DOH")
-                           } else {
-                               print("enqueued: \(audioTrack)")
-                           }
-                           trackFetcher.refreshQueue()
-                       }
-                   }) {
-                Text("Skip")
-                  .frame(width: buttonWidth)
-            }
-            Button(action: {
                        server.pausePlaying() { audioTrack, error in
                            if let error = error {
                                print("DOH")
