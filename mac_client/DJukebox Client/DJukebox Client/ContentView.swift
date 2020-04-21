@@ -94,16 +94,6 @@ struct ContentView: View {
                 List {
                     ForEach(trackFetcher.playingQueue, id: \.self) { track in
                         HStack(alignment: .center) {
-                            /*
-                            Button(action: {
-                                server.stopPlayingTrack(withHash: track.SHA1) { success, error in
-                                    self.trackFetcher.refreshQueue()
-                                    print("stopped playing \(track.SHA1)? \(success) error \(error)")
-                                }
-                            }) {
-                                Text("X")
-                            }
-                            */
                             Button(action: {
                                 self.trackFetcher.showAlbums(forArtist: track.Artist)
                             }) {
@@ -146,11 +136,11 @@ struct ContentView: View {
                 VStack {
                     Text(trackFetcher.trackTitle)
                     List(trackFetcher.tracks) { artist in
-                        Text(artist.Title)
+                        Text(artist.TrackNumber == nil ? artist.Title : "\(artist.TrackNumber!) - \(artist.Title)")
                           .onTapGesture {
                               server.playTrack(withHash: artist.SHA1) { track, error in
                                 self.trackFetcher.refreshQueue()
-                                  print("track \(track) error \(error)")
+                                print("track \(track) error \(error)")
                               }
                           }
                     }
