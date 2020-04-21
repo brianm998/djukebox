@@ -140,7 +140,7 @@ struct ContentView: View {
                 VStack {
                     Text(trackFetcher.albumTitle)
                     List(trackFetcher.albums) { artist in
-                        Text(artist.Album ?? "XXX")
+                        Text(artist.Album ?? "Singles") // XXX constant
                           .onTapGesture {
                               self.trackFetcher.showTracks(for: artist)
                           }

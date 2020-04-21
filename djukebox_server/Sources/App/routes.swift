@@ -116,6 +116,16 @@ func routes(_ app: Application) throws {
         }
     }
 
+    app.get("stop", ":sha1") { req -> Response in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.auth(request: req) {
+            return try authControl.track(from: req) { track, _ in
+                audioPlayer.stopPlaying(sha1Hash: track.SHA1)
+                return Response(status: .ok)
+            }
+        }
+    }
+
     // Skip the currently playing song
     // curl localhost:8080/skip
     app.get("skip") { req -> Response in
