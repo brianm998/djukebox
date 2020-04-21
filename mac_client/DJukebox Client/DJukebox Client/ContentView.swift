@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct ButtonStack: View {
+
+    let buttonWidth: CGFloat = 80
     
     var body: some View {
         VStack {
@@ -22,6 +24,7 @@ struct ButtonStack: View {
                        }
                    }) {
                 Text("Random")
+                  .frame(width: buttonWidth)
             }
             Button(action: {
                        server.stopAllTracks() { audioTrack, error in
@@ -34,6 +37,7 @@ struct ButtonStack: View {
                        }
                    }) {
                 Text("Stop")
+                  .frame(width: buttonWidth)
             }
             Button(action: {
                        server.skipCurrentTrack() { audioTrack, error in
@@ -46,6 +50,7 @@ struct ButtonStack: View {
                        }
                    }) {
                 Text("Skip")
+                  .frame(width: buttonWidth)
             }
             Button(action: {
                        server.pausePlaying() { audioTrack, error in
@@ -57,6 +62,7 @@ struct ButtonStack: View {
                        }
                    }) {
                 Text("Pause")
+                  .frame(width: buttonWidth)
             }
             Button(action: {
                        server.resumePlaying() { audioTrack, error in
@@ -68,16 +74,19 @@ struct ButtonStack: View {
                        }
                    }) {
                 Text("Resume")
+                  .frame(width: buttonWidth)
             }
             Button(action: {
                 trackFetcher.refreshTracks()
             }) {
                 Text("Refresh")
+                  .frame(width: buttonWidth)
             }
             Button(action: {
                 trackFetcher.refreshQueue()
             }) {
                 Text("Refresh Q")
+                  .frame(width: buttonWidth)
             }
         }        
     }
@@ -93,6 +102,7 @@ struct ContentView: View {
     var body: some View {
         VStack {
             HStack {
+                Spacer()
                 ButtonStack()
                 List {
                     ForEach(trackFetcher.playingQueue, id: \.self) { track in
