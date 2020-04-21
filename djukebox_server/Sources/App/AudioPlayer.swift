@@ -5,6 +5,7 @@ public protocol AudioPlayerType {
     var trackQueue: [String] { get }
     var playingTrack: AudioTrack? { get }
     func play(sha1Hash: String)
+    func stopPlaying(sha1Hash: String)
     func skip() 
     func pause() 
     func resume()
@@ -31,6 +32,31 @@ public class AudioPlayer: AudioPlayerType {
 
     public func clearQueue() {
         trackQueue = []
+    }
+
+    public func stopPlaying(sha1Hash: String) {
+        print("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
+        if let playingTrack = playingTrack,
+           playingTrack.SHA1 == sha1Hash
+        {
+            self.skip()
+        } else {
+            for (index, hash) in trackQueue.enumerated() {
+                print("index \(index) hash \(sha1Hash)")
+                if hash == sha1Hash {
+                    print("index \(index) needs to be removed")
+                    if index == 0 {
+                        trackQueue = Array(trackQueue[1..<trackQueue.count])
+                    } else if index == trackQueue.count - 1 {
+                        trackQueue = Array(trackQueue[0..<index])
+                    } else if index < trackQueue.count {
+                        trackQueue = Array(trackQueue[0..<index]) + Array(trackQueue[index+1..<trackQueue.count])
+                    } else {
+                        print("DOH")
+                    }
+                }
+            }
+        }
     }
     
     public func play(sha1Hash: String) {
