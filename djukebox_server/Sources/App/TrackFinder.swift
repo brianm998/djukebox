@@ -66,7 +66,7 @@ public class TrackFinder: TrackFinderType {
                 }
             }
         } catch {
-            print("DOH \(url)")
+            print("DOH \(url) \(error)")
         }
     }    
 }
