@@ -9,38 +9,29 @@ import Cocoa
 import SwiftUI
 import CryptoKit
 
-public class QueueFetcher: ObservableObject {
-    @Published var tracks: [AudioTrack] = []
-
-    let server: ServerType
-    
-    init(withServer server: ServerType) {
-        self.server = server
-        refreshQueue()
-    }
-
-    func refreshQueue() {
-        server.listPlayingQueue() { tracks, error in
-            if let tracks = tracks {
-                DispatchQueue.main.async {
-                    self.tracks = tracks
-                }
-            }
-        }
-    }
-}
-
 public class TrackFetcher: ObservableObject {
     var allTracks: [AudioTrack] = []
 
     @Published var artists: [AudioTrack] = []
     @Published var albums: [AudioTrack] = []
     @Published var tracks: [AudioTrack] = []
+
+    @Published var albumTitle: String
+    @Published var trackTitle: String
     
+    @Published var playingQueue: [AudioTrack] = []
+
     let server: ServerType
     
     init(withServer server: ServerType) {
         self.server = server
+        self.albumTitle = "Albums"
+        self.trackTitle = "Songs"
+        refreshTracks()
+        refreshQueue()
+    }
+
+    func refreshTracks() {
         server.listTracks() { tracks, error in
             if let tracks = tracks {
                 var artistMap: [String:AudioTrack] = [:]
@@ -55,6 +46,25 @@ public class TrackFetcher: ObservableObject {
         }
     }
 
+    func removeItemFromPlayingQueue(at index: Int) {
+        guard index >= 0 else { return }
+        guard index < playingQueue.count else { return }
+
+        server.stopPlayingTrack(withHash: playingQueue[index].SHA1) { success, error in
+            if success { self.refreshQueue() }
+        }
+    }
+    
+    func refreshQueue() {
+        server.listPlayingQueue() { tracks, error in
+            if let tracks = tracks {
+                DispatchQueue.main.async {
+                    self.playingQueue = tracks
+                }
+            }
+        }
+    }
+    
     func showTracks(for audioTrack: AudioTrack) {
         var tracks: [AudioTrack] = []
 
@@ -75,6 +85,11 @@ public class TrackFetcher: ObservableObject {
         
         DispatchQueue.main.async {
             self.tracks = tracks.sorted()
+            if let desiredAlbum = desiredAlbum {
+                self.trackTitle = "\(desiredAlbum) songs"
+            } else {
+                self.trackTitle = "\(desiredArtist) songs"
+            }
         }
     }
     
@@ -93,12 +108,13 @@ public class TrackFetcher: ObservableObject {
         }
         DispatchQueue.main.async {
             self.albums = Array(albumMap.values).sorted()
+            self.albumTitle = "\(artist) albums"
         }
     }
 }
 
 // XXX copied from the server
-public class AudioTrack: Decodable, Identifiable, Comparable {
+public class AudioTrack: Decodable, Identifiable, Comparable, Hashable {
     public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
         if lhs.Artist == rhs.Artist {
             // dig in deeper
@@ -116,6 +132,10 @@ public class AudioTrack: Decodable, Identifiable, Comparable {
     
     public static func == (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
         return lhs.SHA1 == rhs.SHA1
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(SHA1)
     }
     
     let Artist: String
@@ -141,6 +161,7 @@ protocol ServerType {
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void)
     func trackInfo(forHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) 
     func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void)
+    func stopPlayingTrack(withHash hash: String, closure: @escaping (Bool, Error?) -> Void)
 }
 
 class ServerConnection: ServerType {
@@ -233,6 +254,10 @@ class ServerConnection: ServerType {
         }
     }
 
+    func stopPlayingTrack(withHash hash: String, closure: @escaping (Bool, Error?) -> Void) {
+        self.request(path: "stop/\(hash)", closure: closure)
+    }
+    
     func listPlayingQueue(closure: @escaping ([AudioTrack]?, Error?) -> Void) {
         self.requestJson(atPath: "queue") { (audioTracks: [AudioTrack]?, error: Error?) in
             if let error = error {
@@ -268,7 +293,6 @@ class ServerConnection: ServerType {
 
 
 let server: ServerType = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
-let queueFetcher = QueueFetcher(withServer: server)
 let trackFetcher = TrackFetcher(withServer: server)
 
 @NSApplicationMain
@@ -278,9 +302,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view that provides the window contents.
-        let contentView = ContentView(queueFetcher: queueFetcher, trackFetcher: trackFetcher)
+        let contentView = ContentView(trackFetcher: trackFetcher)
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            queueFetcher.refreshQueue()
+            trackFetcher.refreshQueue()
         }
 
         // Create the window and set the content view. 
