@@ -7,115 +7,76 @@
 
 import SwiftUI
 
-struct ButtonStack: View {
-
-    @ObservedObject var serverConnection: ServerConnection //ServerType
-    
-    let buttonWidth: CGFloat = 80
+struct SearchList: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    @State private var searchQuery: String = "" 
     
     var body: some View {
         VStack {
-            Button(action: {
-                server.playRandomTrack() { audioTrack, error in
-                    if let error = error {
-                        print("DOH")
-                    } else if let audioTrack = audioTrack {
-                        print("enqueued: \(audioTrack.Title)")
-                    }
-                    trackFetcher.refreshQueue()
-                }
-            }) {
-                Text("Random")
-                  .frame(width: buttonWidth)
-            }
             HStack {
-                Button(action: {
-                    server.stopAllTracks() { audioTrack, error in
-                        if let error = error {
-                            print("DOH")
-                        } else {
-                            print("enqueued: \(audioTrack)")
-                        }
-                        trackFetcher.refreshQueue()
-                    }
-                }) {
-                    /*
-                     "\u{25B6}" - play
-                     "\u{23f8}" - pause
-                     "\u{23F9}" - stop
-                     */
-                    Text("\u{23F9}").font(.largeTitle) // stop
-                }.buttonStyle(PlainButtonStyle())
-                Button(action: {
-                    if server.isPaused {
-                        server.resumePlaying() { audioTrack, error in
-                            if let error = error {
-                                print("DOH")
-                            } else {
-                                print("enqueued: \(audioTrack)")
-                            }
-                        }
-                    } else {
-                        server.pausePlaying() { audioTrack, error in
-                            if let error = error {
-                                print("DOH")
-                            } else {
-                                print("enqueued: \(audioTrack)")
-                            }
-                        }
-                    }
-                }) {
-                    /*
-                     "\u{25B6}" - play
-                     "\u{23F8}" - pause
-                     "\u{23F9}" - stop
-                     */
-                    Text(serverConnection.isPaused ? "\u{25B6}" : "\u{23F8}").font(.largeTitle) // play / pause
-                    //Text("\u{23F8}").font(.largeTitle) // pause
-                }.buttonStyle(PlainButtonStyle())
+                Spacer()
+                Text("Search: ")
+                TextField(
+                    "search here",
+                    text: $searchQuery,
+                    onEditingChanged: { foo in print("edit cha\(foo) \(self.searchQuery)") },
+                    onCommit: { self.trackFetcher.search(for: self.searchQuery) }
+                )
+                Spacer()
             }
-
-            /*
-            Button(action: {
-                       server.pausePlaying() { audioTrack, error in
-                           if let error = error {
-                               print("DOH")
-                           } else {
-                               print("enqueued: \(audioTrack)")
-                           }
-                       }
-                   }) {
-                Text("Pause")
-                  .frame(width: buttonWidth)
+            List(trackFetcher.searchResults) { result in
+                Text("\(result.Artist) - \(result.Album ?? "") - \(result.Title)")
+                  .onTapGesture {
+                      server.playTrack(withHash: result.SHA1) { track, error in
+                          self.trackFetcher.refreshQueue()
+                          print("track \(track) error \(error)")
+                      }
+                  }
             }
-            Button(action: {
-                       server.resumePlaying() { audioTrack, error in
-                           if let error = error {
-                               print("DOH")
-                           } else {
-                               print("enqueued: \(audioTrack)")
-                           }
-                       }
-                   }) {
-                Text("Resume")
-                  .frame(width: buttonWidth)
-            }
-*/
-            Button(action: {
-                trackFetcher.refreshTracks()
-            }) {
-                Text("Refresh")
-                  .frame(width: buttonWidth)
-            }
-            Button(action: {
-                trackFetcher.refreshQueue()
-            }) {
-                Text("Refresh Q")
-                  .frame(width: buttonWidth)
-            }
-        }        
+        }
     }
 }
+
+struct ArtistAlbumTrackList: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+
+    var body: some View {
+        HStack {
+            VStack {
+                Text("Artists")
+                List(trackFetcher.artists) { artist in
+                    Text(artist.Artist)
+                      .onTapGesture {
+                          self.trackFetcher.showAlbums(forArtist: artist.Artist)
+                      }
+                }
+            }
+            VStack {
+                Text(trackFetcher.albumTitle)
+                List(trackFetcher.albums) { artist in
+                    Text(artist.Album ?? "Singles") // XXX constant
+                      .foregroundColor(artist.Album == nil ? Color.red : Color.black)
+                      .onTapGesture {
+                          self.trackFetcher.showTracks(for: artist)
+                      }
+                }
+            }
+            VStack {
+                Text(trackFetcher.trackTitle)
+                List(trackFetcher.tracks) { artist in
+                    Text(artist.TrackNumber == nil ? artist.Title : "\(artist.TrackNumber!) - \(artist.Title)")
+                      .onTapGesture {
+                          server.playTrack(withHash: artist.SHA1) { track, error in
+                              self.trackFetcher.refreshQueue()
+                              print("track \(track) error \(error)")
+                          }
+                      }
+                }
+            }
+        }
+    }
+}
+
 
 struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
@@ -153,39 +114,8 @@ struct ContentView: View {
                     }.onDelete(perform: delete)
                 }
             }
-            HStack {
-                VStack {
-                    Text("Artists")
-                    List(trackFetcher.artists) { artist in
-                        Text(artist.Artist)
-                          .onTapGesture {
-                              self.trackFetcher.showAlbums(forArtist: artist.Artist)
-                          }
-                    }
-                }
-                VStack {
-                    Text(trackFetcher.albumTitle)
-                    List(trackFetcher.albums) { artist in
-                        Text(artist.Album ?? "Singles") // XXX constant
-                            .foregroundColor(artist.Album == nil ? Color.red : Color.black)
-                          .onTapGesture {
-                              self.trackFetcher.showTracks(for: artist)
-                          }
-                    }
-                }
-                VStack {
-                    Text(trackFetcher.trackTitle)
-                    List(trackFetcher.tracks) { artist in
-                        Text(artist.TrackNumber == nil ? artist.Title : "\(artist.TrackNumber!) - \(artist.Title)")
-                          .onTapGesture {
-                              server.playTrack(withHash: artist.SHA1) { track, error in
-                                self.trackFetcher.refreshQueue()
-                                print("track \(track) error \(error)")
-                              }
-                          }
-                    }
-                }
-            }
+            SearchList(trackFetcher: trackFetcher)
+            ArtistAlbumTrackList(trackFetcher: trackFetcher)
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

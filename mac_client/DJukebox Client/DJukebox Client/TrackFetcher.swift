@@ -16,6 +16,8 @@ public class TrackFetcher: ObservableObject {
     
     @Published var playingQueue: [AudioTrack] = []
 
+    @Published var searchResults: [AudioTrack] = []
+    
     let server: ServerType
     
     init(withServer server: ServerType) {
@@ -26,6 +28,29 @@ public class TrackFetcher: ObservableObject {
         refreshQueue()
     }
 
+    func search(for searchQuery: String) {
+        print("self.allTracks.count \(self.allTracks.count)")
+
+        var results: [AudioTrack] = []
+
+        let lowerCaseQuery = searchQuery.lowercased()
+        
+        for track in self.allTracks {
+            if track.Artist.lowercased().contains(lowerCaseQuery) {
+                results.append(track)
+            } else if let album = track.Album,
+                album.lowercased().contains(lowerCaseQuery) {
+                results.append(track)
+            } else if track.Title.lowercased().contains(lowerCaseQuery) {
+                results.append(track)
+            }
+        }
+        
+        DispatchQueue.main.async {
+            self.searchResults = results
+        }
+    }
+    
     func refreshTracks() {
         server.listTracks() { tracks, error in
             if let tracks = tracks {
