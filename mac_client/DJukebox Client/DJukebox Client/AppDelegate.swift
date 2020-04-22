@@ -185,13 +185,23 @@ protocol ServerType {
     func trackInfo(forHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) 
     func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void)
     func stopPlayingTrack(withHash hash: String, closure: @escaping (Bool, Error?) -> Void)
+    var isPaused: Bool { get }
 }
 
-class ServerConnection: ServerType {
+
+class ServerConnection: ObservableObject, ServerType {
     
     let serverUrl: String
     let authHeaderValue: String
 
+    // XXX should query server on startup, in case it's already paused
+    fileprivate var local_isPaused: Bool = false
+    
+    var isPaused: Bool {
+        print("server isPaused \(local_isPaused)")
+        return local_isPaused
+    }
+    
     init(toUrl url: String, withPassword password: String) {
         self.serverUrl = url
         self.authHeaderValue =
@@ -301,16 +311,22 @@ class ServerConnection: ServerType {
     }
 
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void) {
-        self.request(path: "pause", closure: closure)
+        self.request(path: "pause") { success, error in
+            if success { self.local_isPaused = true }
+            closure(success, error)
+        }
     }
 
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void) {
-        self.request(path: "resume", closure: closure)
+        self.request(path: "resume") { success, error in
+            if success { self.local_isPaused = false }
+            closure(success, error)
+        }
     }
 }
 
 
-let server: ServerType = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
+let server/*: ServerType*/ = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
 let trackFetcher = TrackFetcher(withServer: server)
 
 @NSApplicationMain
@@ -320,8 +336,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view that provides the window contents.
-        let contentView = ContentView(trackFetcher: trackFetcher)
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+        let contentView = ContentView(trackFetcher: trackFetcher, serverConnection: server)
+        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
             trackFetcher.refreshQueue()
         }
 

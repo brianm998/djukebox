@@ -9,36 +9,73 @@ import SwiftUI
 
 struct ButtonStack: View {
 
+    @ObservedObject var serverConnection: ServerConnection //ServerType
+    
     let buttonWidth: CGFloat = 80
     
     var body: some View {
         VStack {
             Button(action: {
-                       server.playRandomTrack() { audioTrack, error in
-                           if let error = error {
-                               print("DOH")
-                           } else if let audioTrack = audioTrack {
-                               print("enqueued: \(audioTrack.Title)")
-                           }
-                           trackFetcher.refreshQueue()
-                       }
-                   }) {
+                server.playRandomTrack() { audioTrack, error in
+                    if let error = error {
+                        print("DOH")
+                    } else if let audioTrack = audioTrack {
+                        print("enqueued: \(audioTrack.Title)")
+                    }
+                    trackFetcher.refreshQueue()
+                }
+            }) {
                 Text("Random")
                   .frame(width: buttonWidth)
             }
-            Button(action: {
-                       server.stopAllTracks() { audioTrack, error in
-                           if let error = error {
-                               print("DOH")
-                           } else {
-                               print("enqueued: \(audioTrack)")
-                           }
-                           trackFetcher.refreshQueue()
-                       }
-                   }) {
-                Text("Stop")
-                  .frame(width: buttonWidth)
+            HStack {
+                Button(action: {
+                    server.stopAllTracks() { audioTrack, error in
+                        if let error = error {
+                            print("DOH")
+                        } else {
+                            print("enqueued: \(audioTrack)")
+                        }
+                        trackFetcher.refreshQueue()
+                    }
+                }) {
+                    /*
+                     "\u{25B6}" - play
+                     "\u{23f8}" - pause
+                     "\u{23F9}" - stop
+                     */
+                    Text("\u{23F9}").font(.largeTitle) // stop
+                }.buttonStyle(PlainButtonStyle())
+                Button(action: {
+                    if server.isPaused {
+                        server.resumePlaying() { audioTrack, error in
+                            if let error = error {
+                                print("DOH")
+                            } else {
+                                print("enqueued: \(audioTrack)")
+                            }
+                        }
+                    } else {
+                        server.pausePlaying() { audioTrack, error in
+                            if let error = error {
+                                print("DOH")
+                            } else {
+                                print("enqueued: \(audioTrack)")
+                            }
+                        }
+                    }
+                }) {
+                    /*
+                     "\u{25B6}" - play
+                     "\u{23F8}" - pause
+                     "\u{23F9}" - stop
+                     */
+                    Text(serverConnection.isPaused ? "\u{25B6}" : "\u{23F8}").font(.largeTitle) // play / pause
+                    //Text("\u{23F8}").font(.largeTitle) // pause
+                }.buttonStyle(PlainButtonStyle())
             }
+
+            /*
             Button(action: {
                        server.pausePlaying() { audioTrack, error in
                            if let error = error {
@@ -63,6 +100,7 @@ struct ButtonStack: View {
                 Text("Resume")
                   .frame(width: buttonWidth)
             }
+*/
             Button(action: {
                 trackFetcher.refreshTracks()
             }) {
@@ -81,6 +119,7 @@ struct ButtonStack: View {
 
 struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var serverConnection: ServerConnection //ServerType
 
     private func hasAlbum(_ track: AudioTrack) -> Bool {
         return track.Album != nil
@@ -90,7 +129,7 @@ struct ContentView: View {
         VStack {
             HStack {
                 Spacer()
-                ButtonStack()
+                ButtonStack(serverConnection: serverConnection)
                 List {
                     ForEach(trackFetcher.playingQueue, id: \.self) { track in
                         HStack(alignment: .center) {
@@ -128,6 +167,7 @@ struct ContentView: View {
                     Text(trackFetcher.albumTitle)
                     List(trackFetcher.albums) { artist in
                         Text(artist.Album ?? "Singles") // XXX constant
+                            .foregroundColor(artist.Album == nil ? Color.red : Color.black)
                           .onTapGesture {
                               self.trackFetcher.showTracks(for: artist)
                           }
@@ -162,6 +202,6 @@ struct ContentView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(trackFetcher: trackFetcher)
+        ContentView(trackFetcher: trackFetcher, serverConnection: server)
     }
 }
