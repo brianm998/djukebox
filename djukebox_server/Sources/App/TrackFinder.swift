@@ -1,7 +1,7 @@
 import Vapor
 
 public protocol TrackFinderType {
-    func track(forHash sha1Hash: String) -> (AudioTrack, String)?
+    func track(forHash sha1Hash: String) -> (AudioTrack, URL)?
     func filePath(forHash sha1Hash: String) -> String?
     func audioTrack(forHash sha1Hash: String) -> AudioTrack?
     func find(atFilePath path: String)
@@ -12,9 +12,9 @@ public class TrackFinder: TrackFinderType {
 
     public var tracks: [String: (AudioTrack, [URL])] = [:]
 
-    public func track(forHash sha1Hash: String) -> (AudioTrack, String)? {
+    public func track(forHash sha1Hash: String) -> (AudioTrack, URL)? {
         if let (track, urls) = tracks[sha1Hash] {
-            return (track, urls[0].path)
+            return (track, urls[0])
         } else {
             return nil
         }

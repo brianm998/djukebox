@@ -42,7 +42,7 @@ class AuthController {
             if let hash = req.parameters.get("sha1"),
                let (track, path) = trackFinder.track(forHash: hash)
             {
-                return closure(track, path)
+                return closure(track, path.path)
             } else {
                 throw Abort(.notFound)
             }
