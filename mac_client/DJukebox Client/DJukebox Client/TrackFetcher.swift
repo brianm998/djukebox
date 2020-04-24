@@ -7,13 +7,14 @@ import CryptoKit
 public class TrackFetcher: ObservableObject {
     var allTracks: [AudioTrack] = []
 
-    @Published var artists: [AudioTrack] = []
+    @Published var artists: [AudioTrack] = [] // XXX use different model objects for artists and albums
     @Published var albums: [AudioTrack] = []
     @Published var tracks: [AudioTrack] = []
 
     @Published var albumTitle: String
     @Published var trackTitle: String
-    
+
+    @Published var currentTrack: AudioTrack?
     @Published var playingQueue: [AudioTrack] = []
 
     @Published var searchResults: [AudioTrack] = []
@@ -81,8 +82,19 @@ public class TrackFetcher: ObservableObject {
     func refreshQueue() {
         server.listPlayingQueue() { tracks, error in
             if let tracks = tracks {
+            print("got \(tracks.count) tracks: \(tracks)")
                 DispatchQueue.main.async {
-                    self.playingQueue = tracks
+                    if tracks.count > 0 {
+                        self.currentTrack = tracks[0]
+                        if tracks.count > 1 {
+                            self.playingQueue = Array(tracks[1..<tracks.count])
+                        } else {
+                            self.playingQueue = []
+                        }
+                    } else {
+                        self.currentTrack = nil
+                        self.playingQueue = []
+                    }
                 }
             }
         }

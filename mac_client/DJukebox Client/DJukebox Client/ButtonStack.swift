@@ -32,68 +32,12 @@ struct ButtonStack: View {
                         trackFetcher.refreshQueue()
                     }
                 }) {
-                    /*
-                     "\u{25B6}" - play
-                     "\u{23f8}" - pause
-                     "\u{23F9}" - stop
-                     */
-                    Text("\u{23F9}").font(.largeTitle) // stop
-                }.buttonStyle(PlainButtonStyle())
-                Button(action: {
-                    if server.isPaused {
-                        server.resumePlaying() { audioTrack, error in
-                            if let error = error {
-                                print("DOH")
-                            } else {
-                                print("enqueued: \(audioTrack)")
-                            }
-                        }
-                    } else {
-                        server.pausePlaying() { audioTrack, error in
-                            if let error = error {
-                                print("DOH")
-                            } else {
-                                print("enqueued: \(audioTrack)")
-                            }
-                        }
-                    }
-                }) {
-                    /*
-                     "\u{25B6}" - play
-                     "\u{23F8}" - pause
-                     "\u{23F9}" - stop
-                     */
-                    Text(serverConnection.isPaused ? "\u{25B6}" : "\u{23F8}").font(.largeTitle) // play / pause
-                    //Text("\u{23F8}").font(.largeTitle) // pause
-                }.buttonStyle(PlainButtonStyle())
+                    Text("Clear Queue")
+                   //   .font(.largeTitle)
+                      .foregroundColor(Color.red)
+                }
             }
 
-            /*
-            Button(action: {
-                       server.pausePlaying() { audioTrack, error in
-                           if let error = error {
-                               print("DOH")
-                           } else {
-                               print("enqueued: \(audioTrack)")
-                           }
-                       }
-                   }) {
-                Text("Pause")
-                  .frame(width: buttonWidth)
-            }
-            Button(action: {
-                       server.resumePlaying() { audioTrack, error in
-                           if let error = error {
-                               print("DOH")
-                           } else {
-                               print("enqueued: \(audioTrack)")
-                           }
-                       }
-                   }) {
-                Text("Resume")
-                  .frame(width: buttonWidth)
-            }
-*/
             Button(action: {
                 trackFetcher.refreshTracks()
             }) {

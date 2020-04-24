@@ -1,7 +1,7 @@
-import Cocoa
+import SwiftUI
 
 // XXX copied from the server
-public class AudioTrack: Decodable, Identifiable, Comparable, Hashable {
+public class AudioTrack: Decodable, Identifiable, Comparable, Hashable, ObservableObject {
     public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
         if lhs.Artist == rhs.Artist {
             // dig in deeper
