@@ -14,6 +14,12 @@ public struct AudioTrack: Content {
     let OriginalDate: String?
 }
 
+public struct PlayingQueue: Content {
+    let tracks: [AudioTrack]
+    let playingTrackDuration: TimeInterval?
+    let playingTrackPosition: TimeInterval?
+}
+
 class AuthController {
     let config: Config
     let trackFinder: TrackFinderType
@@ -150,7 +156,7 @@ func routes(_ app: Application) throws {
 
     // Json list of the current queue of playing songs
     // curl localhost:8080/resume
-    app.get("queue") { req -> [AudioTrack] in
+    app.get("queue") { req -> PlayingQueue in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.auth(request: req) {
             var tracks: [AudioTrack] = []
@@ -162,7 +168,9 @@ func routes(_ app: Application) throws {
                     tracks.append(track)
                 }
             }
-            return tracks
+            return PlayingQueue(tracks: tracks,
+                                playingTrackDuration: audioPlayer.playingTrackDuration,
+                                playingTrackPosition: audioPlayer.playingTrackPosition)
         }
     }
 }

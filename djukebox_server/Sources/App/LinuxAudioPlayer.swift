@@ -11,7 +11,15 @@ public class LinuxAudioPlayer: AudioPlayerType {
     let trackFinder: TrackFinderType
 
     public var playingTrack: AudioTrack? 
-    
+
+    // XXX implement this for linux
+    // The total duration, in seconds, of the sound associated with the audio player.
+    public var playingTrackDuration: TimeInterval?
+
+    // XXX implement this for linux
+    // The playback point, in seconds, within the timeline of the sound associated with the audio player.
+    public var playingTrackPosition: TimeInterval?
+
     fileprivate var process: Process?
     
     init(trackFinder: TrackFinderType) {

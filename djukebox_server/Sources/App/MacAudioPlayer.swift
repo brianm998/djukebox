@@ -29,7 +29,19 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
 
     public var trackQueue: [String] = []
     
-    public var playingTrack: AudioTrack? 
+    public var playingTrack: AudioTrack?
+
+    // The total duration, in seconds, of the sound associated with the audio player.
+    public var playingTrackDuration: TimeInterval? {
+        if let player = player { return player.duration }
+        return nil
+    }
+
+    // The playback point, in seconds, within the timeline of the sound associated with the audio player.
+    public var playingTrackPosition: TimeInterval? {
+        if let player = player { return player.currentTime }
+        return nil
+    }
 
     public var isPaused = false
 
