@@ -4,7 +4,7 @@ import CryptoKit
 
 protocol ServerType {
     func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void)
-    func listPlayingQueue(closure: @escaping ([AudioTrack]?, Error?) -> Void)
+    func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void)
     func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)
     func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) 
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void)
@@ -117,12 +117,12 @@ class ServerConnection: ObservableObject, ServerType {
         self.request(path: "stop/\(hash)", closure: closure)
     }
     
-    func listPlayingQueue(closure: @escaping ([AudioTrack]?, Error?) -> Void) {
-        self.requestJson(atPath: "queue") { (audioTracks: [AudioTrack]?, error: Error?) in
+    func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
+        self.requestJson(atPath: "queue") { (playingQueue: PlayingQueue?, error: Error?) in
             if let error = error {
                 closure(nil, error)
-            } else if let audioTracks = audioTracks {
-                closure(audioTracks, nil)
+            } else if let playingQueue = playingQueue {
+                closure(playingQueue, nil)
             } else {
                 closure(nil, nil) // XXX ???
             }

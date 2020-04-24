@@ -1,6 +1,13 @@
 import SwiftUI
 
-// XXX copied from the server
+// copied from the server
+public class PlayingQueue: Decodable, Identifiable, ObservableObject {
+    let tracks: [AudioTrack]
+    let playingTrackDuration: TimeInterval?
+    let playingTrackPosition: TimeInterval?
+}
+
+// copied from the server
 public class AudioTrack: Decodable, Identifiable, Comparable, Hashable, ObservableObject {
     public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
         if lhs.Artist == rhs.Artist {

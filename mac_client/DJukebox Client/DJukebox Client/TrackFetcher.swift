@@ -18,7 +18,8 @@ public class TrackFetcher: ObservableObject {
     @Published var playingQueue: [AudioTrack] = []
 
     @Published var searchResults: [AudioTrack] = []
-    
+    @Published var playingTrackProgress: Float? // 0..1
+
     let server: ServerType
     
     init(withServer server: ServerType) {
@@ -80,14 +81,22 @@ public class TrackFetcher: ObservableObject {
     }
     
     func refreshQueue() {
-        server.listPlayingQueue() { tracks, error in
-            if let tracks = tracks {
-            print("got \(tracks.count) tracks: \(tracks)")
+        server.listPlayingQueue() { playingQueue, error in
+            if let playingQueue = playingQueue {
+                print("got \(playingQueue.tracks.count) tracks: \(playingQueue.tracks)")
                 DispatchQueue.main.async {
-                    if tracks.count > 0 {
-                        self.currentTrack = tracks[0]
-                        if tracks.count > 1 {
-                            self.playingQueue = Array(tracks[1..<tracks.count])
+                    if let duration = playingQueue.playingTrackDuration,
+                       let position = playingQueue.playingTrackPosition
+                    {
+                        self.playingTrackProgress = Float(position)/Float(duration)
+                        print("self.playingTrackProgress \(self.playingTrackProgress)")
+                    } else {
+                        self.playingTrackProgress = nil
+                    }
+                    if playingQueue.tracks.count > 0 {
+                        self.currentTrack = playingQueue.tracks[0]
+                        if playingQueue.tracks.count > 1 {
+                            self.playingQueue = Array(playingQueue.tracks[1..<playingQueue.tracks.count])
                         } else {
                             self.playingQueue = []
                         }

@@ -57,9 +57,11 @@ struct SearchList: View {
                 )
                 Spacer()
             }
-            List { 
-                ForEach(trackFetcher.searchResults, id: \.self) { result in
-                    SearchListCell(trackFetcher: self.trackFetcher, audioTrack: result)                    
+            if trackFetcher.searchResults.count > 0 {
+                List {
+                    ForEach(trackFetcher.searchResults, id: \.self) { result in
+                        SearchListCell(trackFetcher: self.trackFetcher, audioTrack: result)                    
+                    }
                 }
             }
         }
@@ -136,7 +138,28 @@ struct TrackDetail: View {
     }
 }
 
-struct PlayingQueue: View {
+struct ProgressBar: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Rectangle().frame(width: geometry.size.width,
+                                  height: geometry.size.height)
+                    .opacity(0.3)
+                    .foregroundColor(Color.gray)
+                // XXX This sucks to have the track fetcher so deeply imbedded here
+                Rectangle().frame(width: min(CGFloat(self.trackFetcher.playingTrackProgress ?? 0)*geometry.size.width,
+                                             geometry.size.width),
+                                  height: geometry.size.height)
+                  .foregroundColor(Color.green)
+                  .animation(.linear)
+            }.cornerRadius(45.0)
+        }
+    }
+}
+
+struct PlayingQueueView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     
     var body: some View {
@@ -217,17 +240,21 @@ struct ContentView: View {
                             Text(self.serverConnection.isPaused ? "\u{25B6}" : "\u{23F8}").font(.largeTitle) 
                         }.buttonStyle(PlainButtonStyle())
                         
-                        
                         if trackFetcher.currentTrack == nil {
                             Text("Nothing Playing").foregroundColor(Color.gray)
                         } else {
                             CurrentTrackView(track: trackFetcher.currentTrack!,
                                              trackFetcher: trackFetcher)
+                            ProgressBar(trackFetcher: trackFetcher)
+                              .frame(maxWidth: .infinity, maxHeight: 30)
+                        
                         }
+                        Spacer()
                     }
                       .disabled(trackFetcher.currentTrack == nil)
 
-                    PlayingQueue(trackFetcher: trackFetcher)
+                    PlayingQueueView(trackFetcher: trackFetcher)
+
                 }
             }
             SearchList(trackFetcher: trackFetcher)
