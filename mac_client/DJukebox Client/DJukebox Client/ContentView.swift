@@ -11,6 +11,8 @@ struct SearchListCell: View {
 
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var audioTrack: AudioTrack
+    @ObservedObject var serverConnection: ServerConnection //ServerType
+    
     @State private var toggleIsOn = false
     
     var body: some View {
@@ -31,7 +33,7 @@ struct SearchListCell: View {
             */
              Text("\(audioTrack.Artist) - \(audioTrack.Album ?? "") - \(audioTrack.Title)")
                .onTapGesture {
-                server.playTrack(withHash: self.audioTrack.SHA1) { track, error in
+                   self.serverConnection.playTrack(withHash: self.audioTrack.SHA1) { track, error in
                        self.trackFetcher.refreshQueue()
                        print("track \(track) error \(error)")
                    }
@@ -43,6 +45,7 @@ struct SearchListCell: View {
 struct SearchList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var searchQuery: String = "" 
+    @ObservedObject var serverConnection: ServerConnection //ServerType
 
     var body: some View {
         VStack {
@@ -60,7 +63,9 @@ struct SearchList: View {
             if trackFetcher.searchResults.count > 0 {
                 List {
                     ForEach(trackFetcher.searchResults, id: \.self) { result in
-                        SearchListCell(trackFetcher: self.trackFetcher, audioTrack: result)                    
+                        SearchListCell(trackFetcher: self.trackFetcher,
+                                       audioTrack: result,
+                                       serverConnection: self.serverConnection)                    
                     }
                 }
             }
@@ -70,6 +75,7 @@ struct SearchList: View {
 
 struct ArtistAlbumTrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var serverConnection: ServerConnection //ServerType
 
     var body: some View {
         HStack {
@@ -97,7 +103,7 @@ struct ArtistAlbumTrackList: View {
                 List(trackFetcher.tracks) { artist in
                     Text(artist.TrackNumber == nil ? artist.Title : "\(artist.TrackNumber!) - \(artist.Title)")
                       .onTapGesture {
-                          server.playTrack(withHash: artist.SHA1) { track, error in
+                          self.serverConnection.playTrack(withHash: artist.SHA1) { track, error in
                               self.trackFetcher.refreshQueue()
                               print("track \(track) error \(error)")
                           }
@@ -198,54 +204,25 @@ struct ContentView: View {
     var body: some View {
         VStack {
             Spacer()
-            ArtistAlbumTrackList(trackFetcher: trackFetcher)
+            ArtistAlbumTrackList(trackFetcher: trackFetcher,
+                                 serverConnection: serverConnection)
             HStack {
                 Spacer()
-                ButtonStack(serverConnection: serverConnection)
+                ButtonStack(trackFetcher: trackFetcher, serverConnection: serverConnection)
                 VStack(alignment: .leading) {
                     HStack {
-                        Button(action: {
-                            server.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "") { audioTrack, error in
-                                if let error = error {
-                                    print("DOH")
-                                } else {
-                                    print("enqueued: \(audioTrack)")
-                                }
-                                self.trackFetcher.refreshQueue()
-                            }
-                        }) {
-                            Text("\u{23F9}").font(.largeTitle) // stop
-                        }.buttonStyle(PlainButtonStyle())
-
-                        Button(action: {
-                            if server.isPaused {
-                                server.resumePlaying() { audioTrack, error in
-                                    if let error = error {
-                                        print("DOH")
-                                    } else {
-                                        print("enqueued: \(audioTrack)")
-                                    }
-                                }
-                            } else {
-                                server.pausePlaying() { audioTrack, error in
-                                    if let error = error {
-                                        print("DOH")
-                                    } else {
-                                        print("enqueued: \(audioTrack)")
-                                    }
-                                }
-                            }
-                        }) {
-                            // play / pause
-                            Text(self.serverConnection.isPaused ? "\u{25B6}" : "\u{23F8}").font(.largeTitle) 
-                        }.buttonStyle(PlainButtonStyle())
                         
                         if trackFetcher.currentTrack == nil {
                             Text("Nothing Playing").foregroundColor(Color.gray)
                         } else {
                             CurrentTrackView(track: trackFetcher.currentTrack!,
                                              trackFetcher: trackFetcher)
+                            .layoutPriority(1.0)
                             ProgressBar(trackFetcher: trackFetcher)
+                            //                              .frame(minWidth: 10, minHeight: 10)
+                              //.allowsTightening(true)
+                              .layoutPriority(0.1)
+                              //.resizable()
                               .frame(maxWidth: .infinity, maxHeight: 30)
                         
                         }
@@ -257,7 +234,9 @@ struct ContentView: View {
 
                 }
             }
-            SearchList(trackFetcher: trackFetcher)
+            SearchList(trackFetcher: trackFetcher,
+                       serverConnection: serverConnection)
+
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
