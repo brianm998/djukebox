@@ -1,5 +1,37 @@
 import SwiftUI
 
+struct ButtonStack: View {
+
+    @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var serverConnection: ServerConnection //ServerType
+    
+    let buttonWidth: CGFloat = 80
+    
+    var body: some View {
+        VStack(alignment: .trailing) {
+            HStack(alignment: .top) {
+                SkipCurrentTrackButton(trackFetcher: trackFetcher,
+                                       serverConnection: self.serverConnection)
+                PausePlayButton(serverConnection: self.serverConnection)
+            }        
+
+            PlayRandomTrackButton(trackFetcher: trackFetcher,
+                                  serverConnection: self.serverConnection,
+                                  buttonWidth: buttonWidth)
+
+            ClearQueueButton(trackFetcher: trackFetcher,
+                             serverConnection: self.serverConnection,
+                             buttonWidth: buttonWidth)
+
+            RefreshTracksFromServerButton(trackFetcher: trackFetcher,
+                                          buttonWidth: buttonWidth)
+
+            RefreshQueueButton(trackFetcher: trackFetcher,
+                               buttonWidth: buttonWidth)
+        }        
+    }
+}
+
 struct PausePlayButton: View {
 
     @ObservedObject var serverConnection: ServerConnection //ServerType
@@ -115,38 +147,6 @@ struct RefreshQueueButton: View {
             Text("Refresh Q")
               .frame(width: buttonWidth)
         }
-    }
-}
-
-struct ButtonStack: View {
-
-    @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
-    
-    let buttonWidth: CGFloat = 80
-    
-    var body: some View {
-        VStack(alignment: .trailing) {
-            HStack(alignment: .top) {
-                SkipCurrentTrackButton(trackFetcher: trackFetcher,
-                                       serverConnection: self.serverConnection)
-                PausePlayButton(serverConnection: self.serverConnection)
-            }        
-
-            PlayRandomTrackButton(trackFetcher: trackFetcher,
-                                  serverConnection: self.serverConnection,
-                                  buttonWidth: buttonWidth)
-
-            ClearQueueButton(trackFetcher: trackFetcher,
-                             serverConnection: self.serverConnection,
-                             buttonWidth: buttonWidth)
-
-            RefreshTracksFromServerButton(trackFetcher: trackFetcher,
-                                          buttonWidth: buttonWidth)
-
-            RefreshQueueButton(trackFetcher: trackFetcher,
-                               buttonWidth: buttonWidth)
-        }        
     }
 }
 

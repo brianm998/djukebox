@@ -197,6 +197,34 @@ struct CurrentTrackView: View {
     }
 }
 
+struct PlayingTracksView: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var serverConnection: ServerConnection //ServerType
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Spacer()
+                if trackFetcher.currentTrack == nil {
+                    Text("Nothing Playing").foregroundColor(Color.gray)
+                } else {
+                    CurrentTrackView(track: trackFetcher.currentTrack!,
+                                     trackFetcher: trackFetcher)
+                      .layoutPriority(1.0)
+                    ProgressBar(trackFetcher: trackFetcher)
+                      .layoutPriority(0.1)
+                      .frame(maxWidth: .infinity, maxHeight: 20)
+                }
+                Spacer()
+            }
+              .disabled(trackFetcher.currentTrack == nil)
+
+            PlayingQueueView(trackFetcher: trackFetcher)
+
+        }
+    }
+}
+
+
 struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
@@ -209,30 +237,8 @@ struct ContentView: View {
             HStack {
                 Spacer()
                 ButtonStack(trackFetcher: trackFetcher, serverConnection: serverConnection)
-                VStack(alignment: .leading) {
-                    HStack {
-                        
-                        if trackFetcher.currentTrack == nil {
-                            Text("Nothing Playing").foregroundColor(Color.gray)
-                        } else {
-                            CurrentTrackView(track: trackFetcher.currentTrack!,
-                                             trackFetcher: trackFetcher)
-                            .layoutPriority(1.0)
-                            ProgressBar(trackFetcher: trackFetcher)
-                            //                              .frame(minWidth: 10, minHeight: 10)
-                              //.allowsTightening(true)
-                              .layoutPriority(0.1)
-                              //.resizable()
-                              .frame(maxWidth: .infinity, maxHeight: 30)
-                        
-                        }
-                        Spacer()
-                    }
-                      .disabled(trackFetcher.currentTrack == nil)
-
-                    PlayingQueueView(trackFetcher: trackFetcher)
-
-                }
+                Spacer()
+                PlayingTracksView(trackFetcher: trackFetcher, serverConnection: serverConnection)
             }
             SearchList(trackFetcher: trackFetcher,
                        serverConnection: serverConnection)
