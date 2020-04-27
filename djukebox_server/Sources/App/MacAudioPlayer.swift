@@ -70,27 +70,8 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
             throw Abort(.badRequest)
         }
 
-        if fromIndex < toIndex {
-            // moving up
-            let part = Array(self.trackQueue[0..<fromIndex])
-            let part2 = Array(self.trackQueue[fromIndex+1..<toIndex+1])
-            let part3 = [track.SHA1]
-            var part4: [String] = []
-            if(toIndex + 1 < self.trackQueue.count) {
-                part4 = Array(self.trackQueue[toIndex + 1..<self.trackQueue.count])
-            }
-            self.trackQueue = part + part2 + part3 + part4
-        } else {
-            // moving down
-            let part = Array(self.trackQueue[0..<toIndex])
-            let part2 = [track.SHA1]
-            let part3 = Array(self.trackQueue[toIndex..<fromIndex])
-            var part4: [String] = []
-            if(fromIndex+1 < self.trackQueue.count) {
-                part4 = Array(self.trackQueue[fromIndex+1..<self.trackQueue.count])
-            }
-            self.trackQueue = part + part2 + part3 + part4
-        }
+        self.trackQueue.remove(at: fromIndex)
+        self.trackQueue.insert(track.SHA1, at: toIndex)
     }
     
     public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
@@ -167,7 +148,7 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         
         isPlaying = true
         do {
-            if let (audioTrack, url) = self.trackFinder.track(forHash: nextTrackHash) {
+            if let (_, url) = self.trackFinder.track(forHash: nextTrackHash) {
                 print("about to play \(url)")
                 let player = try AVAudioPlayer(contentsOf: url)
                 player.delegate = self
