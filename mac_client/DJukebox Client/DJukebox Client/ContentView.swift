@@ -167,15 +167,47 @@ struct ProgressBar: View {
 
 struct PlayingQueueView: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var serverConnection: ServerConnection //ServerType
     
     var body: some View {
         List {
             ForEach(trackFetcher.playingQueue, id: \.self) { track in
                 TrackDetail(track: track, trackFetcher: self.trackFetcher)
-            }.onDelete(perform: delete)
+            }
+              .onDelete(perform: delete)
+              .onMove(perform: move)
         }
     }
-    
+
+    private func move(source: IndexSet, destination: Int) {
+        let startIndex = source.sorted()[0]
+        let endIndex = destination
+        let trackToMove = trackFetcher.playingQueue[startIndex]
+        if startIndex < endIndex {
+            let positionsAhead = endIndex-startIndex-1
+            print("moving track \(trackToMove.SHA1) up \(positionsAhead) positions from \(startIndex)")
+            serverConnection.movePlayingTrack(withHash: trackToMove.SHA1,
+                                              fromIndex: startIndex,
+                                              toIndex: startIndex + positionsAhead) { playingQueue, error in
+                if let queue = playingQueue {
+                    self.trackFetcher.update(playingQueue: queue)
+                }
+            }
+        } else if startIndex > endIndex {
+            let positionsBehind = startIndex-endIndex
+            print("moving track \(trackToMove.SHA1) down \(positionsBehind) positions from \(startIndex)")
+            serverConnection.movePlayingTrack(withHash: trackToMove.SHA1,
+                                              fromIndex: startIndex,
+                                              toIndex: startIndex - positionsBehind) { playingQueue, error in
+                if let queue = playingQueue {
+                    self.trackFetcher.update(playingQueue: queue)
+                }
+            }
+        } else {
+            print("not moving at all")
+        }
+    }
+
     func delete (at offsets: IndexSet) {
         print("delete @ \(offsets)")
 
@@ -218,8 +250,7 @@ struct PlayingTracksView: View {
             }
               .disabled(trackFetcher.currentTrack == nil)
 
-            PlayingQueueView(trackFetcher: trackFetcher)
-
+            PlayingQueueView(trackFetcher: trackFetcher, serverConnection: serverConnection)
         }
     }
 }
@@ -234,12 +265,16 @@ struct ContentView: View {
             Spacer()
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
                                  serverConnection: serverConnection)
+
+            
             HStack {
                 Spacer()
                 ButtonStack(trackFetcher: trackFetcher, serverConnection: serverConnection)
                 Spacer()
                 PlayingTracksView(trackFetcher: trackFetcher, serverConnection: serverConnection)
             }
+
+            
             SearchList(trackFetcher: trackFetcher,
                        serverConnection: serverConnection)
 

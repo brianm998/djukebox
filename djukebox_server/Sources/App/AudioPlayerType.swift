@@ -18,5 +18,6 @@ public protocol AudioPlayerType {
     func pause() 
     func resume()
     func clearQueue()
+    func move(track: AudioTrack, fromIndex: Int, toIndex: Int) throws
 }
 

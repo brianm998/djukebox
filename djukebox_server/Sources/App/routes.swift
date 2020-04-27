@@ -42,13 +42,13 @@ class AuthController {
     }
 
     func track<T>(from req: Request,
-                  closure: (AudioTrack, String) -> T) throws -> T
+                  closure: (AudioTrack, String) throws -> T) throws -> T
     {
         return try self.auth(request: req) {
             if let hash = req.parameters.get("sha1"),
                let (track, path) = trackFinder.track(forHash: hash)
             {
-                return closure(track, path.path)
+                return try closure(track, path.path)
             } else {
                 throw Abort(.notFound)
             }
@@ -134,6 +134,24 @@ func routes(_ app: Application) throws {
         }
     }
 
+    app.get("move", ":sha1", ":start", ":destination") { req -> PlayingQueue in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.auth(request: req) {
+            return try authControl.track(from: req) { track, _ in
+                if let startParam = req.parameters.get("start"),
+                   let destParam = req.parameters.get("destination"),
+                   let start = Int(startParam),
+                   let dest = Int(destParam)
+                {
+                    try audioPlayer.move(track: track, fromIndex: start, toIndex: dest)
+                    return listQueue()
+                } else {
+                    throw Abort(.badRequest)
+                }
+            }
+        }
+    }
+    
     // Pause playing
     // curl localhost:8080/pause
     app.get("pause") { req -> Response in
@@ -159,18 +177,22 @@ func routes(_ app: Application) throws {
     app.get("queue") { req -> PlayingQueue in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.auth(request: req) {
-            var tracks: [AudioTrack] = []
-            if let playingTrack = audioPlayer.playingTrack {
-                tracks.append(playingTrack)
-            }
-            for trackHash in audioPlayer.trackQueue {
-                if let track = trackFinder.audioTrack(forHash: trackHash) {
-                    tracks.append(track)
-                }
-            }
-            return PlayingQueue(tracks: tracks,
-                                playingTrackDuration: audioPlayer.playingTrackDuration,
-                                playingTrackPosition: audioPlayer.playingTrackPosition)
+            return listQueue()
         }
+    }
+
+    func listQueue() -> PlayingQueue {
+        var tracks: [AudioTrack] = []
+        if let playingTrack = audioPlayer.playingTrack {
+            tracks.append(playingTrack)
+        }
+        for trackHash in audioPlayer.trackQueue {
+            if let track = trackFinder.audioTrack(forHash: trackHash) {
+                tracks.append(track)
+            }
+        }
+        return PlayingQueue(tracks: tracks,
+                            playingTrackDuration: audioPlayer.playingTrackDuration,
+                            playingTrackPosition: audioPlayer.playingTrackPosition)
     }
 }

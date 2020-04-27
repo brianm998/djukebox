@@ -12,6 +12,8 @@ protocol ServerType {
     func trackInfo(forHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) 
     func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void)
     func stopPlayingTrack(withHash hash: String, closure: @escaping (Bool, Error?) -> Void)
+    func movePlayingTrack(withHash hash: String, fromIndex: Int, toIndex: Int,
+                          closure: @escaping (PlayingQueue?, Error?) -> Void)
     var isPaused: Bool { get }
 }
 
@@ -116,7 +118,23 @@ class ServerConnection: ObservableObject, ServerType {
     func stopPlayingTrack(withHash hash: String, closure: @escaping (Bool, Error?) -> Void) {
         self.request(path: "stop/\(hash)", closure: closure)
     }
-    
+
+    func movePlayingTrack(withHash hash: String,
+                          fromIndex: Int,
+                          toIndex: Int,
+                          closure: @escaping (PlayingQueue?, Error?) -> Void)
+    {
+        self.requestJson(atPath: "move/\(hash)/\(fromIndex)/\(toIndex)") { (playingQueue: PlayingQueue?, error: Error?) in
+            if let error = error {
+                closure(nil, error)
+            } else if let playingQueue = playingQueue {
+                closure(playingQueue, nil)
+            } else {
+                closure(nil, nil) // XXX ???
+            }
+        }
+    }
+        
     func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
         self.requestJson(atPath: "queue") { (playingQueue: PlayingQueue?, error: Error?) in
             if let error = error {

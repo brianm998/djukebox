@@ -30,6 +30,10 @@ public class LinuxAudioPlayer: AudioPlayerType {
         trackQueue = []
     }
 
+    public func move(track: AudioTrack, fromIndex: Int, toIndex: Int) throws {
+        // XXX unimplmeented
+    }
+    
     fileprivate func playingDone() {
         self.playingTrack = nil
         self.isPlaying = false

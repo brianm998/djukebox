@@ -79,33 +79,34 @@ public class TrackFetcher: ObservableObject {
             if success { self.refreshQueue() }
         }
     }
+
+    func update(playingQueue: PlayingQueue) {
+        DispatchQueue.main.async {
+            if let duration = playingQueue.playingTrackDuration,
+               let position = playingQueue.playingTrackPosition
+            {
+                self.playingTrackProgress = Float(position)/Float(duration)
+                //print("self.playingTrackProgress \(self.playingTrackProgress)")
+            } else {
+                self.playingTrackProgress = nil
+            }
+            if playingQueue.tracks.count > 0 {
+                self.currentTrack = playingQueue.tracks[0]
+                if playingQueue.tracks.count > 1 {
+                    self.playingQueue = Array(playingQueue.tracks[1..<playingQueue.tracks.count])
+                } else {
+                    self.playingQueue = []
+                }
+            } else {
+                self.currentTrack = nil
+                self.playingQueue = []
+            }
+        }
+    }
     
     func refreshQueue() {
         server.listPlayingQueue() { playingQueue, error in
-            if let playingQueue = playingQueue {
-                print("got \(playingQueue.tracks.count) tracks: \(playingQueue.tracks)")
-                DispatchQueue.main.async {
-                    if let duration = playingQueue.playingTrackDuration,
-                       let position = playingQueue.playingTrackPosition
-                    {
-                        self.playingTrackProgress = Float(position)/Float(duration)
-                        print("self.playingTrackProgress \(self.playingTrackProgress)")
-                    } else {
-                        self.playingTrackProgress = nil
-                    }
-                    if playingQueue.tracks.count > 0 {
-                        self.currentTrack = playingQueue.tracks[0]
-                        if playingQueue.tracks.count > 1 {
-                            self.playingQueue = Array(playingQueue.tracks[1..<playingQueue.tracks.count])
-                        } else {
-                            self.playingQueue = []
-                        }
-                    } else {
-                        self.currentTrack = nil
-                        self.playingQueue = []
-                    }
-                }
-            }
+            if let queue = playingQueue { self.update(playingQueue: queue) }
         }
     }
 

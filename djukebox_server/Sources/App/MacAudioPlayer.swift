@@ -60,6 +60,39 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         trackQueue = []
     }
 
+    public func move(track: AudioTrack, fromIndex: Int, toIndex: Int) throws {
+        if fromIndex < 0,
+           toIndex < 0,
+           fromIndex >= trackQueue.count,
+           toIndex >= trackQueue.count,
+           trackQueue[fromIndex] != track.SHA1
+        {
+            throw Abort(.badRequest)
+        }
+
+        if fromIndex < toIndex {
+            // moving up
+            let part = Array(self.trackQueue[0..<fromIndex])
+            let part2 = Array(self.trackQueue[fromIndex+1..<toIndex+1])
+            let part3 = [track.SHA1]
+            var part4: [String] = []
+            if(toIndex + 1 < self.trackQueue.count) {
+                part4 = Array(self.trackQueue[toIndex + 1..<self.trackQueue.count])
+            }
+            self.trackQueue = part + part2 + part3 + part4
+        } else {
+            // moving down
+            let part = Array(self.trackQueue[0..<toIndex])
+            let part2 = [track.SHA1]
+            let part3 = Array(self.trackQueue[toIndex..<fromIndex])
+            var part4: [String] = []
+            if(fromIndex+1 < self.trackQueue.count) {
+                part4 = Array(self.trackQueue[fromIndex+1..<self.trackQueue.count])
+            }
+            self.trackQueue = part + part2 + part3 + part4
+        }
+    }
+    
     public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         // XXX this delegate method never gets called :(
         print("song did finish")
