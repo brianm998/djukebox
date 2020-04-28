@@ -46,6 +46,24 @@ public class AudioTrack: Decodable,
         hasher.combine(SHA1)
     }
 
+    public var timeInterval: TimeInterval {
+        var ret: TimeInterval = 0
+        if let duration = self.Duration {
+            // expecting 0:07:11 (approx)
+            let values = duration.split(separator: " ")[0].split(separator: ":")
+            if values.count == 3,
+               let hours = Double(values[0]),
+               let minutes = Double(values[1]),
+               let seconds = Double(values[2])
+            {
+                ret += seconds
+                ret += minutes * 60
+                ret += hours * 60 * 60
+            }
+        }
+        return ret
+    }
+
     let Artist: String
     let Album: String?
     let Title: String

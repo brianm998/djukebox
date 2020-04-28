@@ -20,6 +20,10 @@ public class TrackFetcher: ObservableObject {
     @Published var searchResults: [AudioTrack] = []
     @Published var playingTrackProgress: Float? // 0..1
 
+    @Published var totalDuration: TimeInterval = 0
+
+    @Published var completionTime: Date = Date()
+    
     let server: ServerType
 
     var desiredArtist: String?
@@ -85,25 +89,35 @@ public class TrackFetcher: ObservableObject {
 
     func update(playingQueue: PlayingQueue) {
         DispatchQueue.main.async {
+            var totalDuration: TimeInterval = 0
             if let duration = playingQueue.playingTrackDuration,
                let position = playingQueue.playingTrackPosition
             {
                 self.playingTrackProgress = Float(position)/Float(duration)
+                totalDuration += duration - position
                 //print("self.playingTrackProgress \(self.playingTrackProgress)")
             } else {
                 self.playingTrackProgress = nil
             }
             if playingQueue.tracks.count > 0 {
+                for track in playingQueue.tracks {
+                    totalDuration += track.timeInterval
+                }
                 self.currentTrack = playingQueue.tracks[0]
+
                 if playingQueue.tracks.count > 1 {
                     self.playingQueue = Array(playingQueue.tracks[1..<playingQueue.tracks.count])
                 } else {
                     self.playingQueue = []
                 }
+                
+                self.totalDuration = totalDuration
             } else {
                 self.currentTrack = nil
                 self.playingQueue = []
+                self.totalDuration = 0
             }
+            self.completionTime = Date(timeIntervalSinceNow: totalDuration)
         }
     }
     

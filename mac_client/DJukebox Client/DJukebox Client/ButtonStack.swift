@@ -6,14 +6,38 @@ struct ButtonStack: View {
     @ObservedObject var serverConnection: ServerConnection //ServerType
     
     let buttonWidth: CGFloat = 80
+
+    func format(duration: TimeInterval) -> String {
+        let seconds = Int(duration) % 60
+        let minutes = Int(duration/60) % 60
+        let hours = Int(duration/(60*60))
+        if hours > 0 {
+            return "\(hours) hours"
+        } else if minutes > 0 {
+            return "\(minutes) minutes"
+        } else {
+            return "\(seconds) seconds"
+        }
+    }
+    
+    func string(forTime date: Date) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .none
+        dateFormatter.timeStyle = .medium
+        return dateFormatter.string(from: date)
+    }
     
     var body: some View {
         VStack(alignment: .trailing) {
+            Text(self.format(duration: trackFetcher.totalDuration))
+            Text(self.string(forTime:trackFetcher.completionTime))
             HStack(alignment: .top) {
                 SkipCurrentTrackButton(trackFetcher: trackFetcher,
                                        serverConnection: self.serverConnection)
                 PausePlayButton(serverConnection: self.serverConnection)
-            }        
+            }
+                //.alignmentGuide(.top, computeValue: { d in (d[explicit: .top] ?? 100) })
+              //.alignmentGuide(.top, computeValue: { d in (d[.top] ?? 100) })      
 
             PlayRandomTrackButton(trackFetcher: trackFetcher,
                                   serverConnection: self.serverConnection,
