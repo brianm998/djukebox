@@ -13,7 +13,7 @@ public protocol AudioPlayerType {
     var playingTrackPosition: TimeInterval? { get }
     
     func play(sha1Hash: String)
-    func stopPlaying(sha1Hash: String)
+    func stopPlaying(sha1Hash: String, atIndex index: Int)
     func skip() 
     func pause() 
     func resume()
