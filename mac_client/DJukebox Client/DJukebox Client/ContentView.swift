@@ -73,43 +73,109 @@ struct SearchList: View {
     }
 }
 
+struct ArtistList: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+
+    var body: some View {
+        VStack {
+            Text("Artists")
+            List(trackFetcher.artists) { artist in
+                Text(artist.Artist)
+                  .onTapGesture {
+                      self.trackFetcher.showAlbums(forArtist: artist.Artist)
+                  }
+               
+            }
+        }
+    }
+}
+
+struct AlbumList: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+
+    var body: some View {
+        VStack {
+            Text(trackFetcher.albumTitle)
+            List(trackFetcher.albums) { artist in
+                Text(artist.Album ?? "Singles") // XXX constant
+                  .foregroundColor(artist.Album == nil ? Color.red : Color.black)
+                  .onTapGesture {
+                      self.trackFetcher.showTracks(for: artist)
+                  }
+            }
+        }
+    }
+}
+
+struct TrackList: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var serverConnection: ServerConnection //ServerType
+
+    var body: some View {
+        VStack {
+            Text(trackFetcher.trackTitle)
+              .gesture(
+                DragGesture(minimumDistance: 150)
+                  .onEnded{ fuck in
+                      self.makeNewWindow()
+                  }
+              )
+            List(trackFetcher.tracks) { track in
+                Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title)")
+                  .onTapGesture {
+                      self.serverConnection.playTrack(withHash: track.SHA1) { track, error in
+                          self.trackFetcher.refreshQueue()
+                          print("track \(track) error \(error)")
+                      }
+                  }
+                  .onDrag {
+                      let provider = NSItemProvider(object: track.SHA1 as NSString)
+                      provider.suggestedName = track.Title
+                      return provider
+                  }
+            }
+        }
+    }
+
+    fileprivate func makeNewWindow() {
+        let trackFetcher = TrackFetcher(withServer: self.serverConnection)
+        trackFetcher.tracks = self.trackFetcher.tracks
+        trackFetcher.desiredArtist = self.trackFetcher.desiredArtist
+        trackFetcher.desiredAlbum = self.trackFetcher.desiredAlbum
+
+        if let artist = trackFetcher.desiredArtist,
+           let album = trackFetcher.desiredAlbum
+        {
+            trackFetcher.trackTitle = "\(artist) \(album) songs"
+        } else {
+            trackFetcher.trackTitle = "FIX THIS!"
+        }
+        let contentView = TrackList(trackFetcher: trackFetcher, serverConnection: self.serverConnection)
+        var window = NSWindow(
+          contentRect: NSRect(x: 30, y: 30, // this position is ignored :(
+                              width: 250, height: 300), 
+          styleMask: [.titled, .closable, .utilityWindow],
+          backing: .buffered, defer: false)
+        window.center()
+        window.setFrameAutosaveName("Main Window")
+        window.contentView = NSHostingView(rootView: contentView)
+        window.makeKeyAndOrderFront(nil)
+        windows.append(window)
+    }
+}
+
+// this is only here to avoid an autorelease crash upon release of sub-windows
+fileprivate var windows: [NSWindow] = [] 
+
 struct ArtistAlbumTrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
 
     var body: some View {
         HStack {
-            VStack {
-                Text("Artists")
-                List(trackFetcher.artists) { artist in
-                    Text(artist.Artist)
-                      .onTapGesture {
-                          self.trackFetcher.showAlbums(forArtist: artist.Artist)
-                      }
-                }
-            }
-            VStack {
-                Text(trackFetcher.albumTitle)
-                List(trackFetcher.albums) { artist in
-                    Text(artist.Album ?? "Singles") // XXX constant
-                      .foregroundColor(artist.Album == nil ? Color.red : Color.black)
-                      .onTapGesture {
-                          self.trackFetcher.showTracks(for: artist)
-                      }
-                }
-            }
-            VStack {
-                Text(trackFetcher.trackTitle)
-                List(trackFetcher.tracks) { artist in
-                    Text(artist.TrackNumber == nil ? artist.Title : "\(artist.TrackNumber!) - \(artist.Title)")
-                      .onTapGesture {
-                          self.serverConnection.playTrack(withHash: artist.SHA1) { track, error in
-                              self.trackFetcher.refreshQueue()
-                              print("track \(track) error \(error)")
-                          }
-                      }
-                }
-            }
+            ArtistList(trackFetcher: trackFetcher)
+            AlbumList(trackFetcher: trackFetcher)
+            TrackList(trackFetcher: trackFetcher, serverConnection: serverConnection)
         }
     }
 }
@@ -154,6 +220,8 @@ struct ProgressBar: View {
                                   height: geometry.size.height)
                     .opacity(0.3)
                     .foregroundColor(Color.gray)
+
+
                 // XXX This sucks to have the track fetcher so deeply imbedded here
                 Rectangle().frame(width: min(CGFloat(self.trackFetcher.playingTrackProgress ?? 0)*geometry.size.width,
                                              geometry.size.width),
@@ -176,9 +244,20 @@ struct PlayingQueueView: View {
             }
               .onDelete(perform: delete)
               .onMove(perform: move)
+              //.onInsert(of: ["public.url"], perform: drop) // XXX doesn't work
         }
     }
-
+    private func drop(at index: Int, _ items: [NSItemProvider]) {
+        for item in items {
+            _ = item.loadObject(ofClass: URL.self) { url, error in
+                print("url \(url) error \(error)")
+                //DispatchQueue.main.async {
+                    //url.map { self.links.insert($0, at: index) }
+            //}
+            }
+        }
+    }
+    
     private func move(source: IndexSet, destination: Int) {
         let startIndex = source.sorted()[0]
         let endIndex = destination
@@ -225,14 +304,56 @@ struct CurrentTrackView: View {
 
     var body: some View {
         TrackDetail(track: track, trackFetcher: self.trackFetcher)
-//        Text("\(track.Artist) \(track.Title)")
+        //        Text("\(track.Artist) \(track.Title)")
+    }
+}
+struct MyDropDelegate: DropDelegate {
+    func validateDrop(info: DropInfo) -> Bool {
+        return info.hasItemsConforming(to: [kUTTypePlainText as String])
+    }
+    
+    func dropEntered(info: DropInfo) {
+        print("dropEntered")
+        //NSSound(named: "Morse")?.play()
+    }
+    
+    func performDrop(info: DropInfo) -> Bool {
+        print("performDrop")
+        //NSSound(named: "Submarine")?.play()
+        
+        //let gridPosition = getGridPosition(location: info.location)
+        //self.active = gridPosition
+        
+        if let item = info.itemProviders(for: [kUTTypePlainText as String]).first {
+            item.loadItem(forTypeIdentifier: kUTTypePlainText as String, options: nil) { (urlData, error) in
+                //DispatchQueue.main.async {
+                print("UrlData \(urlData)")
+                    if let urlData = urlData as? String {
+                        print("FUCK: \(urlData)")
+                    } else {
+                        print("FAILED1")
+                    }
+            //}
+            }
+
+            
+            return true
+            
+        } else {
+            print("FAILED")
+            return false
+        }
     }
 }
 
 struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
+
+    let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
+    
     var body: some View {
+        
         VStack(alignment: .leading) {
             HStack {
                 Spacer()
@@ -251,6 +372,29 @@ struct PlayingTracksView: View {
               .disabled(trackFetcher.currentTrack == nil)
 
             PlayingQueueView(trackFetcher: trackFetcher, serverConnection: serverConnection)
+
+              .onDrop(of: [kUTTypePlainText as String], delegate: dropDelegate)
+            /*
+              .onDrop(of: [kUTTypePlainText as String], isTargeted: nil) { providers in
+                  for provider in providers {
+                      print("fuck \(provider.registeredTypeIdentifiers())")
+                      if provider.hasItemConformingToTypeIdentifier(kUTTypePlainText as String) {
+                          print("FUCK YES")
+                          provider.loadItem(forTypeIdentifier: kUTTypePlainText as String) { item, error in
+                              print("got item \(item) error \(error)")
+                          }
+                      } else {
+                          print("FUCK NO")
+                      }
+                      
+                      provider.loadObject(ofClass: String.self) { string,two  in
+                          print("woot! \(string) \(two)")
+                      }
+
+                  }
+                  return false
+              }
+*/
         }
     }
 }

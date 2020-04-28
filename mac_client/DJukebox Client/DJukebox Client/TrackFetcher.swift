@@ -21,6 +21,9 @@ public class TrackFetcher: ObservableObject {
     @Published var playingTrackProgress: Float? // 0..1
 
     let server: ServerType
+
+    var desiredArtist: String?
+    var desiredAlbum: String?
     
     init(withServer server: ServerType) {
         self.server = server
@@ -114,8 +117,8 @@ public class TrackFetcher: ObservableObject {
     func showTracks(for audioTrack: AudioTrack) {
         var tracks: [AudioTrack] = []
 
-        let desiredArtist = audioTrack.Artist
-        let desiredAlbum = audioTrack.Album
+        desiredArtist = audioTrack.Artist
+        desiredAlbum = audioTrack.Album
 
         if let desiredAlbum = desiredAlbum {
             for track in allTracks {
@@ -137,10 +140,10 @@ public class TrackFetcher: ObservableObject {
         
         DispatchQueue.main.async {
             self.tracks = tracks.sorted()
-            if let desiredAlbum = desiredAlbum {
+            if let desiredAlbum = self.desiredAlbum {
                 self.trackTitle = "\(desiredAlbum) songs"
             } else {
-                self.trackTitle = "\(desiredArtist) songs"
+                self.trackTitle = "\(self.desiredArtist) songs"
             }
         }
     }
