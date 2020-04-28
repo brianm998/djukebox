@@ -21,6 +21,7 @@ public class TrackFetcher: ObservableObject {
     @Published var playingTrackProgress: Float? // 0..1
 
     @Published var totalDuration: TimeInterval = 0
+    @Published var currentTrackRemainingTime: TimeInterval = 0
 
     @Published var completionTime: Date = Date()
     
@@ -89,20 +90,7 @@ public class TrackFetcher: ObservableObject {
 
     func update(playingQueue: PlayingQueue) {
         DispatchQueue.main.async {
-            var totalDuration: TimeInterval = 0
-            if let duration = playingQueue.playingTrackDuration,
-               let position = playingQueue.playingTrackPosition
-            {
-                self.playingTrackProgress = Float(position)/Float(duration)
-                totalDuration += duration - position
-                //print("self.playingTrackProgress \(self.playingTrackProgress)")
-            } else {
-                self.playingTrackProgress = nil
-            }
             if playingQueue.tracks.count > 0 {
-                for track in playingQueue.tracks {
-                    totalDuration += track.timeInterval
-                }
                 self.currentTrack = playingQueue.tracks[0]
 
                 if playingQueue.tracks.count > 1 {
@@ -110,13 +98,26 @@ public class TrackFetcher: ObservableObject {
                 } else {
                     self.playingQueue = []
                 }
-                
-                self.totalDuration = totalDuration
             } else {
                 self.currentTrack = nil
                 self.playingQueue = []
-                self.totalDuration = 0
             }
+            var totalDuration: TimeInterval = 0
+            if let duration = playingQueue.playingTrackDuration,
+               let position = playingQueue.playingTrackPosition
+            {
+                self.playingTrackProgress = Float(position)/Float(duration)
+                self.currentTrackRemainingTime = duration - position
+                print("duration \(duration) - position \(position) = \(duration - position)")
+                totalDuration = self.currentTrackRemainingTime
+            } else {
+                self.playingTrackProgress = nil
+            }
+            for (index, track) in playingQueue.tracks.enumerated() {
+                print("adding track.timeInterval \(track.timeInterval)")
+                if index > 0 { totalDuration += track.timeInterval }
+            }
+            self.totalDuration = totalDuration
             self.completionTime = Date(timeIntervalSinceNow: totalDuration)
         }
     }
