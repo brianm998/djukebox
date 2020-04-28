@@ -11,7 +11,9 @@ protocol ServerType {
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void)
     func trackInfo(forHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) 
     func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void)
-    func stopPlayingTrack(withHash hash: String, closure: @escaping (Bool, Error?) -> Void)
+    func stopPlayingTrack(withHash hash: String,
+                          atIndex index: Int?,
+                          closure: @escaping (Bool, Error?) -> Void)
     func movePlayingTrack(withHash hash: String, fromIndex: Int, toIndex: Int,
                           closure: @escaping (PlayingQueue?, Error?) -> Void)
     var isPaused: Bool { get }
@@ -115,8 +117,15 @@ class ServerConnection: ObservableObject, ServerType {
         }
     }
 
-    func stopPlayingTrack(withHash hash: String, closure: @escaping (Bool, Error?) -> Void) {
-        self.request(path: "stop/\(hash)", closure: closure)
+    func stopPlayingTrack(withHash hash: String,
+                          atIndex index: Int? = nil,
+                          closure: @escaping (Bool, Error?) -> Void)
+    {
+        if let index = index {
+            self.request(path: "stop/\(hash)/\(index)", closure: closure)
+        } else {
+            self.request(path: "stop/\(hash)", closure: closure)
+        }
     }
 
     func movePlayingTrack(withHash hash: String,

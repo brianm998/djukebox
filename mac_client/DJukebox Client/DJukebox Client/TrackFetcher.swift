@@ -78,7 +78,7 @@ public class TrackFetcher: ObservableObject {
         guard index >= 0 else { return }
         guard index < playingQueue.count else { return }
 
-        server.stopPlayingTrack(withHash: playingQueue[index].SHA1) { success, error in
+        server.stopPlayingTrack(withHash: playingQueue[index].SHA1, atIndex: index) { success, error in
             if success { self.refreshQueue() }
         }
     }

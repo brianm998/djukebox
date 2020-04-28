@@ -28,6 +28,8 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
     public var isPlaying = false
 
     public var trackQueue: [String] = []
+
+    fileprivate var trackQueueSemaphore = DispatchSemaphore(value: 1)
     
     public var playingTrack: AudioTrack?
 
@@ -57,21 +59,25 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
     }
 
     public func clearQueue() {
+        self.trackQueueSemaphore.wait()
         trackQueue = []
+        self.trackQueueSemaphore.signal()
     }
 
     public func move(track: AudioTrack, fromIndex: Int, toIndex: Int) throws {
+        self.trackQueueSemaphore.wait()
         if fromIndex < 0,
            toIndex < 0,
            fromIndex >= trackQueue.count,
            toIndex >= trackQueue.count,
            trackQueue[fromIndex] != track.SHA1
         {
+            self.trackQueueSemaphore.signal()
             throw Abort(.badRequest)
         }
-
         self.trackQueue.remove(at: fromIndex)
         self.trackQueue.insert(track.SHA1, at: toIndex)
+        self.trackQueueSemaphore.signal()
     }
     
     public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
@@ -88,34 +94,26 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         self.serviceQueue()
     }
     
-    public func stopPlaying(sha1Hash: String) {
+    public func stopPlaying(sha1Hash: String, atIndex index: Int) {
         print("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
-        if let playingTrack = playingTrack,
-           playingTrack.SHA1 == sha1Hash
-        {
-            self.skip()
-        } else {
-            for (index, hash) in trackQueue.enumerated() {
-                print("index \(index) hash \(sha1Hash)")
-                if hash == sha1Hash {
-                    print("index \(index) needs to be removed")
-                    if index == 0 {
-                        trackQueue = Array(trackQueue[1..<trackQueue.count])
-                    } else if index == trackQueue.count - 1 {
-                        trackQueue = Array(trackQueue[0..<index])
-                    } else if index < trackQueue.count {
-                        trackQueue = Array(trackQueue[0..<index]) + Array(trackQueue[index+1..<trackQueue.count])
-                    } else {
-                        print("DOH")
-                    }
-                }
+        self.trackQueueSemaphore.wait()
+        for (trackIndex, hash) in trackQueue.enumerated() {
+            print("index \(trackIndex) hash \(sha1Hash)")
+            if hash == sha1Hash,
+               index == trackIndex
+            {
+                print("index \(index) needs to be removed")
+                self.trackQueue.remove(at: index)
             }
         }
+        self.trackQueueSemaphore.signal()
     }
     
     public func play(sha1Hash: String) {
         // XXX look up this hash beforehand, and throw error if not found?
+        self.trackQueueSemaphore.wait()
         trackQueue.append(sha1Hash)
+        self.trackQueueSemaphore.signal()
         print("calling serviceQueue from play")
         serviceQueue()
     }
@@ -141,9 +139,14 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
     }
 
     fileprivate func serviceQueue() {
-        guard trackQueue.count > 0 else { return }
         guard !isPlaying else { return }
+        self.trackQueueSemaphore.wait()
+        guard trackQueue.count > 0 else {
+            self.trackQueueSemaphore.signal()
+            return
+        }
         let nextTrackHash = trackQueue.removeFirst()
+        self.trackQueueSemaphore.signal()
         self.playingTrack = trackFinder.audioTrack(forHash: nextTrackHash)
         
         isPlaying = true

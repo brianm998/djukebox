@@ -124,12 +124,18 @@ func routes(_ app: Application) throws {
 
     // Stop playing a particular track
     // curl localhost:8080/stop/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
-    app.get("stop", ":sha1") { req -> Response in
+    app.get("stop", ":sha1", ":index") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.auth(request: req) {
             return try authControl.track(from: req) { track, _ in
-                audioPlayer.stopPlaying(sha1Hash: track.SHA1)
-                return Response(status: .ok)
+                if let indexStr = req.parameters.get("index"),
+                   let index = Int(indexStr)
+                {
+                    audioPlayer.stopPlaying(sha1Hash: track.SHA1, atIndex: index)
+                    return Response(status: .ok)
+                } else {
+                    return Response(status: .badRequest)
+                }
             }
         }
     }

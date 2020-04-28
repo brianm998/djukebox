@@ -78,6 +78,7 @@ struct ArtistList: View {
 
     var body: some View {
         VStack {
+            Spacer()
             Text("Artists")
             List(trackFetcher.artists) { artist in
                 Text(artist.Artist)
@@ -95,6 +96,7 @@ struct AlbumList: View {
 
     var body: some View {
         VStack {
+            Spacer()
             Text(trackFetcher.albumTitle)
             List(trackFetcher.albums) { artist in
                 Text(artist.Album ?? "Singles") // XXX constant
@@ -113,6 +115,7 @@ struct TrackList: View {
 
     var body: some View {
         VStack {
+            Spacer()
             Text(trackFetcher.trackTitle)
               .gesture(
                 DragGesture(minimumDistance: 150)
@@ -159,7 +162,8 @@ struct TrackList: View {
         window.center()
         window.setFrameAutosaveName("Main Window")
         window.contentView = NSHostingView(rootView: contentView)
-        window.makeKeyAndOrderFront(nil)
+        //        window.makeKeyAndOrderFront(nil)
+        window.setIsVisible(true)
         windows.append(window)
     }
 }
@@ -406,7 +410,6 @@ struct ContentView: View {
 
     var body: some View {
         VStack {
-            Spacer()
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
                                  serverConnection: serverConnection)
 
