@@ -46,6 +46,18 @@ public class AudioTrack: Decodable,
         hasher.combine(SHA1)
     }
 
+    public var timeIntervalString: String {
+        let amount = self.timeInterval
+        if amount < 60 {
+            return "\(Int(amount))s"
+        } else {
+            let duration = Int(amount)
+            let seconds = String(format: "%02d", duration % 60)
+            let minutes = duration / 60
+            return "\(minutes):\(seconds)"
+        }
+    }
+
     public var timeInterval: TimeInterval {
         var ret: TimeInterval = 0
         if let duration = self.Duration {

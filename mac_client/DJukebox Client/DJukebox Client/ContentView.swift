@@ -124,7 +124,7 @@ struct TrackList: View {
                   }
               )
             List(trackFetcher.tracks) { track in
-                Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title)")
+                Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
                   .onTapGesture {
                       self.serverConnection.playTrack(withHash: track.SHA1) { track, error in
                           self.trackFetcher.refreshQueue()
@@ -187,6 +187,8 @@ struct ArtistAlbumTrackList: View {
 struct TrackDetail: View {
     @ObservedObject var track: AudioTrack
     @ObservedObject var trackFetcher: TrackFetcher
+
+    var showDuration = true
     
     var body: some View {
         HStack(alignment: .center) {
@@ -203,7 +205,7 @@ struct TrackDetail: View {
                 }
             }
             Text(track.Title)
-            if track.Duration != nil {
+            if showDuration && track.Duration != nil {
                 Text(track.Duration!)
             }
         }
@@ -232,10 +234,12 @@ struct ProgressBar: View {
                   .foregroundColor(Color.green)
                   .animation(.linear)
 
-                Text(self.remainingTimeText(self.trackFetcher.currentTrackRemainingTime))
-                  .offset(x: 8)
-                  .foregroundColor(Color.gray)
-                  .opacity(0.7)
+                if self.trackFetcher.totalDuration > 0 {
+                    Text(self.remainingTimeText(self.trackFetcher.currentTrackRemainingTime))
+                      .offset(x: 8)
+                      .foregroundColor(Color.gray)
+                      .opacity(0.7)
+                }
             }.cornerRadius(8)
         }
     }
@@ -322,7 +326,7 @@ struct CurrentTrackView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
     var body: some View {
-        TrackDetail(track: track, trackFetcher: self.trackFetcher)
+        TrackDetail(track: track, trackFetcher: self.trackFetcher, showDuration: false)
         //        Text("\(track.Artist) \(track.Title)")
     }
 }

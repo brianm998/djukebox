@@ -29,8 +29,10 @@ struct ButtonStack: View {
     
     var body: some View {
         VStack(alignment: .trailing) {
-            Text(self.format(duration: trackFetcher.totalDuration))
-            Text(self.string(forTime:trackFetcher.completionTime))
+            if trackFetcher.totalDuration > 0 {
+                Text(self.format(duration: trackFetcher.totalDuration))
+                Text(self.string(forTime:trackFetcher.completionTime))
+            }
             HStack(alignment: .top) {
                 SkipCurrentTrackButton(trackFetcher: trackFetcher,
                                        serverConnection: self.serverConnection)
