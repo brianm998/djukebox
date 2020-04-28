@@ -157,7 +157,7 @@ struct TrackList: View {
         var window = NSWindow(
           contentRect: NSRect(x: 30, y: 30, // this position is ignored :(
                               width: 250, height: 300), 
-          styleMask: [.titled, .closable, .utilityWindow],
+          styleMask: [.titled, .closable, .utilityWindow, .resizable],
           backing: .buffered, defer: false)
         window.center()
         window.setFrameAutosaveName("Main Window")

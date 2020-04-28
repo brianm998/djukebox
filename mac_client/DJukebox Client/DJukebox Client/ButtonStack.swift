@@ -34,10 +34,12 @@ struct ButtonStack: View {
             HStack(alignment: .top) {
                 SkipCurrentTrackButton(trackFetcher: trackFetcher,
                                        serverConnection: self.serverConnection)
-                PausePlayButton(serverConnection: self.serverConnection)
+                if(self.serverConnection.isPaused) {
+                    PlayButton(serverConnection: self.serverConnection)
+                } else {
+                    PauseButton(serverConnection: self.serverConnection)
+                }
             }
-                //.alignmentGuide(.top, computeValue: { d in (d[explicit: .top] ?? 100) })
-              //.alignmentGuide(.top, computeValue: { d in (d[.top] ?? 100) })      
 
             PlayRandomTrackButton(trackFetcher: trackFetcher,
                                   serverConnection: self.serverConnection,
@@ -56,32 +58,38 @@ struct ButtonStack: View {
     }
 }
 
-struct PausePlayButton: View {
-
+struct PlayButton: View {
     @ObservedObject var serverConnection: ServerConnection //ServerType
     
     var body: some View {
         Button(action: {
-            if self.serverConnection.isPaused {
-                self.serverConnection.resumePlaying() { audioTrack, error in
-                    if let error = error {
-                        print("DOH")
-                    } else {
-                        print("enqueued: \(audioTrack)")
-                    }
-                }
-            } else {
-                self.serverConnection.pausePlaying() { audioTrack, error in
-                    if let error = error {
-                        print("DOH")
-                    } else {
-                        print("enqueued: \(audioTrack)")
-                    }
+            self.serverConnection.resumePlaying() { audioTrack, error in
+                if let error = error {
+                    print("DOH")
+                } else {
+                    print("enqueued: \(audioTrack)")
                 }
             }
         }) {
-            // play / pause
-            Text(self.serverConnection.isPaused ? "\u{25B6}" : "\u{23F8}").font(.largeTitle) 
+            Text("\u{25B6}").font(.largeTitle)
+        }.buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct PauseButton: View {
+    @ObservedObject var serverConnection: ServerConnection //ServerType
+    
+    var body: some View {
+        Button(action: {
+            self.serverConnection.pausePlaying() { audioTrack, error in
+                if let error = error {
+                    print("DOH")
+                } else {
+                    print("enqueued: \(audioTrack)")
+                }
+            }
+        }) {
+            Text("\u{23F8}").font(.largeTitle)
         }.buttonStyle(PlainButtonStyle())
     }
 }

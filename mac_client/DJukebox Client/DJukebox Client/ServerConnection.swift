@@ -24,13 +24,8 @@ class ServerConnection: ObservableObject, ServerType {
     let serverUrl: String
     let authHeaderValue: String
 
-    // XXX should query server on startup, in case it's already paused
-    fileprivate var local_isPaused: Bool = false
-    
-    var isPaused: Bool {
-        print("server isPaused \(local_isPaused)")
-        return local_isPaused
-    }
+    // XXX should query server on startup, in case it's already paused (need new api for that)
+    var isPaused = false
     
     init(toUrl url: String, withPassword password: String) {
         self.serverUrl = url
@@ -165,14 +160,14 @@ class ServerConnection: ObservableObject, ServerType {
 
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void) {
         self.request(path: "pause") { success, error in
-            if success { self.local_isPaused = true }
+            if success { self.isPaused = true }
             closure(success, error)
         }
     }
 
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void) {
         self.request(path: "resume") { success, error in
-            if success { self.local_isPaused = false }
+            if success { self.isPaused = false }
             closure(success, error)
         }
     }
