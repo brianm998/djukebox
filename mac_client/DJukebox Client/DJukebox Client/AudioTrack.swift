@@ -8,7 +8,12 @@ public class PlayingQueue: Decodable, Identifiable, ObservableObject {
 }
 
 // copied from the server
-public class AudioTrack: Decodable, Identifiable, Comparable, Hashable, ObservableObject {
+public class AudioTrack: Decodable,
+                         Identifiable,
+                         Comparable,
+                         Hashable,
+                         ObservableObject
+{
     public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
         if lhs.Artist == rhs.Artist {
             // dig in deeper
@@ -40,7 +45,7 @@ public class AudioTrack: Decodable, Identifiable, Comparable, Hashable, Observab
     public func hash(into hasher: inout Hasher) {
         hasher.combine(SHA1)
     }
-    
+
     let Artist: String
     let Album: String?
     let Title: String
