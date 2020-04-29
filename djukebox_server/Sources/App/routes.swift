@@ -122,8 +122,26 @@ func routes(_ app: Application) throws {
         }
     }
 
-    // Stop playing a particular track
+    // Stop playing the currently playing song, referenced by sha1
     // curl localhost:8080/stop/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
+    app.get("stop", ":sha1") { req -> Response in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.auth(request: req) {
+            return try authControl.track(from: req) { track, _ in
+                if let playingTrack = audioPlayer.playingTrack,
+                   playingTrack.SHA1 == track.SHA1
+                {
+                    audioPlayer.skip()
+                    return Response(status: .ok)
+                } else {
+                    return Response(status: .notFound)
+                }
+            }
+        }
+    }
+
+    // Stop playing a particular track at in index
+    // curl localhost:8080/stop/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c/3
     app.get("stop", ":sha1", ":index") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.auth(request: req) {
