@@ -109,20 +109,27 @@ struct AlbumList: View {
     }
 }
 
+
 struct TrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
 
+    @State private var dragging = false 
+    
     var body: some View {
         VStack {
             Spacer()
-            Text(trackFetcher.trackTitle)
-              .gesture(
-                DragGesture(minimumDistance: 150)
-                  .onEnded{ fuck in
-                      self.makeNewWindow()
-                  }
-              )
+            HStack() {
+                Text(trackFetcher.trackTitle)
+                Button(action: {
+                    self.serverConnection.playTracks(self.trackFetcher.tracks) { success, error in
+                        self.trackFetcher.refreshQueue()
+                    }
+                }) {
+                    Text("Play All")
+                }
+                  //.alignmentGuide(.trailing, computeValue: { d in d[.trailing] } )
+            }
             List(trackFetcher.tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
                   .onTapGesture {
@@ -138,29 +145,45 @@ struct TrackList: View {
                   }
             }
         }
+          .gesture(
+            DragGesture(minimumDistance: 100)
+              .onChanged { value in
+                  print("onChanged value \(value)")
+                  if !self.dragging {
+                      self.makeNewWindow(atOrigin: value.location)
+                      self.dragging = true
+                  }
+              }
+              .onEnded { value in
+                  print("onEnded value \(value)")
+                  self.dragging = false
+              }
+          )
     }
 
-    fileprivate func makeNewWindow() {
+    fileprivate func makeNewWindow(atOrigin origin: CGPoint) {
         let trackFetcher = TrackFetcher(withServer: self.serverConnection)
         trackFetcher.tracks = self.trackFetcher.tracks
         trackFetcher.desiredArtist = self.trackFetcher.desiredArtist
         trackFetcher.desiredAlbum = self.trackFetcher.desiredAlbum
 
-        if let artist = trackFetcher.desiredArtist,
-           let album = trackFetcher.desiredAlbum
-        {
-            trackFetcher.trackTitle = "\(artist) \(album) songs"
+        if let artist = trackFetcher.desiredArtist {
+            if let album = trackFetcher.desiredAlbum {
+                trackFetcher.trackTitle = "\(artist) \(album) songs"
+            } else {
+                trackFetcher.trackTitle = "\(artist) singles"
+            }
         } else {
             trackFetcher.trackTitle = "FIX THIS!"
         }
         let contentView = TrackList(trackFetcher: trackFetcher, serverConnection: self.serverConnection)
         var window = NSWindow(
-          contentRect: NSRect(x: 30, y: 30, // this position is ignored :(
+          contentRect: NSRect(x: origin.x, y: origin.y, // this position is ignored :(
                               width: 250, height: 300), 
           styleMask: [.titled, .closable, .utilityWindow, .resizable],
           backing: .buffered, defer: false)
         window.center()
-        window.setFrameAutosaveName("Main Window")
+        //window.setFrameAutosaveName("Utility Window")
         window.contentView = NSHostingView(rootView: contentView)
         //        window.makeKeyAndOrderFront(nil)
         window.setIsVisible(true)

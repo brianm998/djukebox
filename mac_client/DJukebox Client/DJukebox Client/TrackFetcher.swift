@@ -152,13 +152,17 @@ public class TrackFetcher: ObservableObject {
                 }
             }
         }
+
+        self.showAlbums(forArtist: audioTrack.Artist)
         
         DispatchQueue.main.async {
             self.tracks = tracks.sorted()
             if let desiredAlbum = self.desiredAlbum {
                 self.trackTitle = "\(desiredAlbum) songs"
+            } else if let desiredArtist = self.desiredArtist {
+                self.trackTitle = "\(desiredArtist) songs"
             } else {
-                self.trackTitle = "\(self.desiredArtist) songs"
+                self.trackTitle = "songs" // XXX
             }
         }
     }
