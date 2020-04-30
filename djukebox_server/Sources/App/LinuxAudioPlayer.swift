@@ -9,7 +9,8 @@ public class LinuxAudioPlayer: AudioPlayerType {
     public var trackQueue: [String] = []
     
     let trackFinder: TrackFinderType
-
+    let historyWriter: HistoryWriter // not written to in linux yet
+    
     public var playingTrack: AudioTrack? 
 
     // XXX implement this for linux
@@ -22,8 +23,9 @@ public class LinuxAudioPlayer: AudioPlayerType {
 
     fileprivate var process: Process?
     
-    init(trackFinder: TrackFinderType) {
+    init(trackFinder: TrackFinderType, historyWriter: HistoryWriter) {
         self.trackFinder = trackFinder
+        self.historyWriter = historyWriter
     }
 
     public func clearQueue() {

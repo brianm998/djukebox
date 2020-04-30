@@ -20,6 +20,14 @@ public struct PlayingQueue: Content {
     let playingTrackPosition: TimeInterval?
 }
 
+public struct PlayingHistory: Content {
+    let history: [String: [Double]]
+}
+
+public struct PlayingSkips: Content {
+    let skips: [String: [Double]]
+}
+
 class AuthController {
     let config: Config
     let trackFinder: TrackFinderType
@@ -205,6 +213,16 @@ func routes(_ app: Application) throws {
         }
     }
 
+    // json content of played tracks
+    app.get("history") { req -> PlayingHistory in
+        return PlayingHistory(history: history.plays)
+    }
+
+    // json content of skipped tracks
+    app.get("skips") { req -> PlayingSkips in
+        return PlayingSkips(skips: history.skips)
+    }
+    
     func listQueue() -> PlayingQueue {
         var tracks: [AudioTrack] = []
         if let playingTrack = audioPlayer.playingTrack {

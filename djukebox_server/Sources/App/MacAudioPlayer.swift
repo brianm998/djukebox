@@ -49,13 +49,15 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
 
     let trackFinder: TrackFinderType
 
+    let historyWriter: HistoryWriter
+    
     var vaporTimer: VaporTimer?
     
     var player: AVAudioPlayer? 
     
-    
-    init(trackFinder: TrackFinderType) {
+    init(trackFinder: TrackFinderType, historyWriter: HistoryWriter) {
         self.trackFinder = trackFinder
+        self.historyWriter = historyWriter
     }
 
     public func clearQueue() {
@@ -87,6 +89,14 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
     }
 
     fileprivate func playingDone() {
+        if let track = self.playingTrack {
+            do {
+                try historyWriter.writePlay(of: track.SHA1, at: Date())
+            } catch {
+                print("coudn't write history: \(error)")
+            }
+        }
+        
         self.playingTrack = nil
         self.isPlaying = false
         self.player = nil
@@ -123,7 +133,14 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         let player = self.player
         self.player = nil
         player?.stop()
-        print("skip calling playingDone")
+        if let track = self.playingTrack {
+            do {
+                try historyWriter.writeSkip(of: track.SHA1, at: Date())
+            } catch {
+                print("coudn't write history: \(error)")
+            }
+            self.playingTrack = nil // set to keep skipped songs out of history (track these?)
+        }
         playingDone()
     }
 
