@@ -397,10 +397,44 @@ struct PlayingTracksView: View {
     @ObservedObject var serverConnection: ServerConnection //ServerType
 
     let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
+
+    let buttonWidth: CGFloat = 80
     
     var body: some View {
         
         VStack(alignment: .leading) {
+            HStack {
+                Spacer()
+
+                SkipCurrentTrackButton(trackFetcher: self.trackFetcher,
+                                       serverConnection: self.serverConnection)
+                
+                if(self.serverConnection.isPaused) {
+                    PlayButton(serverConnection: self.serverConnection)
+                } else {
+                    PauseButton(serverConnection: self.serverConnection)
+                }
+
+                if trackFetcher.totalDuration > 0 {
+                    Text(self.format(duration: trackFetcher.totalDuration))
+                    Text(self.string(forTime:trackFetcher.completionTime))
+                }
+
+                PlayRandomTrackButton(trackFetcher: trackFetcher,
+                                      serverConnection: self.serverConnection,
+                                      buttonWidth: buttonWidth)
+
+                ClearQueueButton(trackFetcher: trackFetcher,
+                                 serverConnection: self.serverConnection,
+                                 buttonWidth: buttonWidth)
+
+                RefreshTracksFromServerButton(trackFetcher: trackFetcher,
+                                              buttonWidth: buttonWidth)
+
+                RefreshQueueButton(trackFetcher: trackFetcher,
+                                   buttonWidth: buttonWidth)
+            }
+            
             HStack {
                 Spacer()
                 if trackFetcher.currentTrack == nil {
@@ -443,6 +477,26 @@ struct PlayingTracksView: View {
 */
         }
     }
+
+    func string(forTime date: Date) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .none
+        dateFormatter.timeStyle = .medium
+        return dateFormatter.string(from: date)
+    }
+    
+    func format(duration: TimeInterval) -> String {
+        let seconds = Int(duration) % 60
+        let minutes = Int(duration/60) % 60
+        let hours = Int(duration/(60*60))
+        if hours > 0 {
+            return "\(hours) hours"
+        } else if minutes > 0 {
+            return "\(minutes) minutes"
+        } else {
+            return "\(seconds) seconds"
+        }
+    }
 }
 
 
@@ -456,12 +510,7 @@ struct ContentView: View {
                                  serverConnection: serverConnection)
 
             
-            HStack {
-                Spacer()
-                ButtonStack(trackFetcher: trackFetcher, serverConnection: serverConnection)
-                Spacer()
-                PlayingTracksView(trackFetcher: trackFetcher, serverConnection: serverConnection)
-            }
+            PlayingTracksView(trackFetcher: trackFetcher, serverConnection: serverConnection)
 
             
             SearchList(trackFetcher: trackFetcher,

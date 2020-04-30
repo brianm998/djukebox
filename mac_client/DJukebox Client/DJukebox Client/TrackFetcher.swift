@@ -108,13 +108,13 @@ public class TrackFetcher: ObservableObject {
             {
                 self.playingTrackProgress = Float(position)/Float(duration)
                 self.currentTrackRemainingTime = duration - position
-                print("duration \(duration) - position \(position) = \(duration - position)")
+                //print("duration \(duration) - position \(position) = \(duration - position)")
                 totalDuration = self.currentTrackRemainingTime
             } else {
                 self.playingTrackProgress = nil
             }
             for (index, track) in playingQueue.tracks.enumerated() {
-                print("adding track.timeInterval \(track.timeInterval)")
+                //print("adding track.timeInterval \(track.timeInterval)")
                 if index > 0 { totalDuration += track.timeInterval }
             }
             self.totalDuration = totalDuration
