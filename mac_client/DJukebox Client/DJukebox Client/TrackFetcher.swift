@@ -158,9 +158,9 @@ public class TrackFetcher: ObservableObject {
         DispatchQueue.main.async {
             self.tracks = tracks.sorted()
             if let desiredAlbum = self.desiredAlbum {
-                self.trackTitle = "\(desiredAlbum) songs"
+                self.trackTitle = "\(desiredAlbum)"
             } else if let desiredArtist = self.desiredArtist {
-                self.trackTitle = "\(desiredArtist) songs"
+                self.trackTitle = "\(desiredArtist)"
             } else {
                 self.trackTitle = "songs" // XXX
             }
@@ -187,7 +187,7 @@ public class TrackFetcher: ObservableObject {
         }
         DispatchQueue.main.async {
             self.albums = Array(albumMap.values).sorted()
-            self.albumTitle = "\(artist) albums"
+            self.albumTitle = "\(artist)"
         }
     }
 }
