@@ -93,14 +93,14 @@ public func configure(_ app: Application) throws {
 
     // still need to grab list of paths from the config
     
-    //trackFinder.find(atFilePath: "/mnt/root/mp3/Yes")
     trackFinder.find(atFilePath: "/mnt/tree/mp3")
-
-    history.find(atFilePath: historyDir)
-    
+    //trackFinder.find(atFilePath: "/mnt/root/mp3/Yes")
     //trackFinder.find(atFilePath: "/mnt/tree/mp3/Das_Ich")
+
     //trackFinder.find(atFilePath: "/mnt/root/Behemoth/xfer/work/mp3")
     //trackFinder.find(atFilePath: "/mnt/root/mp3")
+
+    history.find(atFilePath: historyDir)
 
     print("test finder has found \(trackFinder.tracks.count) tracks")
     

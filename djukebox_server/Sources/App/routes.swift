@@ -119,6 +119,39 @@ func routes(_ app: Application) throws {
         }
     }
 
+    // Play a randomly selected track that hasn't been played before
+    // curl localhost:8080/newrand
+    app.get("newrand") { req -> AudioTrack in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.auth(request: req) {
+            var sha1Hash: String?
+            var max = 100
+            while sha1Hash == nil,
+                  max > 0
+            {
+                max -= 1
+                let random = Int.random(in: 0..<trackFinder.tracks.count)
+                let hash = Array(trackFinder.tracks.keys)[random]
+                if !history.hasPlay(for: hash),
+                   !history.hasSkip(for: hash),
+                   !isInQueue(hash)
+                {
+                    sha1Hash = hash
+                }
+            }
+            if let sha1Hash = sha1Hash {
+                audioPlayer.play(sha1Hash: sha1Hash)
+                if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) {
+                    return audioTrack
+                } else {
+                    throw Abort(.notFound)
+                }
+            } else {
+                throw Abort(.notFound)
+            }                
+        }
+    }
+
     // Stop all playing, clearing the playing queue
     // curl localhost:8080/stop
     app.get("stop") { req -> Response in
@@ -221,6 +254,20 @@ func routes(_ app: Application) throws {
     // json content of skipped tracks
     app.get("skips") { req -> PlayingSkips in
         return PlayingSkips(skips: history.skips)
+    }
+
+    func isInQueue(_ hash: String) -> Bool {
+        if let playingTrack = audioPlayer.playingTrack,
+           playingTrack.SHA1 == hash
+        {
+            return true
+        }
+
+        for queueHash in audioPlayer.trackQueue {
+            if queueHash == hash { return true }
+        }
+        
+        return false
     }
     
     func listQueue() -> PlayingQueue {

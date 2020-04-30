@@ -20,6 +20,14 @@ public class History: HistoryType {
         find(at: URL(fileURLWithPath: path))
     }
 
+    public func hasPlay(for hash: String) -> Bool {
+        return plays[hash] != nil
+    }
+    
+    public func hasSkip(for hash: String) -> Bool {
+        return skips[hash] != nil
+    }
+    
     public func recordSkip(of hash: String, at time: Double) {
         if skips[hash] == nil {
             skips[hash] = [time]
