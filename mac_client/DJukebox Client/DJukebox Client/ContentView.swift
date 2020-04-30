@@ -424,6 +424,10 @@ struct PlayingTracksView: View {
                                       serverConnection: self.serverConnection,
                                       buttonWidth: buttonWidth)
 
+                PlayNewRandomTrackButton(trackFetcher: trackFetcher,
+                                      serverConnection: self.serverConnection,
+                                      buttonWidth: buttonWidth)
+                
                 ClearQueueButton(trackFetcher: trackFetcher,
                                  serverConnection: self.serverConnection,
                                  buttonWidth: buttonWidth)

@@ -78,6 +78,28 @@ struct PlayRandomTrackButton: View {
     }
 }
 
+struct PlayNewRandomTrackButton: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var serverConnection: ServerConnection //ServerType
+    var buttonWidth: CGFloat
+    
+    var body: some View {
+        Button(action: {
+            self.serverConnection.playNewRandomTrack() { audioTrack, error in
+                if let error = error {
+                    print("DOH")
+                } else if let audioTrack = audioTrack {
+                    print("enqueued: \(audioTrack.Title)")
+                }
+                self.trackFetcher.refreshQueue()
+            }
+        }) {
+            Text("New Random")
+              .frame(width: buttonWidth)
+        }
+    }
+}
+
 struct ClearQueueButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
