@@ -8,6 +8,11 @@ public class PlayingQueue: Decodable, Identifiable, ObservableObject {
 }
 
 // copied from the server
+public class PlayingHistory: Decodable, Identifiable, ObservableObject {
+    let plays: [String: [Double]]
+    let skips: [String: [Double]]
+}
+// copied from the server
 public class AudioTrack: Decodable,
                          Identifiable,
                          Comparable,

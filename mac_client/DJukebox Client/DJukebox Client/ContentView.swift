@@ -140,14 +140,17 @@ struct TrackList: View {
             Spacer()
             HStack() {
                 Text(trackFetcher.trackTitle)
-                Button(action: {
-                    self.serverConnection.playTracks(self.trackFetcher.tracks) { success, error in
-                        self.trackFetcher.refreshQueue()
+                if self.trackFetcher.tracks.count > 0 {
+                    Button(action: {
+                        self.serverConnection.playTracks(self.trackFetcher.tracks) { success, error in
+                            self.trackFetcher.refreshQueue()
+                        }
+                    }) {
+                        Text("Play All")
                     }
-                }) {
-                    Text("Play All")
+
+                    //.alignmentGuide(.trailing, computeValue: { d in d[.trailing] } )
                 }
-                  //.alignmentGuide(.trailing, computeValue: { d in d[.trailing] } )
             }
             List(trackFetcher.tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")

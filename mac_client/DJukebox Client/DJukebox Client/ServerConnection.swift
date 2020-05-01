@@ -5,6 +5,8 @@ import CryptoKit
 protocol ServerType {
     func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void)
     func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void)
+    func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void)
+    func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void)
     func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)
     func playRandomTrack(forArtist: String, closure: @escaping (AudioTrack?, Error?) -> Void)
     func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)
@@ -205,6 +207,14 @@ class ServerConnection: ObservableObject, ServerType {
             if success { self.isPaused = false }
             closure(success, error)
         }
+    }
+
+    func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void) {
+        self.requestJson(atPath: "history", closure: closure)
+    }
+
+    func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void) {
+        self.requestJson(atPath: "history/\(since)", closure: closure)
     }
 }
 

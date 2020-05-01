@@ -21,10 +21,7 @@ public struct PlayingQueue: Content {
 }
 
 public struct PlayingHistory: Content {
-    let history: [String: [Double]]
-}
-
-public struct PlayingSkips: Content {
+    let plays: [String: [Double]]
     let skips: [String: [Double]]
 }
 
@@ -306,12 +303,24 @@ func routes(_ app: Application) throws {
 
     // json content of played tracks
     app.get("history") { req -> PlayingHistory in
-        return PlayingHistory(history: history.plays)
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.auth(request: req) {
+            return history.all
+        }
     }
 
-    // json content of skipped tracks
-    app.get("skips") { req -> PlayingSkips in
-        return PlayingSkips(skips: history.skips)
+    // json content of played tracks
+    app.get("history",  ":since") { req -> PlayingHistory in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.auth(request: req) {
+            if let sinceString = req.parameters.get("since"),
+               let since = Double(sinceString)
+            {
+                let date = Date(timeIntervalSince1970: since)
+                return history.since(time: date)
+            }
+            throw Abort(.notFound)
+        }
     }
 
     func isInQueue(_ hash: String) -> Bool {

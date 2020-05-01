@@ -15,6 +15,30 @@ public class History: HistoryType {
 
     public var plays: [String: [Double]] = [:]
     public var skips: [String: [Double]] = [:]
+
+    var all: PlayingHistory { return PlayingHistory(plays: self.plays, skips: self.skips) }
+
+    public func since(time: Date) -> PlayingHistory {
+        var plays: [String: [Double]] = [:]
+        var skips: [String: [Double]] = [:]
+        for (hash, times) in self.plays {
+            var newTimes: [Double] = []
+            for hashTime in times {
+                let date = Date(timeIntervalSince1970: hashTime)
+                if time < date { newTimes.append(hashTime) }
+            }
+            if newTimes.count > 0 { plays[hash] = newTimes }
+        }
+        for (hash, times) in self.skips {
+            var newTimes: [Double] = []
+            for hashTime in times {
+                let date = Date(timeIntervalSince1970: hashTime)
+                if time < date { newTimes.append(hashTime) }
+            }
+            if newTimes.count > 0 { skips[hash] = newTimes }
+        }
+        return PlayingHistory(plays: plays, skips: skips)
+    }
     
     public func find(atFilePath path: String) {
         find(at: URL(fileURLWithPath: path))
