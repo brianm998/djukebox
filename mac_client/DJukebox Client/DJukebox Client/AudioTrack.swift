@@ -27,6 +27,14 @@ public class PlayingHistory: Decodable, Identifiable, ObservableObject {
             {
                 let ff = Set(times)
                 mergedPlays[hash] = Array(ff.union(timesToMerge))
+            } else {
+                mergedPlays[hash] = times
+            }
+        }
+
+        for (hash, times) in historyToMerge.plays {
+            if self.plays[hash] == nil {
+                mergedPlays[hash] = times
             }
         }
 
@@ -36,9 +44,17 @@ public class PlayingHistory: Decodable, Identifiable, ObservableObject {
             {
                 let ff = Set(times)
                 mergedSkips[hash] = Array(ff.union(timesToMerge))
+            } else {
+                mergedSkips[hash] = times
             }
         }
 
+        for (hash, times) in historyToMerge.skips {
+            if self.skips[hash] == nil {
+                mergedSkips[hash] = times
+            }
+        }
+        
         return PlayingHistory(plays: mergedPlays, skips: mergedSkips)
     }
 }

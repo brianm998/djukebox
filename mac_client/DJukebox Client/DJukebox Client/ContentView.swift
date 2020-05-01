@@ -131,6 +131,7 @@ struct AlbumList: View {
 
 struct TrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
 
     @State private var dragging = false 
@@ -154,6 +155,7 @@ struct TrackList: View {
             }
             List(trackFetcher.tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
+                  .foregroundColor(self.historyFetcher.eventCount(for: track.SHA1) == 0 ? Color.green : Color.gray)
                   .onTapGesture {
                       self.serverConnection.playTrack(withHash: track.SHA1) { track, error in
                           self.trackFetcher.refreshQueue()
@@ -198,7 +200,9 @@ struct TrackList: View {
         } else {
             trackFetcher.trackTitle = "FIX THIS!"
         }
-        let contentView = TrackList(trackFetcher: trackFetcher, serverConnection: self.serverConnection)
+        let contentView = TrackList(trackFetcher: trackFetcher,
+                                    historyFetcher: historyFetcher,
+                                    serverConnection: self.serverConnection)
         var window = NSWindow(
           contentRect: NSRect(x: origin.x, y: origin.y, // this position is ignored :(
                               width: 250, height: 300), 
@@ -218,13 +222,16 @@ fileprivate var windows: [NSWindow] = []
 
 struct ArtistAlbumTrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
 
     var body: some View {
         HStack {
             ArtistList(trackFetcher: trackFetcher)
             AlbumList(trackFetcher: trackFetcher, serverConnection: serverConnection)
-            TrackList(trackFetcher: trackFetcher, serverConnection: serverConnection)
+            TrackList(trackFetcher: trackFetcher,
+                      historyFetcher: historyFetcher,
+                      serverConnection: serverConnection)
         }
     }
 }
@@ -528,11 +535,13 @@ struct PlayingTracksView: View {
 
 struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
 
     var body: some View {
         VStack {
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
+                                 historyFetcher: historyFetcher,
                                  serverConnection: serverConnection)
 
             
@@ -549,6 +558,8 @@ struct ContentView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(trackFetcher: trackFetcher, serverConnection: server)
+        ContentView(trackFetcher: trackFetcher,
+                    historyFetcher: historyFetcher,
+                    serverConnection: server)
     }
 }

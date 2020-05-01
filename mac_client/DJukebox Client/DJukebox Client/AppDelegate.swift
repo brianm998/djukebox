@@ -20,7 +20,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view that provides the window contents.
-        let contentView = ContentView(trackFetcher: trackFetcher, serverConnection: server)
+        historyFetcher.refresh()
+        
+        let contentView = ContentView(trackFetcher: trackFetcher,
+                                      historyFetcher: historyFetcher,
+                                      serverConnection: server)
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             trackFetcher.refreshQueue()
             historyFetcher.refresh()
