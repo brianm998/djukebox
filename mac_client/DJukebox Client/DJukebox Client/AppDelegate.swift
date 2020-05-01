@@ -11,6 +11,7 @@ import CryptoKit
 
 let server/*: ServerType*/ = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
 let trackFetcher = TrackFetcher(withServer: server)
+let historyFetcher = HistoryFetcher(withServer: server)
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -22,6 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let contentView = ContentView(trackFetcher: trackFetcher, serverConnection: server)
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             trackFetcher.refreshQueue()
+            historyFetcher.refresh()
         }
 
         // Create the window and set the content view. 

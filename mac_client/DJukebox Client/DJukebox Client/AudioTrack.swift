@@ -11,7 +11,38 @@ public class PlayingQueue: Decodable, Identifiable, ObservableObject {
 public class PlayingHistory: Decodable, Identifiable, ObservableObject {
     let plays: [String: [Double]]
     let skips: [String: [Double]]
+
+    init(plays: [String: [Double]], skips: [String: [Double]]) {
+        self.plays = plays
+        self.skips = skips
+    }
+    
+    func merge(with historyToMerge: PlayingHistory) -> PlayingHistory {
+        var mergedPlays: [String: [Double]] = [:]
+        var mergedSkips: [String: [Double]] = [:]
+
+        for (hash, times) in self.plays {
+            if historyToMerge.plays[hash] != nil,
+               let timesToMerge = historyToMerge.plays[hash]
+            {
+                let ff = Set(times)
+                mergedPlays[hash] = Array(ff.union(timesToMerge))
+            }
+        }
+
+        for (hash, times) in self.skips {
+            if historyToMerge.skips[hash] != nil,
+               let timesToMerge = historyToMerge.skips[hash]
+            {
+                let ff = Set(times)
+                mergedSkips[hash] = Array(ff.union(timesToMerge))
+            }
+        }
+
+        return PlayingHistory(plays: mergedPlays, skips: mergedSkips)
+    }
 }
+
 // copied from the server
 public class AudioTrack: Decodable,
                          Identifiable,
