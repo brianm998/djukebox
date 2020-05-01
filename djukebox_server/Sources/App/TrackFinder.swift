@@ -6,6 +6,7 @@ public protocol TrackFinderType {
     func audioTrack(forHash sha1Hash: String) -> AudioTrack?
     func find(atFilePath path: String)
     var tracks: [String: (AudioTrack, [URL])] { get }
+    func tracks(forArtist: String) -> [String: (AudioTrack, [URL])]
 }
 
 public class TrackFinder: TrackFinderType {
@@ -18,6 +19,16 @@ public class TrackFinder: TrackFinderType {
         } else {
             return nil
         }
+    }
+
+    public func tracks(forArtist artist: String) -> [String: (AudioTrack, [URL])] {
+        var ret: [String: (AudioTrack, [URL])] = [:]
+        for (hash, (track, urls)) in tracks {
+            if track.Artist == artist {
+                ret[hash] = (track, urls)
+            }
+        }
+        return ret
     }
     
     public func filePath(forHash sha1Hash: String) -> String? {

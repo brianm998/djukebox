@@ -93,11 +93,30 @@ struct ArtistList: View {
 
 struct AlbumList: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var serverConnection: ServerConnection //ServerType
 
     var body: some View {
         VStack {
             Spacer()
-            Text(trackFetcher.albumTitle)
+            HStack {
+                Text(trackFetcher.albumTitle)
+                if self.trackFetcher.albums.count > 0 {
+                    Button(action: {
+                        self.serverConnection.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                            self.trackFetcher.refreshQueue()
+                        }
+                    }) {
+                        Text("Random")
+                    }
+                    Button(action: {
+                        self.serverConnection.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                            self.trackFetcher.refreshQueue()
+                        }
+                    }) {
+                        Text("New Random")
+                    }
+                }
+            }
             List(trackFetcher.albums) { artist in
                 Text(artist.Album ?? "Singles") // XXX constant
                   .foregroundColor(artist.Album == nil ? Color.red : Color.black)
@@ -201,7 +220,7 @@ struct ArtistAlbumTrackList: View {
     var body: some View {
         HStack {
             ArtistList(trackFetcher: trackFetcher)
-            AlbumList(trackFetcher: trackFetcher)
+            AlbumList(trackFetcher: trackFetcher, serverConnection: serverConnection)
             TrackList(trackFetcher: trackFetcher, serverConnection: serverConnection)
         }
     }

@@ -6,7 +6,9 @@ protocol ServerType {
     func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void)
     func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void)
     func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)
+    func playRandomTrack(forArtist: String, closure: @escaping (AudioTrack?, Error?) -> Void)
     func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)
+    func playNewRandomTrack(forArtist: String, closure: @escaping (AudioTrack?, Error?) -> Void)
     func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) 
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void)
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void)
@@ -57,7 +59,8 @@ class ServerConnection: ObservableObject, ServerType {
     }
 
     fileprivate func requestJson<T>(atPath path: String, closure: @escaping (T?, Error?) -> Void) where T: Decodable {
-        if let url = URL(string: "\(serverUrl)/\(path)") {
+        let urlPath = path.replacingOccurrences(of: " ", with: "%20")
+        if let url = URL(string: "\(serverUrl)/\(urlPath)") {
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
             request.setValue(authHeaderValue, forHTTPHeaderField:"Authorization")
@@ -174,8 +177,16 @@ class ServerConnection: ObservableObject, ServerType {
         self.requestJson(atPath: "rand", closure: closure)
     }
 
+    func playRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+        self.requestJson(atPath: "rand/\(artist)", closure: closure)
+    }
+    
     func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
         self.requestJson(atPath: "newrand", closure: closure)
+    }
+    
+    func playNewRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+        self.requestJson(atPath: "newrand/\(artist)", closure: closure)
     }
     
     func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {

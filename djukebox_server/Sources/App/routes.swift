@@ -119,6 +119,26 @@ func routes(_ app: Application) throws {
         }
     }
 
+    // Play a randomly selected track by a given artist
+    // curl localhost:8080/rand/Queen
+    app.get("rand", ":artist") { req -> AudioTrack in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        if let artist = req.parameters.get("artist") {
+            return try authControl.auth(request: req) {
+                let array = trackFinder.tracks(forArtist: artist)
+                let random = Int.random(in: 0..<array.count)
+                let hash = Array(array.keys)[random]
+                audioPlayer.play(sha1Hash: hash)
+                if let audioTrack = trackFinder.audioTrack(forHash: hash) {
+                    return audioTrack
+                } else {
+                    throw Abort(.notFound)
+                }
+            }
+        }
+        throw Abort(.notFound)
+    }
+
     // Play a randomly selected track that hasn't been played before
     // curl localhost:8080/newrand
     app.get("newrand") { req -> AudioTrack in
@@ -140,8 +160,8 @@ func routes(_ app: Application) throws {
                 }
             }
             if let sha1Hash = sha1Hash {
-                audioPlayer.play(sha1Hash: sha1Hash)
                 if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) {
+                    audioPlayer.play(sha1Hash: sha1Hash)
                     return audioTrack
                 } else {
                     throw Abort(.notFound)
@@ -150,6 +170,44 @@ func routes(_ app: Application) throws {
                 throw Abort(.notFound)
             }                
         }
+    }
+
+    // Play a randomly selected track by a given artist
+    // curl localhost:8080/newrand/Queen
+    app.get("newrand", ":artist") { req -> AudioTrack in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        if let artist = req.parameters.get("artist") {
+            return try authControl.auth(request: req) {
+                let array = trackFinder.tracks(forArtist: artist)
+
+                var sha1Hash: String?
+                var max = 100
+                while sha1Hash == nil,
+                      max > 0
+                {
+                    max -= 1
+                    let random = Int.random(in: 0..<array.count)
+                    let hash = Array(array.keys)[random]
+                    if !history.hasPlay(for: hash),
+                       !history.hasSkip(for: hash),
+                       !isInQueue(hash)
+                    {
+                        sha1Hash = hash
+                    }
+                }
+                if let sha1Hash = sha1Hash {
+                    if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) {
+                        audioPlayer.play(sha1Hash: sha1Hash)
+                        return audioTrack
+                    } else {
+                        throw Abort(.notFound)
+                    }
+                } else {
+                    throw Abort(.notFound)
+                }                
+            }
+        }
+        throw Abort(.notFound)
     }
 
     // Stop all playing, clearing the playing queue
