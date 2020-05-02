@@ -7,6 +7,8 @@ import CryptoKit
 public class TrackFetcher: ObservableObject {
     var allTracks: [AudioTrack] = []
 
+    var trackMap: [String:AudioTrack] = [:]
+    
     @Published var artists: [AudioTrack] = [] // XXX use different model objects for artists and albums
     @Published var albums: [AudioTrack] = []
     @Published var tracks: [AudioTrack] = []
@@ -65,15 +67,18 @@ public class TrackFetcher: ObservableObject {
         server.listTracks() { tracks, error in
             if let tracks = tracks {
                 var artistMap: [String:AudioTrack] = [:]
+                var sha1Map: [String:AudioTrack] = [:]
                 for track in tracks {
                     if track.Album == nil {
                         print("artist \(track.Artist) has orphaned tracks")
                     }
                     artistMap[track.Artist] = track
+                    sha1Map[track.SHA1] = track
                 }
                 DispatchQueue.main.async {
                     self.allTracks = tracks
                     self.artists = Array(artistMap.values).sorted()
+                    self.trackMap = sha1Map
                 }
             }
         }

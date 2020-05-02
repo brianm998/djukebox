@@ -12,9 +12,35 @@ public class PlayingHistory: Decodable, Identifiable, ObservableObject {
     let plays: [String: [Double]]
     let skips: [String: [Double]]
 
+    init() {
+        self.plays = [:]
+        self.skips = [:]
+    }
+    
     init(plays: [String: [Double]], skips: [String: [Double]]) {
         self.plays = plays
         self.skips = skips
+    }
+
+    func recentHistory(startingAt startTime: Date) -> PlayingHistory {
+        var recentPlays: [String: [Double]] = [:]
+        var recentSkips: [String: [Double]] = [:]
+        
+        for (hash, times) in self.plays {
+            let recentTimes = times.filter { startTime.timeIntervalSince1970 < $0 }
+            if recentTimes.count > 0 {
+                recentPlays[hash] = recentTimes
+            }
+        }
+
+        for (hash, times) in self.skips {
+            let recentTimes = times.filter { startTime.timeIntervalSince1970 < $0 }
+            if recentTimes.count > 0 {
+                recentSkips[hash] = recentTimes
+            }
+        }
+
+        return PlayingHistory(plays: recentPlays, skips: recentSkips)
     }
     
     func merge(with historyToMerge: PlayingHistory) -> PlayingHistory {

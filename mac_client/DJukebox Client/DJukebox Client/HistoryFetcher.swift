@@ -2,10 +2,35 @@ import Cocoa
 import SwiftUI
 
 // this is a view model used to update SwiftUI
+public class HistoryEntry: Comparable, Identifiable, ObservableObject {
+    let track: AudioTrack
+    let when: Date
+    let playedFully: Bool
+
+    public init(track: AudioTrack,
+                when: Date,
+                playedFully: Bool)
+    {
+        self.track = track
+        self.when = when
+        self.playedFully = playedFully
+    }
+    
+    public static func < (lhs: HistoryEntry, rhs: HistoryEntry) -> Bool {
+        return lhs.when < rhs.when
+    }
+    
+    public static func == (lhs: HistoryEntry, rhs: HistoryEntry) -> Bool {
+        return lhs.track.SHA1 == rhs.track.SHA1 && lhs.when == rhs.when && lhs.playedFully == rhs.playedFully
+    }
+}
 
 public class HistoryFetcher: ObservableObject {
-    @Published var all: PlayingHistory?
+    @Published var all = PlayingHistory()
+    @Published var recent: [HistoryEntry] = []
 
+    let recentHistoryDurationSeconds: Double = 30*60 // 60 minutes
+    
     let server: ServerType
     var lastUpdateTime: Date?
 
@@ -21,9 +46,7 @@ public class HistoryFetcher: ObservableObject {
     }
     
     func plays(for hash: String) -> [Double] {
-        if let history = self.all,
-           let plays = history.plays[hash]
-        {
+        if let plays = self.all.plays[hash] {
             return plays
         } else {
             return []
@@ -31,8 +54,7 @@ public class HistoryFetcher: ObservableObject {
     }
 
     func skips(for hash: String) -> [Double] {
-        if let history = self.all,
-           let skips = history.skips[hash]
+        if let skips = self.all.skips[hash]
         {
             return skips
         } else {
@@ -40,24 +62,52 @@ public class HistoryFetcher: ObservableObject {
         }
     }
 
+    func updateRecent() {
+        let previousHistoryDate = Date(timeIntervalSinceNow: -self.recentHistoryDurationSeconds)
+        let recent = self.all.recentHistory(startingAt: previousHistoryDate)
+
+        var history: [HistoryEntry] = []
+
+        for (track, times) in recent.plays {
+            if let audioTrack = trackFetcher.trackMap[track] { // XXX global trackFetcher
+                for time in times {
+                    history.append(HistoryEntry(track: audioTrack,
+                                                when: Date(timeIntervalSince1970: time),
+                                                playedFully: true))
+                }
+            }
+        }
+        for (track, times) in recent.skips {
+            if let audioTrack = trackFetcher.trackMap[track] { // XXX global trackFetcher
+                for time in times {
+                    history.append(HistoryEntry(track: audioTrack,
+                                                when: Date(timeIntervalSince1970: time),
+                                                playedFully: false))
+                }
+            }
+        }
+        history.sort()
+        self.recent = history
+    }
+
     func refresh() {
         if let lastUpdateTime = self.lastUpdateTime {
-            let historyOverlapDuration = 300
+            let historyOverlapDuration: Double = 300
             server.listHistory(since: Int(lastUpdateTime.timeIntervalSince1970-historyOverlapDuration)) { history, error in
                 if let history = history {
                     DispatchQueue.main.async {
-                        if let allHistory = self.all {
-                            self.all = allHistory.merge(with: history)
-                        } else {
-                            self.all = history
-                        }
+                        self.all = self.all.merge(with: history)
+                        self.updateRecent()
                     }
                 }
             }
         } else {
             server.listHistory() { history, error in
                 DispatchQueue.main.async {
-                    if let history = history { self.all = history }
+                    if let history = history {
+                        self.all = history
+                        self.updateRecent()
+                    }
                 }
             }
         }

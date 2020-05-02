@@ -236,6 +236,30 @@ struct ArtistAlbumTrackList: View {
     }
 }
 
+struct HistoryEntryView: View {
+    @ObservedObject var history: HistoryEntry
+
+    fileprivate var text: String {
+        if history.track.TrackNumber == nil {
+            if history.track.Album == nil {
+                return "\(history.track.Artist) \(history.track.Title)"
+            } else {
+                return "\(history.track.Artist) \(history.track.Album!) \(history.track.Title)"
+            }
+        } else {
+            if history.track.Album == nil {
+                return "\(history.track.Artist) \(history.track.TrackNumber!) \(history.track.Title)"
+            } else {
+                return "\(history.track.Artist) \(history.track.Album!) \(history.track.TrackNumber!) \(history.track.Title)"
+            }
+        }
+    }
+    
+    var body: some View {
+        Text(self.text).foregroundColor(history.playedFully ? Color.black : Color.red)
+    }
+}
+
 struct TrackDetail: View {
     @ObservedObject var track: AudioTrack
     @ObservedObject var trackFetcher: TrackFetcher
@@ -551,6 +575,15 @@ struct ContentView: View {
             SearchList(trackFetcher: trackFetcher,
                        serverConnection: serverConnection)
 
+            // XXX history
+
+            if historyFetcher.recent.count > 0 {
+                List(historyFetcher.recent) {  history in
+                    HistoryEntryView(history: history)
+                }
+            }
+            
+            // XXX history
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
