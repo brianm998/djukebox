@@ -1,6 +1,7 @@
 import Vapor
 import AVFoundation
 import Dispatch
+import DJukeboxCommon
 
 // XXX this timer fires forever, and never ends
 final class VaporTimer {
@@ -31,7 +32,7 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
 
     fileprivate var trackQueueSemaphore = DispatchSemaphore(value: 1)
     
-    public var playingTrack: AudioTrack?
+    public var playingTrack: AudioTrackType?
 
     // The total duration, in seconds, of the sound associated with the audio player.
     public var playingTrackDuration: TimeInterval? {
@@ -66,7 +67,7 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         self.trackQueueSemaphore.signal()
     }
 
-    public func move(track: AudioTrack, fromIndex: Int, toIndex: Int) throws {
+    public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) throws {
         self.trackQueueSemaphore.wait()
         if fromIndex < 0,
            toIndex < 0,

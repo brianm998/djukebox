@@ -1,4 +1,5 @@
 import Vapor
+import DJukeboxCommon
 
 public class LinuxAudioPlayer: AudioPlayerType {
 
@@ -11,7 +12,7 @@ public class LinuxAudioPlayer: AudioPlayerType {
     let trackFinder: TrackFinderType
     let historyWriter: HistoryWriter // not written to in linux yet
     
-    public var playingTrack: AudioTrack? 
+    public var playingTrack: AudioTrackType? 
 
     // XXX implement this for linux
     // The total duration, in seconds, of the sound associated with the audio player.
@@ -32,7 +33,7 @@ public class LinuxAudioPlayer: AudioPlayerType {
         trackQueue = []
     }
 
-    public func move(track: AudioTrack, fromIndex: Int, toIndex: Int) throws {
+    public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) throws {
         // XXX unimplmeented
     }
     

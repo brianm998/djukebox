@@ -1,6 +1,7 @@
 import Vapor
 import Crypto
 import CryptoKit
+import DJukeboxCommon
 
 let trackFinder: TrackFinderType = TrackFinder()
 

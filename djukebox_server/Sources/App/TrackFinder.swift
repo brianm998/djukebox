@@ -1,4 +1,5 @@
 import Vapor
+import DJukeboxCommon
 
 public protocol TrackFinderType {
     func track(forHash sha1Hash: String) -> (AudioTrack, URL)?

@@ -1,10 +1,24 @@
 import Foundation
 
+public protocol AudioTrackType {
+    var Artist: String { get }
+    var Album: String? { get }
+    var Title: String { get }
+    var Filename: String { get }
+    var SHA1: String { get }
+    var Duration: String? { get }
+    var AudioBitrate: String? { get }
+    var SampleRate: String? { get }
+    var TrackNumber: String? { get }
+    var Genre: String? { get }
+    var OriginalDate: String? { get }
+}
+
 public protocol AudioPlayerType {
     var isPlaying: Bool { get }
     //var isPaused: Bool { get }
     var trackQueue: [String] { get }
-    var playingTrack: AudioTrack? { get }
+    var playingTrack: AudioTrackType? { get }
 
     // The total duration, in seconds, of the sound associated with the audio player.
     var playingTrackDuration: TimeInterval? { get }
@@ -18,6 +32,6 @@ public protocol AudioPlayerType {
     func pause() 
     func resume()
     func clearQueue()
-    func move(track: AudioTrack, fromIndex: Int, toIndex: Int) throws
+    func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) throws
 }
 

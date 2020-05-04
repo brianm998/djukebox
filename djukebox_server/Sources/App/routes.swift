@@ -1,17 +1,18 @@
 import Vapor
+import DJukeboxCommon
 
-public struct AudioTrack: Content {
-    let Artist: String
-    let Album: String?
-    let Title: String
-    let Filename: String
-    let SHA1: String
-    let Duration: String?
-    let AudioBitrate: String?
-    let SampleRate: String?
-    let TrackNumber: String?
-    let Genre: String?
-    let OriginalDate: String?
+public struct AudioTrack: Content, AudioTrackType {
+    public let Artist: String
+    public let Album: String?
+    public let Title: String
+    public let Filename: String
+    public let SHA1: String
+    public let Duration: String?
+    public let AudioBitrate: String?
+    public let SampleRate: String?
+    public let TrackNumber: String?
+    public let Genre: String?
+    public let OriginalDate: String?
 }
 
 public struct PlayingQueue: Content {
@@ -108,7 +109,7 @@ func routes(_ app: Application) throws {
             let random = Int.random(in: 0..<trackFinder.tracks.count)
             let hash = Array(trackFinder.tracks.keys)[random]
             audioPlayer.play(sha1Hash: hash)
-            if let audioTrack = trackFinder.audioTrack(forHash: hash) {
+            if let audioTrack = trackFinder.audioTrack(forHash: hash) as? AudioTrack {
                 return audioTrack
             } else {
                 throw Abort(.notFound)
@@ -126,7 +127,7 @@ func routes(_ app: Application) throws {
                 let random = Int.random(in: 0..<array.count)
                 let hash = Array(array.keys)[random]
                 audioPlayer.play(sha1Hash: hash)
-                if let audioTrack = trackFinder.audioTrack(forHash: hash) {
+                if let audioTrack = trackFinder.audioTrack(forHash: hash) as? AudioTrack {
                     return audioTrack
                 } else {
                     throw Abort(.notFound)
@@ -339,7 +340,7 @@ func routes(_ app: Application) throws {
     
     func listQueue() -> PlayingQueue {
         var tracks: [AudioTrack] = []
-        if let playingTrack = audioPlayer.playingTrack {
+        if let playingTrack = audioPlayer.playingTrack as? AudioTrack {
             tracks.append(playingTrack)
         }
         for trackHash in audioPlayer.trackQueue {
