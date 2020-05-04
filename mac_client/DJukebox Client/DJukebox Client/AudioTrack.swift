@@ -6,6 +6,15 @@ public class PlayingQueue: Decodable, Identifiable, ObservableObject {
     let tracks: [AudioTrack]
     let playingTrackDuration: TimeInterval?
     let playingTrackPosition: TimeInterval?
+
+    init(tracks: [AudioTrack],
+         playingTrackDuration: TimeInterval?,
+         playingTrackPosition: TimeInterval?)
+    {
+        self.tracks = tracks
+        self.playingTrackDuration = playingTrackDuration
+        self.playingTrackPosition = playingTrackPosition
+    }
 }
 
 // copied from the server
