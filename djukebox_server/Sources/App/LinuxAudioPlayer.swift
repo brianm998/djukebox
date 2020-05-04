@@ -1,4 +1,4 @@
-import Vapor
+import Foundation
 import DJukeboxCommon
 
 public class LinuxAudioPlayer: AudioPlayerType {
@@ -33,8 +33,8 @@ public class LinuxAudioPlayer: AudioPlayerType {
         trackQueue = []
     }
 
-    public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) throws {
-        // XXX unimplmeented
+    public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {
+        return false
     }
     
     fileprivate func playingDone() {

@@ -1,7 +1,6 @@
-import Vapor
+import Foundation
 import AVFoundation
 import Dispatch
-import DJukeboxCommon
 
 // XXX this timer fires forever, and never ends
 final class VaporTimer {
@@ -50,13 +49,13 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
 
     let trackFinder: TrackFinderType
 
-    let historyWriter: HistoryWriter
+    let historyWriter: HistoryWriterType
     
     var vaporTimer: VaporTimer?
     
     var player: AVAudioPlayer? 
     
-    init(trackFinder: TrackFinderType, historyWriter: HistoryWriter) {
+    public init(trackFinder: TrackFinderType, historyWriter: HistoryWriterType) {
         self.trackFinder = trackFinder
         self.historyWriter = historyWriter
     }
@@ -67,7 +66,7 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         self.trackQueueSemaphore.signal()
     }
 
-    public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) throws {
+    public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {
         self.trackQueueSemaphore.wait()
         if fromIndex < 0,
            toIndex < 0,
@@ -76,11 +75,12 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
            trackQueue[fromIndex] != track.SHA1
         {
             self.trackQueueSemaphore.signal()
-            throw Abort(.badRequest)
+            return false
         }
         self.trackQueue.remove(at: fromIndex)
         self.trackQueue.insert(track.SHA1, at: toIndex)
         self.trackQueueSemaphore.signal()
+        return true
     }
     
     public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
@@ -192,16 +192,5 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         } catch {
             print("error \(error)")
         }
-    }
-
-    fileprivate func play(filename: String) throws {
-        // linux: aplay, osx: afplay
-        var player: String = "afplay" 
-        player = "aplay"
-        let newProcess = Process()
-       
-        try shellOut(to: player,
-                     arguments: ["\"\(filename)\""],
-                     process: newProcess)
     }
 }

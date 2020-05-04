@@ -1,20 +1,11 @@
 import Vapor
 import DJukeboxCommon
 
-public protocol TrackFinderType {
-    func track(forHash sha1Hash: String) -> (AudioTrack, URL)?
-    func filePath(forHash sha1Hash: String) -> String?
-    func audioTrack(forHash sha1Hash: String) -> AudioTrack?
-    func find(atFilePath path: String)
-    var tracks: [String: (AudioTrack, [URL])] { get }
-    func tracks(forArtist: String) -> [String: (AudioTrack, [URL])]
-}
-
 public class TrackFinder: TrackFinderType {
 
-    public var tracks: [String: (AudioTrack, [URL])] = [:]
+    public var tracks: [String: (AudioTrackType, [URL])] = [:]
 
-    public func track(forHash sha1Hash: String) -> (AudioTrack, URL)? {
+    public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
         if let (track, urls) = tracks[sha1Hash] {
             return (track, urls[0])
         } else {
@@ -22,8 +13,8 @@ public class TrackFinder: TrackFinderType {
         }
     }
 
-    public func tracks(forArtist artist: String) -> [String: (AudioTrack, [URL])] {
-        var ret: [String: (AudioTrack, [URL])] = [:]
+    public func tracks(forArtist artist: String) -> [String: (AudioTrackType, [URL])] {
+        var ret: [String: (AudioTrackType, [URL])] = [:]
         for (hash, (track, urls)) in tracks {
             if track.Artist == artist {
                 ret[hash] = (track, urls)
@@ -40,7 +31,7 @@ public class TrackFinder: TrackFinderType {
         }
     }
     
-    public func audioTrack(forHash sha1Hash: String) -> AudioTrack? {
+    public func audioTrack(forHash sha1Hash: String) -> AudioTrackType? {
         if let (audioTrack, _) = tracks[sha1Hash] {
             return audioTrack
         } else {
