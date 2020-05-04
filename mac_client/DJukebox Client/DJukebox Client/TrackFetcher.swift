@@ -28,12 +28,14 @@ public class TrackFetcher: ObservableObject {
     @Published var completionTime: Date = Date()
     
     let server: ServerType
+    let audioPlayer: AsyncAudioPlayerType
 
     var desiredArtist: String?
     var desiredAlbum: String?
     
-    init(withServer server: ServerType) {
+    init(withServer server: ServerType, audioPlayer: AsyncAudioPlayerType) {
         self.server = server
+        self.audioPlayer = audioPlayer
         self.albumTitle = "Albums"
         self.trackTitle = "Songs"
         refreshTracks()
@@ -88,7 +90,7 @@ public class TrackFetcher: ObservableObject {
         guard index >= 0 else { return }
         guard index < playingQueue.count else { return }
 
-        server.stopPlayingTrack(withHash: playingQueue[index].SHA1, atIndex: index) { success, error in
+        audioPlayer.stopPlayingTrack(withHash: playingQueue[index].SHA1, atIndex: index) { success, error in
             if success { self.refreshQueue() }
         }
     }
@@ -128,7 +130,7 @@ public class TrackFetcher: ObservableObject {
     }
     
     func refreshQueue() {
-        server.listPlayingQueue() { playingQueue, error in
+        audioPlayer.listPlayingQueue() { playingQueue, error in
             if let queue = playingQueue { self.update(playingQueue: queue) }
         }
     }

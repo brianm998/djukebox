@@ -10,7 +10,10 @@ import SwiftUI
 import CryptoKit
 
 let server/*: ServerType*/ = ServerConnection(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
-let trackFetcher = TrackFetcher(withServer: server)
+let serverAudioPlayer = ServerAudioPlayer(toUrl: "http://127.0.0.1:8080", withPassword: "foobar")
+
+let trackFetcher = TrackFetcher(withServer: server, audioPlayer: serverAudioPlayer)
+let audioPlayer = ViewObservableAudioPlayer(player: serverAudioPlayer)
 let historyFetcher = HistoryFetcher(withServer: server)
 
 @NSApplicationMain
@@ -24,7 +27,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         let contentView = ContentView(trackFetcher: trackFetcher,
                                       historyFetcher: historyFetcher,
-                                      serverConnection: server)
+                                      serverConnection: server,
+                                      audioPlayer: audioPlayer)
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             trackFetcher.refreshQueue()
             historyFetcher.refresh()

@@ -11,7 +11,7 @@ struct SearchListCell: View {
 
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var audioTrack: AudioTrack
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
     @State private var toggleIsOn = false
     
@@ -33,7 +33,7 @@ struct SearchListCell: View {
             */
              Text("\(audioTrack.Artist) - \(audioTrack.Album ?? "") - \(audioTrack.Title)")
                .onTapGesture {
-                   self.serverConnection.playTrack(withHash: self.audioTrack.SHA1) { track, error in
+                   self.audioPlayer.player.playTrack(withHash: self.audioTrack.SHA1) { track, error in
                        self.trackFetcher.refreshQueue()
                        print("track \(track) error \(error)")
                    }
@@ -44,8 +44,8 @@ struct SearchListCell: View {
 
 struct SearchList: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     @State private var searchQuery: String = "" 
-    @ObservedObject var serverConnection: ServerConnection //ServerType
 
     var body: some View {
         VStack {
@@ -65,7 +65,7 @@ struct SearchList: View {
                     ForEach(trackFetcher.searchResults, id: \.self) { result in
                         SearchListCell(trackFetcher: self.trackFetcher,
                                        audioTrack: result,
-                                       serverConnection: self.serverConnection)                    
+                                       audioPlayer: self.audioPlayer)                    
                     }
                 }
             }
@@ -94,6 +94,7 @@ struct ArtistList: View {
 struct AlbumList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var body: some View {
         VStack {
@@ -102,14 +103,14 @@ struct AlbumList: View {
                 Text(trackFetcher.albumTitle)
                 if self.trackFetcher.albums.count > 0 {
                     Button(action: {
-                        self.serverConnection.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                        self.audioPlayer.player.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
                         Text("Random")
                     }
                     Button(action: {
-                        self.serverConnection.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                        self.audioPlayer.player.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
@@ -133,6 +134,7 @@ struct TrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     @State private var dragging = false 
     
@@ -143,7 +145,7 @@ struct TrackList: View {
                 Text(trackFetcher.trackTitle)
                 if self.trackFetcher.tracks.count > 0 {
                     Button(action: {
-                        self.serverConnection.playTracks(self.trackFetcher.tracks) { success, error in
+                            self.audioPlayer.player.playTracks(self.trackFetcher.tracks) { success, error in
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
@@ -157,7 +159,7 @@ struct TrackList: View {
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
                   .foregroundColor(self.historyFetcher.eventCount(for: track.SHA1) == 0 ? Color.green : Color.gray)
                   .onTapGesture {
-                      self.serverConnection.playTrack(withHash: track.SHA1) { track, error in
+                      self.audioPlayer.player.playTrack(withHash: track.SHA1) { track, error in
                           self.trackFetcher.refreshQueue()
                           print("track \(track) error \(error)")
                       }
@@ -186,7 +188,7 @@ struct TrackList: View {
     }
 
     fileprivate func makeNewWindow(atOrigin origin: CGPoint) {
-        let trackFetcher = TrackFetcher(withServer: self.serverConnection)
+        let trackFetcher = TrackFetcher(withServer: self.serverConnection, audioPlayer: self.audioPlayer.player)
         trackFetcher.tracks = self.trackFetcher.tracks
         trackFetcher.desiredArtist = self.trackFetcher.desiredArtist
         trackFetcher.desiredAlbum = self.trackFetcher.desiredAlbum
@@ -202,7 +204,8 @@ struct TrackList: View {
         }
         let contentView = TrackList(trackFetcher: trackFetcher,
                                     historyFetcher: historyFetcher,
-                                    serverConnection: self.serverConnection)
+                                    serverConnection: self.serverConnection,
+                                    audioPlayer: audioPlayer)
         var window = NSWindow(
           contentRect: NSRect(x: origin.x, y: origin.y, // this position is ignored :(
                               width: 250, height: 300), 
@@ -224,14 +227,18 @@ struct ArtistAlbumTrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var body: some View {
         HStack {
             ArtistList(trackFetcher: trackFetcher)
-            AlbumList(trackFetcher: trackFetcher, serverConnection: serverConnection)
+            AlbumList(trackFetcher: trackFetcher,
+                      serverConnection: serverConnection,
+                      audioPlayer: audioPlayer)
             TrackList(trackFetcher: trackFetcher,
                       historyFetcher: historyFetcher,
-                      serverConnection: serverConnection)
+                      serverConnection: serverConnection,
+                      audioPlayer: audioPlayer)
         }
     }
 }
@@ -334,7 +341,7 @@ struct ProgressBar: View {
 
 struct PlayingQueueView: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    //@ObservedObject var serverConnection: ServerConnection //ServerType
     
     var body: some View {
         List {
@@ -364,7 +371,7 @@ struct PlayingQueueView: View {
         if startIndex < endIndex {
             let positionsAhead = endIndex-startIndex-1
             print("moving track \(trackToMove.SHA1) up \(positionsAhead) positions from \(startIndex)")
-            serverConnection.movePlayingTrack(withHash: trackToMove.SHA1,
+            audioPlayer.player.movePlayingTrack(withHash: trackToMove.SHA1,
                                               fromIndex: startIndex,
                                               toIndex: startIndex + positionsAhead) { playingQueue, error in
                 if let queue = playingQueue {
@@ -374,7 +381,7 @@ struct PlayingQueueView: View {
         } else if startIndex > endIndex {
             let positionsBehind = startIndex-endIndex
             print("moving track \(trackToMove.SHA1) down \(positionsBehind) positions from \(startIndex)")
-            serverConnection.movePlayingTrack(withHash: trackToMove.SHA1,
+            audioPlayer.player.movePlayingTrack(withHash: trackToMove.SHA1,
                                               fromIndex: startIndex,
                                               toIndex: startIndex - positionsBehind) { playingQueue, error in
                 if let queue = playingQueue {
@@ -447,7 +454,7 @@ struct MyDropDelegate: DropDelegate {
 
 struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
 
@@ -460,12 +467,12 @@ struct PlayingTracksView: View {
                 Spacer()
 
                 SkipCurrentTrackButton(trackFetcher: self.trackFetcher,
-                                       serverConnection: self.serverConnection)
+                                       audioPlayer: self.audioPlayer)
                 
-                if(self.serverConnection.isPaused) {
-                    PlayButton(serverConnection: self.serverConnection)
+                if(self.audioPlayer.player.isPaused) {
+                    PlayButton(audioPlayer: self.audioPlayer)
                 } else {
-                    PauseButton(serverConnection: self.serverConnection)
+                    PauseButton(audioPlayer: self.audioPlayer)
                 }
 
                 if trackFetcher.totalDuration > 0 {
@@ -474,15 +481,15 @@ struct PlayingTracksView: View {
                 }
 
                 PlayRandomTrackButton(trackFetcher: trackFetcher,
-                                      serverConnection: self.serverConnection,
+                                      audioPlayer: self.audioPlayer,
                                       buttonWidth: buttonWidth)
 
                 PlayNewRandomTrackButton(trackFetcher: trackFetcher,
-                                      serverConnection: self.serverConnection,
+                                      audioPlayer: self.audioPlayer,
                                       buttonWidth: buttonWidth)
                 
                 ClearQueueButton(trackFetcher: trackFetcher,
-                                 serverConnection: self.serverConnection,
+                                 audioPlayer: self.audioPlayer,
                                  buttonWidth: buttonWidth)
 
                 RefreshTracksFromServerButton(trackFetcher: trackFetcher,
@@ -508,7 +515,7 @@ struct PlayingTracksView: View {
             }
               .disabled(trackFetcher.currentTrack == nil)
 
-            PlayingQueueView(trackFetcher: trackFetcher, serverConnection: serverConnection)
+            PlayingQueueView(trackFetcher: trackFetcher/*, serverConnection: serverConnection*/)
 
               .onDrop(of: [kUTTypePlainText as String], delegate: dropDelegate)
             /*
@@ -561,19 +568,22 @@ struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var serverConnection: ServerConnection //ServerType
-
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
+    
     var body: some View {
         VStack {
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
                                  historyFetcher: historyFetcher,
-                                 serverConnection: serverConnection)
+                                 serverConnection: serverConnection,
+                                 audioPlayer: audioPlayer)
 
             
-            PlayingTracksView(trackFetcher: trackFetcher, serverConnection: serverConnection)
+            PlayingTracksView(trackFetcher: trackFetcher,
+                              audioPlayer: audioPlayer)
 
             
             SearchList(trackFetcher: trackFetcher,
-                       serverConnection: serverConnection)
+                       audioPlayer: audioPlayer)
 
             // XXX history
 
@@ -593,6 +603,7 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView(trackFetcher: trackFetcher,
                     historyFetcher: historyFetcher,
-                    serverConnection: server)
+                    serverConnection: server,
+                    audioPlayer: audioPlayer)
     }
 }

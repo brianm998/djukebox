@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct PlayButton: View {
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
     var body: some View {
         Button(action: {
-            self.serverConnection.resumePlaying() { audioTrack, error in
+            self.audioPlayer.player.resumePlaying() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else {
@@ -19,11 +19,11 @@ struct PlayButton: View {
 }
 
 struct PauseButton: View {
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
     var body: some View {
         Button(action: {
-            self.serverConnection.pausePlaying() { audioTrack, error in
+            self.audioPlayer.player.pausePlaying() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else {
@@ -38,11 +38,12 @@ struct PauseButton: View {
 
 struct SkipCurrentTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
     var body: some View {
         Button(action: {
-            self.serverConnection.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "") { audioTrack, error in
+                self.audioPlayer.player.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "",
+                                                         atIndex: 0) { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else {
@@ -58,12 +59,12 @@ struct SkipCurrentTrackButton: View {
 
 struct PlayRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
-            self.serverConnection.playRandomTrack() { audioTrack, error in
+            self.audioPlayer.player.playRandomTrack() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else if let audioTrack = audioTrack {
@@ -80,12 +81,12 @@ struct PlayRandomTrackButton: View {
 
 struct PlayNewRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
-            self.serverConnection.playNewRandomTrack() { audioTrack, error in
+            self.audioPlayer.player.playNewRandomTrack() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else if let audioTrack = audioTrack {
@@ -102,12 +103,12 @@ struct PlayNewRandomTrackButton: View {
 
 struct ClearQueueButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
-            self.serverConnection.stopAllTracks() { audioTrack, error in
+            self.audioPlayer.player.stopAllTracks() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else {
