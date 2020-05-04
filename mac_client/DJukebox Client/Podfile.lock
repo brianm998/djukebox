@@ -1,0 +1,16 @@
+PODS:
+  - DJukeboxCommon (0.0.1)
+
+DEPENDENCIES:
+  - DJukeboxCommon (from `../../DjukeboxCommon`)
+
+EXTERNAL SOURCES:
+  DJukeboxCommon:
+    :path: "../../DjukeboxCommon"
+
+SPEC CHECKSUMS:
+  DJukeboxCommon: 4931d4a4ae103b4e4d932dc84d369636ff16fdf4
+
+PODFILE CHECKSUM: a72858ec739a8b1574a7bad27a48782e52827b5e
+
+COCOAPODS: 1.7.2

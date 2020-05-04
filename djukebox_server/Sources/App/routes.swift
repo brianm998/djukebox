@@ -52,9 +52,10 @@ class AuthController {
     {
         return try self.auth(request: req) {
             if let hash = req.parameters.get("sha1"),
-               let (track, path) = trackFinder.track(forHash: hash)
+               let (track, path) = trackFinder.track(forHash: hash),
+               let audioTrack = track as? AudioTrack
             {
-                return try closure(track, path.path)
+                return try closure(audioTrack, path.path)
             } else {
                 throw Abort(.notFound)
             }
@@ -69,7 +70,11 @@ func routes(_ app: Application) throws {
     app.get("tracks") { req -> [AudioTrack] in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.auth(request: req) {
-            return trackFinder.tracks.values.map { (track, _) in return track }
+            var ret: [AudioTrack] = []
+            for (track, _) in trackFinder.tracks.values {
+                if let track = track as? AudioTrack {  ret.append(track) }
+            }
+            return ret
         }
     }
 
@@ -158,7 +163,7 @@ func routes(_ app: Application) throws {
                 }
             }
             if let sha1Hash = sha1Hash {
-                if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) {
+                if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) as? AudioTrack {
                     audioPlayer.play(sha1Hash: sha1Hash)
                     return audioTrack
                 } else {
@@ -194,7 +199,7 @@ func routes(_ app: Application) throws {
                     }
                 }
                 if let sha1Hash = sha1Hash {
-                    if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) {
+                    if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) as? AudioTrack {
                         audioPlayer.play(sha1Hash: sha1Hash)
                         return audioTrack
                     } else {
@@ -264,8 +269,11 @@ func routes(_ app: Application) throws {
                    let start = Int(startParam),
                    let dest = Int(destParam)
                 {
-                    try audioPlayer.move(track: track, fromIndex: start, toIndex: dest)
-                    return listQueue()
+                    if audioPlayer.move(track: track, fromIndex: start, toIndex: dest) {
+                        return listQueue()
+                    } else {
+                        throw Abort(.badRequest)
+                    }
                 } else {
                     throw Abort(.badRequest)
                 }
@@ -344,7 +352,7 @@ func routes(_ app: Application) throws {
             tracks.append(playingTrack)
         }
         for trackHash in audioPlayer.trackQueue {
-            if let track = trackFinder.audioTrack(forHash: trackHash) {
+            if let track = trackFinder.audioTrack(forHash: trackHash) as? AudioTrack {
                 tracks.append(track)
             }
         }

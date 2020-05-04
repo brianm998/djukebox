@@ -1,4 +1,5 @@
 import SwiftUI
+import DJukeboxCommon
 
 // copied from the server
 public class PlayingQueue: Decodable, Identifiable, ObservableObject {
@@ -90,7 +91,8 @@ public class AudioTrack: Decodable,
                          Identifiable,
                          Comparable,
                          Hashable,
-                         ObservableObject
+                         ObservableObject,
+                         AudioTrackType
 {
     public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
         if lhs.Artist == rhs.Artist {
@@ -154,16 +156,16 @@ public class AudioTrack: Decodable,
         return ret
     }
 
-    let Artist: String
-    let Album: String?
-    let Title: String
-    let Filename: String
-    let SHA1: String
-    let Duration: String?
-    let AudioBitrate: String?
-    let SampleRate: String?
-    let TrackNumber: String?
-    let Genre: String?
-    let OriginalDate: String?
+    public let Artist: String
+    public let Album: String?
+    public let Title: String
+    public let Filename: String
+    public let SHA1: String
+    public let Duration: String?
+    public let AudioBitrate: String?
+    public let SampleRate: String?
+    public let TrackNumber: String?
+    public let Genre: String?
+    public let OriginalDate: String?
 }
 

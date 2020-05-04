@@ -64,8 +64,7 @@ class FileWriter {
         }
     }
 }
-
-public class HistoryWriter {
+public class HistoryWriter: HistoryWriterType {
     let dirname: String
     let dateFormatter = DateFormatter()
     
@@ -74,14 +73,14 @@ public class HistoryWriter {
         dateFormatter.dateFormat = "MM_dd_yyyy"
     }
 
-    func writePlay(of sha1: String, at date: Date) throws {
+    public func writePlay(of sha1: String, at date: Date) throws {
         let filename = "history_\(dateFormatter.string(from: Date())).txt"
         let writer = FileWriter("\(dirname)/\(filename)")
         try writer.write("\(sha1),\(date.timeIntervalSince1970),1\n")
         history.recordPlay(of: sha1, at: date)
     }
 
-    func writeSkip(of sha1: String, at date: Date) throws {
+    public func writeSkip(of sha1: String, at date: Date) throws {
         let filename = "history_\(dateFormatter.string(from: Date())).txt"
         let writer = FileWriter("\(dirname)/\(filename)")
         try writer.write("\(sha1),\(date.timeIntervalSince1970),0\n")
