@@ -122,7 +122,7 @@ public class TrackFetcher: ObservableObject {
             }
             for (index, track) in playingQueue.tracks.enumerated() {
                 //print("adding track.timeInterval \(track.timeInterval)")
-                if index > 0 { totalDuration += track.timeInterval }
+                if index > 0 { totalDuration += track.timeInterval ?? 0 }
             }
             self.totalDuration = totalDuration
             self.completionTime = Date(timeIntervalSinceNow: totalDuration)

@@ -15,14 +15,18 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegat
     public var playingTrack: AudioTrackType?
 
     // The total duration, in seconds, of the sound associated with the audio player.
-    public var playingTrackDuration: TimeInterval? {
-        //if let player = player { return player.duration } // XXX XXX FIX THIS
+    public var playingTrackPosition: TimeInterval? {
+        if let player = player {
+            let currentTime = player.currentTime()
+            // convert to seconds
+            return Double(currentTime.value)/Double(currentTime.timescale)
+        }
         return nil
     }
 
-    // The playback point, in seconds, within the timeline of the sound associated with the audio player.
-    public var playingTrackPosition: TimeInterval? {
-        // if let player = player { return player.currentTime } /// XXX XXX FIX THIS TOO (maybe it can work?)
+    public var playingTrackDuration: TimeInterval? {
+        // The playback point, in seconds, within the timeline of the sound associated with the audio player.
+        if let playingTrack = playingTrack { return playingTrack.timeInterval }
         return nil
     }
 
@@ -32,16 +36,24 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegat
 
     let historyWriter: HistoryWriterType
     
-    var vaporTimer: VaporTimer?
-    
     var player: AVPlayer? 
     
     public init(trackFinder: TrackFinderType,
                 historyWriter: HistoryWriterType) {
         self.trackFinder = trackFinder
         self.historyWriter = historyWriter
+        
+        super.init()
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(playerDidFinishPlaying),
+                                               name: .AVPlayerItemDidPlayToEndTime,
+                                               object: nil)
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
     public func clearQueue() {
         self.trackQueueSemaphore.wait()
         trackQueue = []
@@ -65,12 +77,6 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegat
         return true
     }
     
-    public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        // XXX this delegate method never gets called :(
-        print("song did finish")
-        //playingDone()
-    }
-
     fileprivate func playingDone() {
         if let track = self.playingTrack {
             do {
@@ -139,6 +145,10 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegat
         isPaused = false
     }
 
+    @objc func playerDidFinishPlaying(note: NSNotification) {
+        self.playingDone()
+    }
+    
     fileprivate func serviceQueue() {
         guard !isPlaying else { return }
         self.trackQueueSemaphore.wait()
@@ -157,28 +167,8 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegat
             if let (_, url) = self.trackFinder.track(forHash: nextTrackHash) {
                 print("about to play \(url)")
                 let player = try AVPlayer(url: url)
-                //player.delegate = self
                 player.play()
                 self.player = player
-                //print("player woot2 player.isPlaying \(player.isPlaying)")
-
-                print("starting timer")
-
-                if self.vaporTimer == nil {
-                    self.vaporTimer = VaporTimer(withMillisecondInterval: 200) {
-                        //print("vapor timer fired \(self.player) player.currentItem \(player.currentItem)")
-                        if let player = self.player,
-                           //   !player.isPlaying,
-                           player.currentItem == nil,
-                           !self.isPaused
-                        {
-                            print("vapor timer calling playingDone")
-                            self.playingDone()
-                        } else {
-                            print("player.currentItem \(player.currentItem) self.playingTrack \(self.playingTrack) trackQueue \(self.trackQueue)")
-                        }
-                    }
-                }
             }
         } catch {
             print("error \(error)")

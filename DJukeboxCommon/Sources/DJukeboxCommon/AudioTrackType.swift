@@ -7,6 +7,7 @@ public protocol AudioTrackType {
     var Filename: String { get }
     var SHA1: String { get }
     var Duration: String? { get }
+    var timeInterval: Double? { get }
     var AudioBitrate: String? { get }
     var SampleRate: String? { get }
     var TrackNumber: String? { get }

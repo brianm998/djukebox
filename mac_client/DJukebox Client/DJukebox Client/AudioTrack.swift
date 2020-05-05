@@ -136,20 +136,23 @@ public class AudioTrack: Decodable,
     }
 
     public var timeIntervalString: String {
-        let amount = self.timeInterval
-        if amount < 60 {
-            return "\(Int(amount))s"
+        if let amount = self.timeInterval {
+            if amount < 60 {
+                return "\(Int(amount))s"
+            } else {
+                let duration = Int(amount)
+                let seconds = String(format: "%02d", duration % 60)
+                let minutes = duration / 60
+                return "\(minutes):\(seconds)"
+            }
         } else {
-            let duration = Int(amount)
-            let seconds = String(format: "%02d", duration % 60)
-            let minutes = duration / 60
-            return "\(minutes):\(seconds)"
+            return ""
         }
     }
 
-    public var timeInterval: TimeInterval {
-        var ret: TimeInterval = 0
+    public var timeInterval: Double? {
         if let duration = self.Duration {
+            var ret: TimeInterval = 0
             // expecting 0:07:11 (approx)
             let values = duration.split(separator: " ")[0].split(separator: ":")
             if values.count == 3,
@@ -161,8 +164,9 @@ public class AudioTrack: Decodable,
                 ret += minutes * 60
                 ret += hours * 60 * 60
             }
+            return ret
         }
-        return ret
+        return nil
     }
 
     public let Artist: String
