@@ -71,9 +71,14 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
 
     fileprivate var playingQueue: PlayingQueue {
         var trackQueue: [AudioTrack] = []
+        if let playingTrack = player.playingTrack as? AudioTrack {
+            trackQueue.append(playingTrack)
+        }
         for queueHash in player.trackQueue {
             if let queueTrack = fetcher.trackMap[queueHash] {
                 trackQueue.append(queueTrack)
+            } else {
+                print("HOLY FUCK")
             }
         }
         return PlayingQueue(tracks: trackQueue,
@@ -95,6 +100,7 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
     }
     
     func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
+        print("listPlayingQueue")
         closure(self.playingQueue, nil)
     }
     

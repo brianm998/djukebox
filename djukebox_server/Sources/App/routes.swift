@@ -61,6 +61,20 @@ class AuthController {
             }
         }
     }
+
+    // XXX not auth'd for testing
+    func frack<T>(from req: Request,
+                  closure: (AudioTrack, String) throws -> T) throws -> T
+    {
+        if let hash = req.parameters.get("sha1"),
+           let (track, path) = trackFinder.track(forHash: hash),
+           let audioTrack = track as? AudioTrack
+        {
+            return try closure(audioTrack, path.path)
+        } else {
+            throw Abort(.notFound)
+        }
+    }
 }
 
 func routes(_ app: Application) throws {
@@ -82,7 +96,8 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/stream/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
     app.get("stream", ":sha1") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.track(from: req) { _, filepath in
+        //return try authControl.track(from: req) { _, filepath in
+        return try authControl.frack(from: req) { _, filepath in
             return req.fileio.streamFile(at: filepath)
         }
     }

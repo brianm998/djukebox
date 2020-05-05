@@ -77,8 +77,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // XXX
         let fakeHistoryWriter = HistoryWriter()
         let trackFinder = TrackFinder(trackFetcher: trackFetcher)
-        let macAudioPlayer: AudioPlayerType = MacAudioPlayer(trackFinder: trackFinder,
-                                                             historyWriter: fakeHistoryWriter)
+        let macAudioPlayer: AudioPlayerType = NetworkAudioPlayer(trackFinder: trackFinder,
+                                                                 historyWriter: fakeHistoryWriter)
         
         let localAudioPlayer = AsyncAudioPlayer(player: macAudioPlayer, fetcher: trackFetcher)
         // XXX
@@ -88,8 +88,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // local one is stuck on URLRequest vs URL
         // https://stackoverflow.com/questions/50379272/how-to-pass-http-basic-authentication-to-avaudioplayer-in-swift-4
-        //let audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
-        let audioPlayerToUse: AsyncAudioPlayerType = serverAudioPlayer
+        let audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
+        //let audioPlayerToUse: AsyncAudioPlayerType = serverAudioPlayer
 
         trackFetcher.audioPlayer = audioPlayerToUse
         
@@ -98,10 +98,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let historyFetcher = HistoryFetcher(withServer: server, trackFetcher: trackFetcher)
         
-        print("localAudioPlayer \(localAudioPlayer)")
-
         historyFetcher.refresh()
-
         
         let contentView = ContentView(trackFetcher: trackFetcher,
                                       historyFetcher: historyFetcher,
