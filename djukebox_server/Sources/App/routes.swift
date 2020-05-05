@@ -1,6 +1,12 @@
 import Vapor
 import DJukeboxCommon
 
+public struct HistoryEntry: Content {
+    public let hash: String
+    public let time: Int
+    public let fullyPlayed: Bool
+}
+
 public struct AudioTrack: Content, AudioTrackType {
     public let Artist: String
     public let Album: String?
@@ -374,6 +380,24 @@ func routes(_ app: Application) throws {
         }
     }
 
+    // curl -H 'Authorization: foo' -H 'content-type: application/json' -d '{"hash":"foo","time":41220,"fullyPlayed":true}' http://127.0.0.1:8080/history
+    // this writes to a history entry
+    app.post("history") { req -> Response in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.auth(request: req) {
+            let entry = try req.content.decode(HistoryEntry.self)
+
+            if entry.fullyPlayed {
+                try historyWriter.writePlay(of: entry.hash,
+                                            at: Date(timeIntervalSince1970: Double(entry.time)))
+            } else {
+                try historyWriter.writeSkip(of: entry.hash,
+                                            at: Date(timeIntervalSince1970: Double(entry.time)))
+            }
+            return Response(status: .ok)
+        }
+    }
+    
     func isInQueue(_ hash: String) -> Bool {
         if let playingTrack = audioPlayer.playingTrack,
            playingTrack.SHA1 == hash
