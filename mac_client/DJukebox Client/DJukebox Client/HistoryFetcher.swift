@@ -32,10 +32,13 @@ public class HistoryFetcher: ObservableObject {
     let recentHistoryDurationSeconds: Double = 30*60 // 60 minutes
     
     let server: ServerType
+    let trackFetcher: TrackFetcher
+    
     var lastUpdateTime: Date?
 
-    init(withServer server: ServerType) {
+    init(withServer server: ServerType, trackFetcher: TrackFetcher) {
         self.server = server
+        self.trackFetcher = trackFetcher
         refresh()
     }
 

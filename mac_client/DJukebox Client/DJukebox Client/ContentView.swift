@@ -93,7 +93,7 @@ struct ArtistList: View {
 
 struct AlbumList: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    var serverConnection: ServerType
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var body: some View {
@@ -133,7 +133,7 @@ struct AlbumList: View {
 struct TrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    var serverConnection: ServerType
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     @State private var dragging = false 
@@ -188,7 +188,8 @@ struct TrackList: View {
     }
 
     fileprivate func makeNewWindow(atOrigin origin: CGPoint) {
-        let trackFetcher = TrackFetcher(withServer: self.serverConnection, audioPlayer: self.audioPlayer.player)
+        let trackFetcher = TrackFetcher(withServer: self.serverConnection)
+        trackFetcher.audioPlayer = self.audioPlayer.player
         trackFetcher.tracks = self.trackFetcher.tracks
         trackFetcher.desiredArtist = self.trackFetcher.desiredArtist
         trackFetcher.desiredAlbum = self.trackFetcher.desiredAlbum
@@ -226,7 +227,7 @@ fileprivate var windows: [NSWindow] = []
 struct ArtistAlbumTrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    var serverConnection: ServerType
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var body: some View {
@@ -341,7 +342,7 @@ struct ProgressBar: View {
 
 struct PlayingQueueView: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    //@ObservedObject var serverConnection: ServerConnection //ServerType
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
     var body: some View {
         List {
@@ -372,8 +373,8 @@ struct PlayingQueueView: View {
             let positionsAhead = endIndex-startIndex-1
             print("moving track \(trackToMove.SHA1) up \(positionsAhead) positions from \(startIndex)")
             audioPlayer.player.movePlayingTrack(withHash: trackToMove.SHA1,
-                                              fromIndex: startIndex,
-                                              toIndex: startIndex + positionsAhead) { playingQueue, error in
+                                                fromIndex: startIndex,
+                                                toIndex: startIndex + positionsAhead) { playingQueue, error in
                 if let queue = playingQueue {
                     self.trackFetcher.update(playingQueue: queue)
                 }
@@ -382,8 +383,8 @@ struct PlayingQueueView: View {
             let positionsBehind = startIndex-endIndex
             print("moving track \(trackToMove.SHA1) down \(positionsBehind) positions from \(startIndex)")
             audioPlayer.player.movePlayingTrack(withHash: trackToMove.SHA1,
-                                              fromIndex: startIndex,
-                                              toIndex: startIndex - positionsBehind) { playingQueue, error in
+                                                fromIndex: startIndex,
+                                                toIndex: startIndex - positionsBehind) { playingQueue, error in
                 if let queue = playingQueue {
                     self.trackFetcher.update(playingQueue: queue)
                 }
@@ -469,7 +470,7 @@ struct PlayingTracksView: View {
                 SkipCurrentTrackButton(trackFetcher: self.trackFetcher,
                                        audioPlayer: self.audioPlayer)
                 
-                if(self.audioPlayer.player.isPaused) {
+                if(self.audioPlayer.isPaused) {
                     PlayButton(audioPlayer: self.audioPlayer)
                 } else {
                     PauseButton(audioPlayer: self.audioPlayer)
@@ -515,9 +516,9 @@ struct PlayingTracksView: View {
             }
               .disabled(trackFetcher.currentTrack == nil)
 
-            PlayingQueueView(trackFetcher: trackFetcher/*, serverConnection: serverConnection*/)
-
+            PlayingQueueView(trackFetcher: trackFetcher, audioPlayer: self.audioPlayer)
               .onDrop(of: [kUTTypePlainText as String], delegate: dropDelegate)
+            
             /*
               .onDrop(of: [kUTTypePlainText as String], isTargeted: nil) { providers in
                   for provider in providers {
@@ -567,7 +568,7 @@ struct PlayingTracksView: View {
 struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
-    @ObservedObject var serverConnection: ServerConnection //ServerType
+    var serverConnection: ServerType
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
     var body: some View {
@@ -599,11 +600,22 @@ struct ContentView: View {
 }
 
 
+// an async audio player that subclasses the ServerConnection to play tracks on the server
+let previewServerAudioPlayer: AsyncAudioPlayerType = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
+// an observable view object for showing lots of track based info
+let previewTrackFetcher = TrackFetcher(withServer: server)
+
+// an observable view object for the playing queue
+let previewViewAudioPlayer = ViewObservableAudioPlayer(player: previewServerAudioPlayer)
+
+let previewHistoryFetcher = HistoryFetcher(withServer: server, trackFetcher: previewTrackFetcher)
+
+
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(trackFetcher: trackFetcher,
-                    historyFetcher: historyFetcher,
+        ContentView(trackFetcher: previewTrackFetcher,
+                    historyFetcher: previewHistoryFetcher,
                     serverConnection: server,
-                    audioPlayer: audioPlayer)
+                    audioPlayer: previewViewAudioPlayer)
     }
 }

@@ -12,13 +12,21 @@ import DJukeboxCommon
 
 let serverURL = "http://127.0.0.1:8080"
 let password = "foobar"
-  
-let server/*: ServerType*/ = ServerConnection(toUrl: serverURL, withPassword: password)
-let serverAudioPlayer = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
 
-let trackFetcher = TrackFetcher(withServer: server, audioPlayer: serverAudioPlayer)
-let audioPlayer = ViewObservableAudioPlayer(player: serverAudioPlayer)
-let historyFetcher = HistoryFetcher(withServer: server)
+// the server connection for tracks and history 
+let server: ServerType = ServerConnection(toUrl: serverURL, withPassword: password)
+
+
+
+public class HistoryWriter: HistoryWriterType {
+    public func writePlay(of sha1: String, at date: Date) throws {
+        print("write play of \(sha1)")
+    }
+
+    public func writeSkip(of sha1: String, at date: Date) throws {
+        print("write skip of \(sha1)")
+    }
+}
 
 public class TrackFinder: TrackFinderType {
     
@@ -33,7 +41,7 @@ public class TrackFinder: TrackFinderType {
     
     public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
         if let track = trackFetcher.trackMap[sha1Hash],
-           let url = URL(string: "\(serverURL)/stream/sha1Hash") // XXX need auth still with URLRequest
+           let url = URL(string: "\(serverURL)/stream/\(sha1Hash)") // XXX need auth still with URLRequest
         {
             return (track, url)
         }
@@ -48,10 +56,6 @@ public class TrackFinder: TrackFinderType {
     }
 }
 
-let trackFinder = TrackFinder(trackFetcher: trackFetcher)
-
-//AsyncAudioPlayer
-
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -59,12 +63,50 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view that provides the window contents.
+
+        // XXX XXX
+
+        // an async audio player that subclasses the ServerConnection to play tracks on the server
+        let serverAudioPlayer: AsyncAudioPlayerType = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
+        
+        // an observable view object for showing lots of track based info
+        let trackFetcher = TrackFetcher(withServer: server/*, audioPlayer: audioPlayerToUse*/)
+        
+        // XXX
+        // XXX
+        // XXX
+        let fakeHistoryWriter = HistoryWriter()
+        let trackFinder = TrackFinder(trackFetcher: trackFetcher)
+        let macAudioPlayer: AudioPlayerType = MacAudioPlayer(trackFinder: trackFinder,
+                                                             historyWriter: fakeHistoryWriter)
+        
+        let localAudioPlayer = AsyncAudioPlayer(player: macAudioPlayer, fetcher: trackFetcher)
+        // XXX
+        // XXX
+        // XXX
+
+
+        // local one is stuck on URLRequest vs URL
+        // https://stackoverflow.com/questions/50379272/how-to-pass-http-basic-authentication-to-avaudioplayer-in-swift-4
+        //let audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
+        let audioPlayerToUse: AsyncAudioPlayerType = serverAudioPlayer
+
+        trackFetcher.audioPlayer = audioPlayerToUse
+        
+        // an observable view object for the playing queue
+        let viewAudioPlayer = ViewObservableAudioPlayer(player: audioPlayerToUse)
+
+        let historyFetcher = HistoryFetcher(withServer: server, trackFetcher: trackFetcher)
+        
+        print("localAudioPlayer \(localAudioPlayer)")
+
         historyFetcher.refresh()
+
         
         let contentView = ContentView(trackFetcher: trackFetcher,
                                       historyFetcher: historyFetcher,
                                       serverConnection: server,
-                                      audioPlayer: audioPlayer)
+                                      audioPlayer: viewAudioPlayer)
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             trackFetcher.refreshQueue()
             historyFetcher.refresh()

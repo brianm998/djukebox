@@ -39,6 +39,7 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
     init(player: AudioPlayerType, fetcher: TrackFetcher) {
         self.player = player
         self.fetcher = fetcher
+        print("FUCK THIS")
     }
 
     var isPaused: Bool {
@@ -98,8 +99,8 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
     }
     
     func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
-        let random = Int.random(in: 0..<trackFetcher.allTracks.count)
-        let track = trackFetcher.allTracks[random]
+        let random = Int.random(in: 0..<fetcher.allTracks.count)
+        let track = fetcher.allTracks[random]
         player.play(sha1Hash: track.SHA1)
         closure(track, nil)
     }
@@ -266,7 +267,7 @@ class ServerConnection: ObservableObject, ServerType {
         if let url = URL(string: "\(serverUrl)/\(path)") {
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            request.setValue(authHeaderValue, forHTTPHeaderField:"Authorization")
+            request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
             request.timeoutInterval = 60.0
             
             URLSession.shared.dataTask(with: request) { data, response, error in
