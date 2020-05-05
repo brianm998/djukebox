@@ -14,7 +14,7 @@ public struct AudioTrack: Content, AudioTrackType {
     public let Genre: String?
     public let OriginalDate: String?
 
-    public var timeInterval: Double {
+    public var timeInterval: Double? {
         if let duration = self.Duration {
             var ret: TimeInterval = 0
             // expecting 0:07:11 (approx)

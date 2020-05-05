@@ -85,11 +85,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // XXX
         // XXX
 
-
-        // local one is stuck on URLRequest vs URL
-        // https://stackoverflow.com/questions/50379272/how-to-pass-http-basic-authentication-to-avaudioplayer-in-swift-4
-        let audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
-        //let audioPlayerToUse: AsyncAudioPlayerType = serverAudioPlayer
+        var audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
+        if true {
+            // play on server
+            audioPlayerToUse = serverAudioPlayer
+        }
 
         trackFetcher.audioPlayer = audioPlayerToUse
         
