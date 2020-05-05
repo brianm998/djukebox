@@ -77,7 +77,7 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
         }
         return PlayingQueue(tracks: trackQueue,
                             playingTrackDuration: player.playingTrackDuration,
-                            playingTrackPosition: player.playingTrackPosition),
+                            playingTrackPosition: player.playingTrackPosition)
     }
     
     func movePlayingTrack(withHash hash: String,
@@ -98,37 +98,38 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
     }
     
     func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
-        
+        let random = Int.random(in: 0..<trackFetcher.allTracks.count)
+        let track = trackFetcher.allTracks[random]
+        player.play(sha1Hash: track.SHA1)
+        closure(track, nil)
     }
     
     func playRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
-
+        // XXX implement this
     }
     
     func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
-
+        // XXX implement this
     }
     
     func playNewRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
-        
+        // XXX implement this
     }
     
     func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {
-
+        // XXX implement this
     }
     
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void) {
-
+        player.pause()
+        closure(true, nil)
     }
     
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void) {
-
+        player.resume()
+        closure(true, nil)
     }
 }
-
-//class MacLocalAsyncAudioPlayer: AsyncAudioPlayerType {
-    
-//}
 
 class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
     

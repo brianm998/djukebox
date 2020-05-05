@@ -22,14 +22,14 @@ public class TrackFinder: TrackFinderType {
         }
         return ret
     }
-    
+      /*
     public func filePath(forHash sha1Hash: String) -> String? {
         if let (_, urls) = tracks[sha1Hash] {
             return urls[0].path
         } else {
             return nil
         }
-    }
+    }*/
     
     public func audioTrack(forHash sha1Hash: String) -> AudioTrackType? {
         if let (audioTrack, _) = tracks[sha1Hash] {

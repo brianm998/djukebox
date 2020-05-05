@@ -55,7 +55,8 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
     
     var player: AVAudioPlayer? 
     
-    public init(trackFinder: TrackFinderType, historyWriter: HistoryWriterType) {
+    public init(trackFinder: TrackFinderType,
+                historyWriter: HistoryWriterType) {
         self.trackFinder = trackFinder
         self.historyWriter = historyWriter
     }
@@ -131,9 +132,6 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
 
     // skips the currently playing song, removing it from the playlist
     public func skip() {
-        let player = self.player
-        self.player = nil
-        player?.stop()
         if let track = self.playingTrack {
             do {
                 try historyWriter.writeSkip(of: track.SHA1, at: Date())
@@ -141,6 +139,10 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
                 print("coudn't write history: \(error)")
             }
             self.playingTrack = nil // set to keep skipped songs out of history (track these?)
+        }
+        if let player = self.player {
+            self.player = nil
+            player.stop()
         }
         playingDone()
     }

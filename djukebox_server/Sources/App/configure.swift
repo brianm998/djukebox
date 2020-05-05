@@ -3,7 +3,7 @@ import Crypto
 import CryptoKit
 import DJukeboxCommon
 
-let trackFinder: TrackFinderType = TrackFinder()
+let trackFinder/*: TrackFinderType*/ = TrackFinder()
 
 let historyDir = "/mnt/root/mp3/playing_history"
 
