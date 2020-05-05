@@ -289,7 +289,7 @@ func routes(_ app: Application) throws {
                    let index = Int(indexStr)
                 {
                     print("index \(index)")
-                    if index == 0 {
+                    if index == -1 {
                         audioPlayer.skip()
                     } else {
                         audioPlayer.stopPlaying(sha1Hash: track.SHA1, atIndex: index)

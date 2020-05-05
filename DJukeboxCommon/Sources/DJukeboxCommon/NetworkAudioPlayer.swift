@@ -95,17 +95,25 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegat
     
     public func stopPlaying(sha1Hash: String, atIndex index: Int) {
         print("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
-        self.trackQueueSemaphore.wait()
-        for (trackIndex, hash) in trackQueue.enumerated() {
-            print("index \(trackIndex) hash \(sha1Hash)")
-            if hash == sha1Hash,
-               index == trackIndex
-            {
-                print("index \(index) needs to be removed")
-                self.trackQueue.remove(at: index)
+
+        if index == -1,
+           let playingTrack = playingTrack,
+           playingTrack.SHA1 == sha1Hash
+        {
+            self.skip()
+        } else {
+            self.trackQueueSemaphore.wait()
+            for (trackIndex, hash) in trackQueue.enumerated() {
+                print("index \(trackIndex) hash \(sha1Hash)")
+                if hash == sha1Hash,
+                   index == trackIndex
+                {
+                    print("index \(index) needs to be removed")
+                    self.trackQueue.remove(at: index)
+                }
             }
+            self.trackQueueSemaphore.signal()
         }
-        self.trackQueueSemaphore.signal()
     }
     
     public func play(sha1Hash: String) {
@@ -135,14 +143,18 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegat
     }
 
     public func pause() {
-        print("calling pause")
-        isPaused = true
-        self.player?.pause()
+        if isPaused {
+            isPaused = false
+            self.player?.play()
+        } else {
+            print("calling pause isPaused \(isPaused)")
+            isPaused = true
+            self.player?.pause()
+        }
     }
     
     public func resume() {
-        self.player?.play()
-        isPaused = false
+        self.pause()
     }
 
     @objc func playerDidFinishPlaying(note: NSNotification) {

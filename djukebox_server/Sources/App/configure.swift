@@ -33,7 +33,6 @@ public struct Config: Content {
     let TrackPaths: [String]
 }
 
-
 enum FileWriteError: Error {
     case directoryDoesntExist
     case convertToDataIssue

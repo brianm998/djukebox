@@ -48,10 +48,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // XXX
         // XXX
         // XXX
-        let fakeHistoryWriter = HistoryWriter()
+        let fakeHistoryWriter = HistoryWriter() // XXX make this go to the server
         let trackFinder = TrackFinder(trackFetcher: trackFetcher)
-        let macAudioPlayer: AudioPlayerType = NetworkAudioPlayer(trackFinder: trackFinder,
-                                                                 historyWriter: fakeHistoryWriter)
+        let macAudioPlayer: AudioPlayerType =
+          NetworkAudioPlayer(trackFinder: trackFinder, historyWriter: fakeHistoryWriter)
         
         let localAudioPlayer = AsyncAudioPlayer(player: macAudioPlayer, fetcher: trackFetcher)
         // XXX
@@ -59,7 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // XXX
 
         var audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
-        if true {
+        if false {
             // play on server
             audioPlayerToUse = serverAudioPlayer
         }

@@ -43,7 +43,7 @@ struct SkipCurrentTrackButton: View {
     var body: some View {
         Button(action: {
                 self.audioPlayer.player.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "",
-                                                         atIndex: 0) { audioTrack, error in
+                                                         atIndex: -1) { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else {
