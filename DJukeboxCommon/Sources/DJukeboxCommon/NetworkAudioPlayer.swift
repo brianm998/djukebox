@@ -4,8 +4,6 @@ import Dispatch
 
 public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
 
-    let dispatchQueue = DispatchQueue(label: "djukebox-audio-player")
-
     public var isPlaying = false
 
     public var trackQueue: [String] = []
