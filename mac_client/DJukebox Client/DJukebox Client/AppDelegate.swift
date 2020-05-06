@@ -66,7 +66,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // we can play either locally or on the server
         var audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
 
-        var shouldPlayLocally = true
+        var shouldPlayLocally = false
         
         if !shouldPlayLocally { // play on server ?
             audioPlayerToUse = serverAudioPlayer
