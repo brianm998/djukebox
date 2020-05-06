@@ -8,6 +8,13 @@ protocol ServerType {
 
     func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void)
     func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void)
+    func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void)
+}
+
+public struct ServerHistoryEntry: Codable {
+    public let hash: String
+    public let time: Int
+    public let fullyPlayed: Bool
 }
 
 class ServerConnection: ObservableObject, ServerType {
@@ -42,6 +49,27 @@ class ServerConnection: ObservableObject, ServerType {
         }
     }
 
+    internal func post(body: Data, toPath path: String, closure: @escaping (Bool, Error?) -> Void) {
+        if let url = URL(string: "\(serverUrl)/\(path)") {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "content-type")
+
+            request.timeoutInterval = 60.0
+            request.httpBody = body
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    closure(false, error)
+                } else {
+                    closure(true, nil)
+                }
+            }.resume()
+        } else {
+            closure(false, nil)
+        }
+    }
+
     internal func requestJson<T>(atPath path: String, closure: @escaping (T?, Error?) -> Void) where T: Decodable {
         let urlPath = path.replacingOccurrences(of: " ", with: "%20")
         if let url = URL(string: "\(serverUrl)/\(urlPath)") {
@@ -62,6 +90,16 @@ class ServerConnection: ObservableObject, ServerType {
             }.resume()
         } else {
             closure(nil, nil)
+        }
+    }
+
+    func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void) {
+        let encoder = JSONEncoder()
+        do {
+            let jsonString = try encoder.encode(history)
+            self.post(body: jsonString, toPath: "history", closure: closure)
+        } catch {
+            print("json error \(error)")
         }
     }
     

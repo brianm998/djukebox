@@ -17,17 +17,26 @@ let password = "foobar"
 let server: ServerType = ServerConnection(toUrl: serverURL, withPassword: password)
 
 
-
-public class HistoryWriter: HistoryWriterType {
+// this is used for writing locally played tracks to the history on the server
+public class ServerHistoryWriter: HistoryWriterType {
     public func writePlay(of sha1: String, at date: Date) throws {
-        print("write play of \(sha1)")
+        let history = ServerHistoryEntry(hash: sha1,
+                                         time: Int(date.timeIntervalSince1970),
+                                         fullyPlayed: true)
+        server.post(history: history) { success, error in
+            print("wrote play of \(sha1)")
+        }
     }
 
     public func writeSkip(of sha1: String, at date: Date) throws {
-        print("write skip of \(sha1)")
+        let history = ServerHistoryEntry(hash: sha1,
+                                         time: Int(date.timeIntervalSince1970),
+                                         fullyPlayed: false)
+        server.post(history: history) { success, error in
+            print("wrote skip of \(sha1)")
+        }
     }
 }
-
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -37,30 +46,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view that provides the window contents.
 
-        // XXX XXX
-
         // an async audio player that subclasses the ServerConnection to play tracks on the server
         let serverAudioPlayer: AsyncAudioPlayerType = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
         
         // an observable view object for showing lots of track based info
         let trackFetcher = TrackFetcher(withServer: server/*, audioPlayer: audioPlayerToUse*/)
         
-        // XXX
-        // XXX
-        // XXX
-        let fakeHistoryWriter = HistoryWriter() // XXX make this go to the server
-        let trackFinder = TrackFinder(trackFetcher: trackFetcher)
-        let macAudioPlayer: AudioPlayerType =
-          NetworkAudioPlayer(trackFinder: trackFinder, historyWriter: fakeHistoryWriter)
-        
-        let localAudioPlayer = AsyncAudioPlayer(player: macAudioPlayer, fetcher: trackFetcher)
-        // XXX
-        // XXX
-        // XXX
+        // this monstrosity plays the files locally via streaming urls
+        let localAudioPlayer =
+          AsyncAudioPlayer(player: NetworkAudioPlayer(trackFinder: TrackFinder(trackFetcher: trackFetcher),
+                                                      historyWriter: ServerHistoryWriter()),
+                           fetcher: trackFetcher)
 
+        // we can play either locally or on the server
         var audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
-        if false {
-            // play on server
+
+        var shouldPlayLocally = true
+        
+        if !shouldPlayLocally { // play on server ?
             audioPlayerToUse = serverAudioPlayer
         }
 
