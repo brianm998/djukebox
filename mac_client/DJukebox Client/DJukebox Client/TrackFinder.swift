@@ -4,17 +4,18 @@ import DJukeboxCommon
 public class TrackFinder: TrackFinderType {
     
     public var tracks: [String : (AudioTrackType, [URL])]
-    
     let trackFetcher: TrackFetcher
+    let serverConnection: ServerType
 
-    init(trackFetcher: TrackFetcher) {
+    init(trackFetcher: TrackFetcher, serverConnection: ServerType) {
         self.trackFetcher = trackFetcher
+        self.serverConnection = serverConnection
         self.tracks = [:]
     }
     
     public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
         if let track = trackFetcher.trackMap[sha1Hash],
-           let url = URL(string: "\(serverURL)/stream/\(sha1Hash)") // XXX need auth still
+           let url = URL(string: "\(serverURL)/stream/\(serverConnection.authHeaderValue)/\(sha1Hash)")
         {
             return (track, url)
         }

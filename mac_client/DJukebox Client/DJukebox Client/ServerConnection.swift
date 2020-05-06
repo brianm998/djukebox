@@ -9,6 +9,7 @@ protocol ServerType {
     func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void)
     func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void)
     func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void)
+    var authHeaderValue: String { get }
 }
 
 public struct ServerHistoryEntry: Codable {

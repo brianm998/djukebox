@@ -60,8 +60,8 @@ class AuthController {
         self.trackFinder = trackFinder
     }
 
-    // curl -H "auth: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425" http://localhost:8080/rand
-    func auth<T>(request req: Request, closure: () throws -> T) throws -> T {
+    // curl -H "Authorization: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425" http://localhost:8080/rand
+    func headerAuth<T>(request req: Request, closure: () throws -> T) throws -> T {
         for header in req.headers {
             if header.name == "Authorization" {
                 if SHA512.hash(data: Data(config.Password.utf8)).hexEncodedString() == header.value {
@@ -72,10 +72,21 @@ class AuthController {
         throw Abort(.unauthorized)
     }
 
-    func track<T>(from req: Request,
-                  closure: (AudioTrack, String) throws -> T) throws -> T
+    func pathAuth<T>(request req: Request, closure: () throws -> T) throws -> T {
+        for header in req.headers {
+            if let auth = req.parameters.get("auth") {
+                if SHA512.hash(data: Data(config.Password.utf8)).hexEncodedString() == auth {
+                    return try closure()
+                }
+            }
+        }
+        throw Abort(.unauthorized)
+    }
+
+    func trackFromPath<T>(from req: Request, // XXX reame this
+                          closure: (AudioTrack, String) throws -> T) throws -> T
     {
-        return try self.auth(request: req) {
+        return try self.pathAuth(request: req) {
             if let hash = req.parameters.get("sha1"),
                let (track, path) = trackFinder.track(forHash: hash),
                let audioTrack = track as? AudioTrack
@@ -87,17 +98,18 @@ class AuthController {
         }
     }
 
-    // XXX not auth'd for testing
-    func frack<T>(from req: Request,
+    func track<T>(from req: Request,
                   closure: (AudioTrack, String) throws -> T) throws -> T
     {
-        if let hash = req.parameters.get("sha1"),
-           let (track, path) = trackFinder.track(forHash: hash),
-           let audioTrack = track as? AudioTrack
-        {
-            return try closure(audioTrack, path.path)
-        } else {
-            throw Abort(.notFound)
+        return try self.headerAuth(request: req) {
+            if let hash = req.parameters.get("sha1"),
+               let (track, path) = trackFinder.track(forHash: hash),
+               let audioTrack = track as? AudioTrack
+            {
+                return try closure(audioTrack, path.path)
+            } else {
+                throw Abort(.notFound)
+            }
         }
     }
 }
@@ -108,7 +120,7 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/tracks
     app.get("tracks") { req -> [AudioTrack] in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             var ret: [AudioTrack] = []
             for (track, _) in trackFinder.tracks.values {
                 if let track = track as? AudioTrack {  ret.append(track) }
@@ -117,12 +129,11 @@ func routes(_ app: Application) throws {
         }
     }
 
-    // stream a track by hash
-    // curl localhost:8080/stream/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
-    app.get("stream", ":sha1") { req -> Response in
+    // stream a track by hash, with auth on the path
+    // curl localhost:8080/stream/0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
+    app.get("stream", ":auth", ":sha1") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        //return try authControl.track(from: req) { _, filepath in
-        return try authControl.frack(from: req) { _, filepath in
+        return try authControl.trackFromPath(from: req) { _, filepath in
             return req.fileio.streamFile(at: filepath)
         }
     }
@@ -150,7 +161,7 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/rand
     app.get("rand") { req -> AudioTrack in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             let random = Int.random(in: 0..<trackFinder.tracks.count)
             let hash = Array(trackFinder.tracks.keys)[random]
             audioPlayer.play(sha1Hash: hash)
@@ -167,7 +178,7 @@ func routes(_ app: Application) throws {
     app.get("rand", ":artist") { req -> AudioTrack in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         if let artist = req.parameters.get("artist") {
-            return try authControl.auth(request: req) {
+            return try authControl.headerAuth(request: req) {
                 let array = trackFinder.tracks(forArtist: artist)
                 let random = Int.random(in: 0..<array.count)
                 let hash = Array(array.keys)[random]
@@ -186,7 +197,7 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/newrand
     app.get("newrand") { req -> AudioTrack in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             var sha1Hash: String?
             var max = 100
             while sha1Hash == nil,
@@ -220,7 +231,7 @@ func routes(_ app: Application) throws {
     app.get("newrand", ":artist") { req -> AudioTrack in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         if let artist = req.parameters.get("artist") {
-            return try authControl.auth(request: req) {
+            return try authControl.headerAuth(request: req) {
                 let array = trackFinder.tracks(forArtist: artist)
 
                 var sha1Hash: String?
@@ -257,7 +268,7 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/stop
     app.get("stop") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             audioPlayer.clearQueue()
             audioPlayer.skip()
             return Response(status: .ok)
@@ -269,7 +280,7 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/stop/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
     app.get("stop", ":sha1") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             return try authControl.track(from: req) { track, _ in
                 if let playingTrack = audioPlayer.playingTrack,
                    playingTrack.SHA1 == track.SHA1
@@ -289,7 +300,7 @@ func routes(_ app: Application) throws {
     app.get("stop", ":sha1", ":index") { req -> Response in
         print("stop at index")
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             return try authControl.track(from: req) { track, _ in
                 if let indexStr = req.parameters.get("index"),
                    let index = Int(indexStr)
@@ -310,7 +321,7 @@ func routes(_ app: Application) throws {
 
     app.get("move", ":sha1", ":start", ":destination") { req -> PlayingQueue in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             return try authControl.track(from: req) { track, _ in
                 if let startParam = req.parameters.get("start"),
                    let destParam = req.parameters.get("destination"),
@@ -333,7 +344,7 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/pause
     app.get("pause") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             audioPlayer.pause()
             return Response(status: .ok)
         }
@@ -343,7 +354,7 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/resume
     app.get("resume") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             audioPlayer.resume()
             return Response(status: .ok)
         }
@@ -353,7 +364,7 @@ func routes(_ app: Application) throws {
     // curl localhost:8080/resume
     app.get("queue") { req -> PlayingQueue in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             return listQueue()
         }
     }
@@ -361,7 +372,7 @@ func routes(_ app: Application) throws {
     // json content of played tracks
     app.get("history") { req -> PlayingHistory in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             return history.all
         }
     }
@@ -369,7 +380,7 @@ func routes(_ app: Application) throws {
     // json content of played tracks
     app.get("history",  ":since") { req -> PlayingHistory in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             if let sinceString = req.parameters.get("since"),
                let since = Double(sinceString)
             {
@@ -384,7 +395,7 @@ func routes(_ app: Application) throws {
     // this writes to a history entry
     app.post("history") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.auth(request: req) {
+        return try authControl.headerAuth(request: req) {
             let entry = try req.content.decode(HistoryEntry.self)
 
             if entry.fullyPlayed {

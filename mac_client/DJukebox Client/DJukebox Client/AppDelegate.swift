@@ -57,7 +57,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // this monstrosity plays the files locally via streaming urls
         let localAudioPlayer =
-          AsyncAudioPlayer(player: NetworkAudioPlayer(trackFinder: TrackFinder(trackFetcher: trackFetcher),
+          AsyncAudioPlayer(player: NetworkAudioPlayer(trackFinder: TrackFinder(trackFetcher: trackFetcher,
+                                                                               serverConnection: server),
                                                       historyWriter: ServerHistoryWriter()),
                            fetcher: trackFetcher,
                            history: historyFetcher)
