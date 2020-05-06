@@ -23,11 +23,9 @@ class AuthController {
     }
 
     func pathAuth<T>(request req: Request, closure: () throws -> T) throws -> T {
-        for header in req.headers {
-            if let auth = req.parameters.get("auth") {
-                if SHA512.hash(data: Data(config.Password.utf8)).hexEncodedString() == auth {
-                    return try closure()
-                }
+        if let auth = req.parameters.get("auth") {
+            if SHA512.hash(data: Data(config.Password.utf8)).hexEncodedString() == auth {
+                return try closure()
             }
         }
         throw Abort(.unauthorized)
