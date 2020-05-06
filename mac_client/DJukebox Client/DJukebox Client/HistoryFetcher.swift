@@ -56,6 +56,10 @@ public class HistoryFetcher: ObservableObject {
         }
     }
 
+    public func hasPlay(for hash: String) -> Bool {
+        return self.all.plays[hash] != nil
+    }
+    
     func skips(for hash: String) -> [Double] {
         if let skips = self.all.skips[hash]
         {
@@ -65,6 +69,10 @@ public class HistoryFetcher: ObservableObject {
         }
     }
 
+    public func hasSkip(for hash: String) -> Bool {
+        return self.all.skips[hash] != nil
+    }
+    
     func updateRecent() {
         let previousHistoryDate = Date(timeIntervalSinceNow: -self.recentHistoryDurationSeconds)
         let recent = self.all.recentHistory(startingAt: previousHistoryDate)

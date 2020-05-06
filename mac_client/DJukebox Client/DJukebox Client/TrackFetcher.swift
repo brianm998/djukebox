@@ -197,4 +197,14 @@ public class TrackFetcher: ObservableObject {
             self.albumTitle = "\(artist)"
         }
     }
+
+    public func tracks(forArtist artist: String) -> [AudioTrack] {
+        var ret: [AudioTrack] = []
+        for track in allTracks {
+            if track.Artist == artist {
+                ret.append(track)
+            }
+        }
+        return ret
+    }
 }

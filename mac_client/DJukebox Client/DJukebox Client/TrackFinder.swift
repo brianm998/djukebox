@@ -14,7 +14,7 @@ public class TrackFinder: TrackFinderType {
     
     public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
         if let track = trackFetcher.trackMap[sha1Hash],
-           let url = URL(string: "\(serverURL)/stream/\(sha1Hash)") // XXX need auth still with URLRequest
+           let url = URL(string: "\(serverURL)/stream/\(sha1Hash)") // XXX need auth still
         {
             return (track, url)
         }

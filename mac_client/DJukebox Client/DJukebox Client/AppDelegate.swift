@@ -51,12 +51,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // an observable view object for showing lots of track based info
         let trackFetcher = TrackFetcher(withServer: server/*, audioPlayer: audioPlayerToUse*/)
+
+        // an observable object for keeping the history up to date from the server
+        let historyFetcher = HistoryFetcher(withServer: server, trackFetcher: trackFetcher)
         
         // this monstrosity plays the files locally via streaming urls
         let localAudioPlayer =
           AsyncAudioPlayer(player: NetworkAudioPlayer(trackFinder: TrackFinder(trackFetcher: trackFetcher),
                                                       historyWriter: ServerHistoryWriter()),
-                           fetcher: trackFetcher)
+                           fetcher: trackFetcher,
+                           history: historyFetcher)
 
         // we can play either locally or on the server
         var audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
@@ -72,8 +76,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // an observable view object for the playing queue
         let viewAudioPlayer = ViewObservableAudioPlayer(player: audioPlayerToUse)
 
-        let historyFetcher = HistoryFetcher(withServer: server, trackFetcher: trackFetcher)
-        
         historyFetcher.refresh()
         
         let contentView = ContentView(trackFetcher: trackFetcher,
