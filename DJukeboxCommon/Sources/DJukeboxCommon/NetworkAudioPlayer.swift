@@ -175,15 +175,11 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegat
         print("fuck self.playingTrack \(self.playingTrack)")
         
         isPlaying = true
-        do {
-            if let (_, url) = self.trackFinder.track(forHash: nextTrackHash) {
-                print("about to play \(url)")
-                let player = try AVPlayer(url: url)
-                player.play()
-                self.player = player
-            }
-        } catch {
-            print("error \(error)")
+        if let (_, url) = self.trackFinder.track(forHash: nextTrackHash) {
+            print("about to play \(url)")
+            let player = AVPlayer(url: url)
+            player.play()
+            self.player = player
         }
     }
 }
