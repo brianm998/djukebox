@@ -29,7 +29,20 @@ public class HistoryFetcher: ObservableObject {
     @Published var all = PlayingHistory()
     @Published var recent: [HistoryEntry] = []
 
-    let recentHistoryDurationSeconds: Double = 30*60 // 60 minutes
+    var recentHistoryDurationSeconds: Double = 30*60 { // 60 minutes
+        didSet(oldValue) {
+            self.lastUpdateTime = nil
+            self.refresh()
+        }
+    }
+
+    func decrementHistoryAge() {
+        self.recentHistoryDurationSeconds -= 60
+    }
+
+    func incrementHistoryAge() {
+        self.recentHistoryDurationSeconds += 60
+    }
     
     let server: ServerType
     let trackFetcher: TrackFetcher

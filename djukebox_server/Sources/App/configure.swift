@@ -92,7 +92,8 @@ public func configure(_ app: Application) throws {
 
     // still need to grab list of paths from the config
     
-    trackFinder.find(atFilePath: "/mnt/tree/mp3")
+    trackFinder.find(atFilePath: "/Volumes/Temp/mp3/")
+    //trackFinder.find(atFilePath: "/mnt/tree/mp3")
     //trackFinder.find(atFilePath: "/mnt/root/mp3/Yes")
     //trackFinder.find(atFilePath: "/mnt/tree/mp3/Das_Ich")
 

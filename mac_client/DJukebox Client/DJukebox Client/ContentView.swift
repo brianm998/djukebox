@@ -51,7 +51,6 @@ struct SearchList: View {
         VStack {
             HStack {
                 Spacer()
-                Text("Search: ")
                 TextField(
                     "search here",
                     text: $searchQuery,
@@ -60,13 +59,11 @@ struct SearchList: View {
                 )
                 Spacer()
             }
-            if trackFetcher.searchResults.count > 0 {
-                List {
-                    ForEach(trackFetcher.searchResults, id: \.self) { result in
-                        SearchListCell(trackFetcher: self.trackFetcher,
-                                       audioTrack: result,
-                                       audioPlayer: self.audioPlayer)                    
-                    }
+            List {
+                ForEach(trackFetcher.searchResults, id: \.self) { result in
+                    SearchListCell(trackFetcher: self.trackFetcher,
+                                   audioTrack: result,
+                                   audioPlayer: self.audioPlayer)                    
                 }
             }
         }
@@ -564,13 +561,43 @@ struct PlayingTracksView: View {
     }
 }
 
+struct HistoryView: View {
+
+    @ObservedObject var historyFetcher: HistoryFetcher
+ 
+    var body: some View {
+        VStack {
+            HStack {
+                Stepper(self.stepperText(), onIncrement: {
+                    self.historyFetcher.incrementHistoryAge()
+                }, onDecrement: {
+                    self.historyFetcher.decrementHistoryAge()
+                })
+            }
+            List(historyFetcher.recent) {  history in
+                HistoryEntryView(history: history)
+            }
+        }
+    }    
+
+    func stepperText() -> String {
+        let age = Int(historyFetcher.recentHistoryDurationSeconds)
+        let start = "History for the last"
+        if age < 120 {
+            return "\(start) \(age) seconds"
+        } else {
+            return "\(start) \(age/60) minutes"
+        }
+    }
+    
+}
 
 struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
     var serverConnection: ServerType
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
-    
+
     var body: some View {
         VStack {
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
@@ -582,19 +609,12 @@ struct ContentView: View {
             PlayingTracksView(trackFetcher: trackFetcher,
                               audioPlayer: audioPlayer)
 
-            
-            SearchList(trackFetcher: trackFetcher,
-                       audioPlayer: audioPlayer)
+            HStack {
+                SearchList(trackFetcher: trackFetcher,
+                           audioPlayer: audioPlayer)
 
-            // XXX history
-
-            if historyFetcher.recent.count > 0 {
-                List(historyFetcher.recent) {  history in
-                    HistoryEntryView(history: history)
-                }
+                HistoryView(historyFetcher: historyFetcher)
             }
-            
-            // XXX history
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
