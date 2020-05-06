@@ -22,6 +22,7 @@ class AuthController {
         throw Abort(.unauthorized)
     }
 
+    // curl http://localhost:8080/stream/0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425/efb753b304ce6d4302fe7dce19da7cf9d73da66d
     func pathAuth<T>(request req: Request, closure: () throws -> T) throws -> T {
         if let auth = req.parameters.get("auth") {
             if SHA512.hash(data: Data(config.Password.utf8)).hexEncodedString() == auth {

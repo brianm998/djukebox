@@ -2,7 +2,8 @@ import Foundation
 import AVFoundation
 import Dispatch
 
-public class NetworkAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
+// this class uses AVPlayer to play remote audio urls locally
+public class NetworkAudioPlayer: NSObject, AudioPlayerType {
 
     public var isPlaying = false
 
