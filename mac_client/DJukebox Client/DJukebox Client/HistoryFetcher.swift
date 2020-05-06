@@ -2,7 +2,7 @@ import Cocoa
 import SwiftUI
 
 // this is a view model used to update SwiftUI
-public class HistoryEntry: Comparable, Identifiable, ObservableObject {
+public class HistoryEntry: Comparable, Identifiable, ObservableObject, Hashable {
     let track: AudioTrack
     let when: Date
     let playedFully: Bool
@@ -16,6 +16,11 @@ public class HistoryEntry: Comparable, Identifiable, ObservableObject {
         self.playedFully = playedFully
     }
     
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(track)
+        hasher.combine(when)
+    }
+
     public static func < (lhs: HistoryEntry, rhs: HistoryEntry) -> Bool {
         return lhs.when < rhs.when
     }

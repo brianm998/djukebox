@@ -7,41 +7,6 @@
 
 import SwiftUI
 
-struct SearchListCell: View {
-
-    @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioTrack: AudioTrack
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
-    
-    @State private var toggleIsOn = false
-    
-    var body: some View {
-        HStack {
-            /*
-            Toggle("foo", isOn: self.$toggleIsOn)
-              .layoutPriority(1.0)
-              .frame(width: 80, height: 40)
-            //.fixedSize()
-              .background(Color.green)
-            //.frame(minWidth: 300, minHeight: 300)
-              .padding()
-            Button(action: {
-                       print("fuck this shit")
-                   }) {
-                Text("XXX").foregroundColor(Color.orange)
-            }.frame(maxWidth: 80, maxHeight: 30).background(Color.blue)
-            */
-             Text("\(audioTrack.Artist) - \(audioTrack.Album ?? "") - \(audioTrack.Title)")
-               .onTapGesture {
-                   self.audioPlayer.player.playTrack(withHash: self.audioTrack.SHA1) { track, error in
-                       self.trackFetcher.refreshQueue()
-                       print("track \(track) error \(error)")
-                   }
-             }
-        }
-    }
-}
-
 struct SearchList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
@@ -60,10 +25,10 @@ struct SearchList: View {
                 Spacer()
             }
             List {
-                ForEach(trackFetcher.searchResults, id: \.self) { result in
-                    SearchListCell(trackFetcher: self.trackFetcher,
-                                   audioTrack: result,
-                                   audioPlayer: self.audioPlayer)                    
+                ForEach(trackFetcher.searchResults, id: \.self) { track in
+                    TrackDetail(track: track,
+                                trackFetcher: self.trackFetcher,
+                                audioPlayer: self.audioPlayer)
                 }
             }
         }
@@ -268,8 +233,10 @@ struct HistoryEntryView: View {
 struct TrackDetail: View {
     @ObservedObject var track: AudioTrack
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var showDuration = true
+    var playOnTap = true
     
     var body: some View {
         HStack(alignment: .center) {
@@ -290,6 +257,14 @@ struct TrackDetail: View {
                 Text(track.Duration!)
             }
         }
+          .onTapGesture {
+            if self.playOnTap {
+                  self.audioPlayer.player.playTrack(withHash: self.track.SHA1) { track, error in
+                      self.trackFetcher.refreshQueue()
+                      print("track \(track) error \(error)")
+                  }
+              }
+          }
     }
     
     private func hasAlbum(_ track: AudioTrack) -> Bool {
@@ -344,7 +319,10 @@ struct PlayingQueueView: View {
     var body: some View {
         List {
             ForEach(trackFetcher.playingQueue, id: \.self) { track in
-                TrackDetail(track: track, trackFetcher: self.trackFetcher)
+                TrackDetail(track: track,
+                            trackFetcher: self.trackFetcher,
+                            audioPlayer: self.audioPlayer,
+                            playOnTap: false)
             }
               .onDelete(perform: delete)
               .onMove(perform: move)
@@ -405,9 +383,14 @@ struct PlayingQueueView: View {
 struct CurrentTrackView: View {
     @ObservedObject var track: AudioTrack
     @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var body: some View {
-        TrackDetail(track: track, trackFetcher: self.trackFetcher, showDuration: false)
+        TrackDetail(track: track,
+                    trackFetcher: self.trackFetcher,
+                    audioPlayer: self.audioPlayer,
+                    showDuration: false,
+                    playOnTap: false)
         //        Text("\(track.Artist) \(track.Title)")
     }
 }
@@ -503,7 +486,8 @@ struct PlayingTracksView: View {
                     Text("Nothing Playing").foregroundColor(Color.gray)
                 } else {
                     CurrentTrackView(track: trackFetcher.currentTrack!,
-                                     trackFetcher: trackFetcher)
+                                     trackFetcher: self.trackFetcher,
+                                     audioPlayer: self.audioPlayer)
                       .layoutPriority(1.0)
                     ProgressBar(trackFetcher: trackFetcher)
                       .layoutPriority(0.1)
@@ -564,6 +548,8 @@ struct PlayingTracksView: View {
 struct HistoryView: View {
 
     @ObservedObject var historyFetcher: HistoryFetcher
+    @ObservedObject var trackFetcher: TrackFetcher
+    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
  
     var body: some View {
         VStack {
@@ -574,8 +560,12 @@ struct HistoryView: View {
                     self.historyFetcher.decrementHistoryAge()
                 })
             }
-            List(historyFetcher.recent) {  history in
-                HistoryEntryView(history: history)
+            List {
+                ForEach(historyFetcher.recent, id: \.self) { historyEntry in
+                    TrackDetail(track: historyEntry.track,
+                                trackFetcher: self.trackFetcher,
+                                audioPlayer: self.audioPlayer)
+                }
             }
         }
     }    
@@ -609,12 +599,13 @@ struct ContentView: View {
             PlayingTracksView(trackFetcher: trackFetcher,
                               audioPlayer: audioPlayer)
 
-            HStack {
-                SearchList(trackFetcher: trackFetcher,
-                           audioPlayer: audioPlayer)
+            SearchList(trackFetcher: trackFetcher,
+                       audioPlayer: audioPlayer)
 
-                HistoryView(historyFetcher: historyFetcher)
-            }
+            HistoryView(historyFetcher: historyFetcher,
+                        trackFetcher: trackFetcher,
+                        audioPlayer: audioPlayer)
+            
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
