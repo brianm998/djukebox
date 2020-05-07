@@ -1,7 +1,17 @@
 import SwiftUI
 
 struct ProgressBar: View {
-    @ObservedObject var trackFetcher: TrackFetcher
+    public class State: ObservableObject {
+        init(level: Double = 0, max: Double = 1) {
+            self.level = level
+            self.max = max
+        }
+        @Published var level: Double // 0..max
+        @Published var max: Double
+    }
+
+    @ObservedObject var state: ProgressBar.State
+    var labelClosure: ((Double) -> String)?
     
     var body: some View {
         GeometryReader { geometry in
@@ -11,31 +21,19 @@ struct ProgressBar: View {
                     .opacity(0.3)
                     .foregroundColor(Color.gray)
 
-                // XXX This sucks to have the track fetcher so deeply imbedded here
-                Rectangle().frame(width: min(CGFloat(self.trackFetcher.playingTrackProgress ?? 0)*geometry.size.width,
+                Rectangle().frame(width: min(CGFloat(self.state.level/self.state.max)*geometry.size.width,
                                              geometry.size.width),
                                   height: geometry.size.height)
                   .foregroundColor(Color.green)
                   .animation(.linear)
 
-                if self.trackFetcher.totalDuration > 0 {
-                    Text(self.remainingTimeText(self.trackFetcher.currentTrackRemainingTime))
+                if self.labelClosure != nil && self.state.level > 0 {
+                    Text(self.labelClosure!(self.state.max-self.state.level))
                       .offset(x: 8)
                       .foregroundColor(Color.gray)
                       .opacity(0.7)
                 }
             }.cornerRadius(8)
-        }
-    }
-
-    private func remainingTimeText(_ amount: TimeInterval) -> String {
-        if amount < 60 {
-            return "\(Int(amount)) seconds left"
-        } else {
-            let duration = Int(amount)
-            let seconds = String(format: "%02d", duration % 60)
-            let minutes = duration / 60
-            return "\(minutes):\(seconds) left"
         }
     }
 }

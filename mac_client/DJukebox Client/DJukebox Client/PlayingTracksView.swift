@@ -57,14 +57,19 @@ struct PlayingTracksView: View {
                                 audioPlayer: self.audioPlayer,
                                 showDuration: false,
                                 playOnTap: false)
-
-                            /*
-                    CurrentTrackView(track: trackFetcher.currentTrack!,
-                                     trackFetcher: self.trackFetcher,
-                                     audioPlayer: self.audioPlayer)
-*/
                       .layoutPriority(1.0)
-                    ProgressBar(trackFetcher: trackFetcher)
+                    
+                    ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
+                        print("remainingTimeText(\(amount))")
+                        if amount < 60 {
+                            return "\(Int(amount)) seconds left"
+                        } else {
+                            let duration = Int(amount)
+                            let seconds = String(format: "%02d", duration % 60)
+                            let minutes = duration / 60
+                            return "\(minutes):\(seconds) left"
+                        }
+                    }
                       .layoutPriority(0.1)
                       .frame(maxWidth: .infinity, maxHeight: 20)
                 }
