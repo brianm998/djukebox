@@ -16,11 +16,25 @@ struct ContentView: View {
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var body: some View {
-        VStack {
+        TabView {
+            PlayingTracksView(trackFetcher: trackFetcher,
+                              audioPlayer: audioPlayer)
+              .tabItem { Text("queue") }
+
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
                                  historyFetcher: historyFetcher,
                                  serverConnection: serverConnection,
                                  audioPlayer: audioPlayer)
+              .tabItem { Text("tracks") }
+
+            SearchView(trackFetcher: trackFetcher,
+                       audioPlayer: audioPlayer)
+              .tabItem { Text("search") }
+
+            HistoryView(historyFetcher: historyFetcher,
+                        trackFetcher: trackFetcher,
+                        audioPlayer: audioPlayer)
+              .tabItem { Text("history") }
         }
     }
 }

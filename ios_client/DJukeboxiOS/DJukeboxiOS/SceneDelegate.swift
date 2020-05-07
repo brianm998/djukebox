@@ -10,7 +10,11 @@ import UIKit
 import SwiftUI
 import DJukeboxClient
 import DJukeboxCommon
+//169.254.7.233
+//192.168.1.164 
 
+// XXX doesn't work:
+//let serverURL = "http://169.254.7.233:8080"
 let serverURL = "http://127.0.0.1:8080"
 let password = "foobar"
 
@@ -54,6 +58,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             audioPlayer = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
         }
         
+        // set after init to avoid a circular dependency in the .local case above
+        trackFetcher.audioPlayer = audioPlayer
+        
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            trackFetcher.refreshQueue()
+            historyFetcher.refresh()
+        }
+
         return ContentView(trackFetcher: trackFetcher,
                            historyFetcher: historyFetcher,
                            serverConnection: server,
