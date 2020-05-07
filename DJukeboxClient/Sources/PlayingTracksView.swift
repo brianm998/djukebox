@@ -1,14 +1,21 @@
 import SwiftUI
 
-struct PlayingTracksView: View {
+public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
+    public init(trackFetcher: TrackFetcher,
+                audioPlayer: ViewObservableAudioPlayer)
+    {
+        self.trackFetcher = trackFetcher
+        self.audioPlayer = audioPlayer
+    }
+    
     let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
 
     let buttonWidth: CGFloat = 80
     
-    var body: some View {
+    public var body: some View {
         
         VStack(alignment: .leading) {
             HStack {

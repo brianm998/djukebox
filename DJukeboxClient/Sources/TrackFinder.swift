@@ -8,7 +8,7 @@ public class TrackFinder: TrackFinderType {
     let trackFetcher: TrackFetcher
     let serverConnection: ServerType
 
-    init(trackFetcher: TrackFetcher, serverConnection: ServerType) {
+    public init(trackFetcher: TrackFetcher, serverConnection: ServerType) {
         self.trackFetcher = trackFetcher
         self.serverConnection = serverConnection
         self.tracks = [:]
@@ -16,7 +16,7 @@ public class TrackFinder: TrackFinderType {
     
     public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
         if let track = trackFetcher.trackMap[sha1Hash],
-           let url = URL(string: "\(serverURL)/stream/\(serverConnection.authHeaderValue)/\(sha1Hash)")
+           let url = URL(string: "\(serverConnection.url)/stream/\(serverConnection.authHeaderValue)/\(sha1Hash)")
         {
             return (track, url)
         }

@@ -28,12 +28,12 @@ public class TrackFetcher: ObservableObject {
     @Published var completionTime: Date = Date()
     
     let server: ServerType
-    var audioPlayer: AsyncAudioPlayerType?
+    public var audioPlayer: AsyncAudioPlayerType?
 
     var desiredArtist: String?
     var desiredAlbum: String?
     
-    init(withServer server: ServerType/*, audioPlayer: AsyncAudioPlayerType*/) {
+    public init(withServer server: ServerType/*, audioPlayer: AsyncAudioPlayerType*/) {
         self.server = server
        // self.audioPlayer = audioPlayer
         self.albumTitle = "Albums"
@@ -126,7 +126,7 @@ public class TrackFetcher: ObservableObject {
         }
     }
     
-    func refreshQueue() {
+    public func refreshQueue() {
         audioPlayer?.listPlayingQueue() { playingQueue, error in
             if let queue = playingQueue { self.update(playingQueue: queue) }
         }

@@ -1,11 +1,18 @@
 import SwiftUI
 
-struct SearchView: View {
+public struct SearchView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     @State private var searchQuery: String = "" 
 
-    var body: some View {
+    public init(trackFetcher: TrackFetcher,
+                audioPlayer: ViewObservableAudioPlayer)
+    {
+        self.trackFetcher = trackFetcher
+        self.audioPlayer = audioPlayer
+    }
+
+    public var body: some View {
         VStack {
             HStack {
                 Spacer()

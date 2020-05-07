@@ -1,11 +1,11 @@
 import Foundation
 
-class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
+public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
     
     // XXX should query server on startup, in case it's already paused (need new api for that)
-    var isPaused = false
+    public var isPaused = false
 
-    func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         self.requestJson(atPath: "play/\(hash)") { (audioTrack: AudioTrack?, error: Error?) in
             if let error = error {
                 closure(nil, error)
@@ -17,7 +17,7 @@ class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
         }
     }
 
-    func playTracks(_ tracks: [AudioTrack], closure: @escaping (Bool, Error?) -> Void) {
+    public func playTracks(_ tracks: [AudioTrack], closure: @escaping (Bool, Error?) -> Void) {
         if tracks.count == 0 {
             closure(false, nil)
         } else if tracks.count > 0 {
@@ -34,7 +34,7 @@ class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
         }
     }
     
-    func stopPlayingTrack(withHash hash: String,
+    public func stopPlayingTrack(withHash hash: String,
                           atIndex index: Int,
                           closure: @escaping (Bool, Error?) -> Void)
     {
@@ -45,7 +45,7 @@ class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
         //}
     }
 
-    func movePlayingTrack(withHash hash: String,
+    public func movePlayingTrack(withHash hash: String,
                           fromIndex: Int,
                           toIndex: Int,
                           closure: @escaping (PlayingQueue?, Error?) -> Void)
@@ -61,7 +61,7 @@ class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
         }
     }
         
-    func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
+    public func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
         self.requestJson(atPath: "queue") { (playingQueue: PlayingQueue?, error: Error?) in
             if let error = error {
                 closure(nil, error)
@@ -73,34 +73,34 @@ class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
         }
     }
 
-    func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
         self.requestJson(atPath: "rand", closure: closure)
     }
 
-    func playRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         self.requestJson(atPath: "rand/\(artist)", closure: closure)
     }
     
-    func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
         self.requestJson(atPath: "newrand", closure: closure)
     }
     
-    func playNewRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playNewRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         self.requestJson(atPath: "newrand/\(artist)", closure: closure)
     }
     
-    func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {
+    public func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {
         self.request(path: "stop", closure: closure)
     }
 
-    func pausePlaying(closure: @escaping (Bool, Error?) -> Void) {
+    public func pausePlaying(closure: @escaping (Bool, Error?) -> Void) {
         self.request(path: "pause") { success, error in
             if success { self.isPaused = true }
             closure(success, error)
         }
     }
 
-    func resumePlaying(closure: @escaping (Bool, Error?) -> Void) {
+    public func resumePlaying(closure: @escaping (Bool, Error?) -> Void) {
         self.request(path: "resume") { success, error in
             if success { self.isPaused = false }
             closure(success, error)

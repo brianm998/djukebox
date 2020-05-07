@@ -9,6 +9,7 @@ import Cocoa
 import SwiftUI
 import CryptoKit
 import DJukeboxCommon
+import DJukeboxClient
 
 let serverURL = "http://127.0.0.1:8080"
 let password = "foobar"
@@ -76,7 +77,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-
         // Create the window and set the content view. 
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),

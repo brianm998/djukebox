@@ -54,7 +54,7 @@ public class HistoryFetcher: ObservableObject {
     
     var lastUpdateTime: Date?
 
-    init(withServer server: ServerType, trackFetcher: TrackFetcher) {
+    public init(withServer server: ServerType, trackFetcher: TrackFetcher) {
         self.server = server
         self.trackFetcher = trackFetcher
         refresh()
@@ -119,7 +119,7 @@ public class HistoryFetcher: ObservableObject {
         self.recent = history
     }
 
-    func refresh() {
+    public func refresh() {
         if let lastUpdateTime = self.lastUpdateTime {
             let historyOverlapDuration: Double = 300
             server.listHistory(since: Int(lastUpdateTime.timeIntervalSince1970-historyOverlapDuration)) { history, error in

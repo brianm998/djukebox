@@ -4,11 +4,11 @@ import DJukeboxCommon
 // this is used for writing locally played tracks to the history on the server
 public class ServerHistoryWriter: HistoryWriterType {
 
-    init(server: ServerType) {
+    let server: ServerType
+
+    public init(server: ServerType) {
         self.server = server
     }
-    
-    let server: ServerType
     
     public func writePlay(of sha1: String, at date: Date) throws {
         let history = ServerHistoryEntry(hash: sha1,

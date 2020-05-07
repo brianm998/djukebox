@@ -1,6 +1,6 @@
 import Foundation
 
-class ViewObservableAudioPlayer: ObservableObject {
+public class ViewObservableAudioPlayer: ObservableObject {
     let player: AsyncAudioPlayerType
 
     public init(player: AsyncAudioPlayerType) {

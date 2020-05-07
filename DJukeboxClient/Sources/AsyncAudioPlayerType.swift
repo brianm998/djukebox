@@ -1,6 +1,6 @@
 import Foundation
 
-protocol AsyncAudioPlayerType {
+public protocol AsyncAudioPlayerType {
     var isPaused: Bool { get }
 
     func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void)

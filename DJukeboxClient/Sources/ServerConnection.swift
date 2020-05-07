@@ -3,13 +3,14 @@ import SwiftUI
 import CryptoKit
 import DJukeboxCommon
 
-protocol ServerType {
+public protocol ServerType {
     func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void)
 
     func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void)
     func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void)
     func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void)
     var authHeaderValue: String { get }
+    var url: String { get }
 }
 
 public struct ServerHistoryEntry: Codable {
@@ -18,12 +19,14 @@ public struct ServerHistoryEntry: Codable {
     public let fullyPlayed: Bool
 }
 
-class ServerConnection: ObservableObject, ServerType {
+public class ServerConnection: ObservableObject, ServerType {
     
     let serverUrl: String
-    let authHeaderValue: String
+    public let authHeaderValue: String
+
+    public var url: String { return serverUrl }
     
-    init(toUrl url: String, withPassword password: String) {
+    public init(toUrl url: String, withPassword password: String) {
         self.serverUrl = url
         self.authHeaderValue =
           SHA512.hash(data: Data(password.utf8)).map {
@@ -94,7 +97,7 @@ class ServerConnection: ObservableObject, ServerType {
         }
     }
 
-    func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void) {
+    public func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void) {
         let encoder = JSONEncoder()
         do {
             let jsonString = try encoder.encode(history)
@@ -104,7 +107,7 @@ class ServerConnection: ObservableObject, ServerType {
         }
     }
     
-    func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void) {
+    public func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void) {
         self.requestJson(atPath: "tracks") { (audioTracks: [AudioTrack]?, error: Error?) in
             if let error = error {
                 closure(nil, error)
@@ -128,11 +131,11 @@ class ServerConnection: ObservableObject, ServerType {
         }
     }
 
-    func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void) {
+    public func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void) {
         self.requestJson(atPath: "history", closure: closure)
     }
 
-    func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void) {
+    public func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void) {
         self.requestJson(atPath: "history/\(since)", closure: closure)
     }
 }

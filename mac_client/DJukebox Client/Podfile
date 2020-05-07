@@ -13,6 +13,7 @@ target 'DJukebox Client' do
   use_frameworks!
 
   pod 'DJukeboxCommon', :path => "../../DjukeboxCommon"
+  pod 'DJukeboxClient', :path => "../../DjukeboxClient"
   
   # this gets rid of some localizability warnings on the pods xcode project
   post_install do |installer|

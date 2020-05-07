@@ -3,22 +3,22 @@ import DJukeboxCommon
 
 // this class takes an AudioPlayerType and makes it async with closures so the UI can use it
 // a lot of this logic mirrors that in routes.swift on the server
-class AsyncAudioPlayer: AsyncAudioPlayerType {
+public class AsyncAudioPlayer: AsyncAudioPlayerType {
     let player: AudioPlayerType
     let fetcher: TrackFetcher
     let history: HistoryFetcher
 
-    init(player: AudioPlayerType, fetcher: TrackFetcher, history: HistoryFetcher) {
+    public init(player: AudioPlayerType, fetcher: TrackFetcher, history: HistoryFetcher) {
         self.player = player
         self.fetcher = fetcher
         self.history = history
     }
 
-    var isPaused: Bool {
+    public var isPaused: Bool {
         return !player.isPlaying
     }
 
-    func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         if let track = fetcher.trackMap[hash] {
             player.play(sha1Hash: hash)
             closure(track, nil)
@@ -27,14 +27,14 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
         }
     }
     
-    func playTracks(_ tracks: [AudioTrack], closure: @escaping (Bool, Error?) -> Void) {
+    public func playTracks(_ tracks: [AudioTrack], closure: @escaping (Bool, Error?) -> Void) {
         for track in tracks {
             player.play(sha1Hash: track.SHA1)
         }
         closure(true, nil)
     }
     
-    func stopPlayingTrack(withHash hash: String,
+    public func stopPlayingTrack(withHash hash: String,
                           atIndex index: Int,
                           closure: @escaping (Bool, Error?) -> Void) {
         player.stopPlaying(sha1Hash: hash, atIndex: index)
@@ -58,7 +58,7 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
                             playingTrackPosition: player.playingTrackPosition)
     }
     
-    func movePlayingTrack(withHash hash: String,
+    public func movePlayingTrack(withHash hash: String,
                           fromIndex: Int,
                           toIndex: Int,
                           closure: @escaping (PlayingQueue?, Error?) -> Void) {
@@ -71,25 +71,25 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
         }
     }
     
-    func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
+    public func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
         print("listPlayingQueue")
         closure(self.playingQueue, nil)
     }
     
-    func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
         let random = Int.random(in: 0..<fetcher.allTracks.count)
         let track = fetcher.allTracks[random]
         player.play(sha1Hash: track.SHA1)
         closure(track, nil)
     }
     
-    func playRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         let tracks = fetcher.tracks(forArtist: artist)
         let track = tracks[Int.random(in: 0..<tracks.count)]
         player.play(sha1Hash: track.SHA1)
     }
     
-    func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
         var randomTrack: AudioTrack?
         var max = 100
         while randomTrack == nil,
@@ -127,7 +127,7 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
         return false
     }
 
-    func playNewRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playNewRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         var randomTrack: AudioTrack?
         var max = 100
         let tracksForThisArtist = fetcher.tracks(forArtist: artist)
@@ -151,18 +151,18 @@ class AsyncAudioPlayer: AsyncAudioPlayerType {
         }
     }
     
-    func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {
+    public func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {
         player.clearQueue()
         player.skip()
         closure(true, nil)
     }
     
-    func pausePlaying(closure: @escaping (Bool, Error?) -> Void) {
+    public func pausePlaying(closure: @escaping (Bool, Error?) -> Void) {
         player.pause()
         closure(true, nil)
     }
     
-    func resumePlaying(closure: @escaping (Bool, Error?) -> Void) {
+    public func resumePlaying(closure: @escaping (Bool, Error?) -> Void) {
         player.resume()
         closure(true, nil)
     }

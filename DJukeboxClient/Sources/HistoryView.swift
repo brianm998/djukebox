@@ -1,12 +1,21 @@
 import SwiftUI
 
-struct HistoryView: View {
+public struct HistoryView: View {
 
     @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
- 
-    var body: some View {
+
+    public init(historyFetcher: HistoryFetcher,
+                trackFetcher: TrackFetcher,
+                audioPlayer: ViewObservableAudioPlayer)
+    {
+        self.historyFetcher = historyFetcher
+        self.trackFetcher = trackFetcher
+        self.audioPlayer = audioPlayer
+    }
+    
+    public var body: some View {
         VStack {
             HStack {
                 Stepper(self.stepperText(), onIncrement: {

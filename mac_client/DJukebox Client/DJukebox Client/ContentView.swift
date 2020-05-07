@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import DJukeboxClient
 
 struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
