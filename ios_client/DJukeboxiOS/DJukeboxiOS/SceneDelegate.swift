@@ -14,11 +14,19 @@ import DJukeboxCommon
 let serverURL = "http://127.0.0.1:8080"
 let password = "foobar"
 
+enum QueueType {
+    case local
+    case remote
+}
+
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
+    // set this to .local to play locally instead of on the server
+    let queueType: QueueType = .remote
+    
     var contentView: some View {
         // the server connection for tracks and history 
         let server = ServerConnection(toUrl: serverURL, withPassword: password)
@@ -29,16 +37,23 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // an observable object for keeping the history up to date from the server
         let historyFetcher = HistoryFetcher(withServer: server, trackFetcher: trackFetcher)
 
-        /*
-        server.listTracks { tracks, error in
-            print("got tracks \(tracks?.count ?? -1)")
-        }*/
+        // which queue do we play to?
+        var audioPlayer: AsyncAudioPlayerType!
 
-        let trackFinder = TrackFinder(trackFetcher: trackFetcher, serverConnection: server)
-        let player = NetworkAudioPlayer(trackFinder: trackFinder,
-                                        historyWriter: ServerHistoryWriter(server: server))
-        let audioPlayer = AsyncAudioPlayer(player: player, fetcher: trackFetcher, history: historyFetcher)
+        switch queueType {
+        case .local:
+            let trackFinder = TrackFinder(trackFetcher: trackFetcher, serverConnection: server)
+            let player = NetworkAudioPlayer(trackFinder: trackFinder,
+                                            historyWriter: ServerHistoryWriter(server: server))
+            audioPlayer = AsyncAudioPlayer(player: player, fetcher: trackFetcher, history: historyFetcher)
 
+        case .remote:
+            /*
+             an audio player that subclasses the ServerConnection to use apis to manage a server queue
+            */
+            audioPlayer = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
+        }
+        
         return ContentView(trackFetcher: trackFetcher,
                            historyFetcher: historyFetcher,
                            serverConnection: server,
