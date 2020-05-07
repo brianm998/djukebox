@@ -38,7 +38,8 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType {
     var player: AVPlayer? 
     
     public init(trackFinder: TrackFinderType,
-                historyWriter: HistoryWriterType) {
+                historyWriter: HistoryWriterType)
+    {
         self.trackFinder = trackFinder
         self.historyWriter = historyWriter
         

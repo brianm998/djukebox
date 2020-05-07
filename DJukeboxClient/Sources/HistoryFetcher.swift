@@ -1,4 +1,4 @@
-import Cocoa
+import Foundation
 import SwiftUI
 
 // this is a view model used to update SwiftUI

@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.license      = "GPL"
 
   s.author       = { "" => "" }
-  s.platform     = :osx, "10.15"
+  s.platforms    = { :osx =>  "10.15", :ios => "13.4" }
 
   s.source       = { :git => "git@github.com:Automatic/swift-core.git", :branch => "develop" }
   s.source_files  = "Sources/**/*.{swift}"

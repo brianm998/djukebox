@@ -1,0 +1,22 @@
+PODS:
+  - DJukeboxClient (0.0.1):
+    - DJukeboxCommon
+  - DJukeboxCommon (0.0.1)
+
+DEPENDENCIES:
+  - DJukeboxClient (from `../../DjukeboxClient`)
+  - DJukeboxCommon (from `../../DjukeboxCommon`)
+
+EXTERNAL SOURCES:
+  DJukeboxClient:
+    :path: "../../DjukeboxClient"
+  DJukeboxCommon:
+    :path: "../../DjukeboxCommon"
+
+SPEC CHECKSUMS:
+  DJukeboxClient: 4a58205b3098eb57cf25252364b3b66adc9a3dac
+  DJukeboxCommon: 4931d4a4ae103b4e4d932dc84d369636ff16fdf4
+
+PODFILE CHECKSUM: bd687631e74deaea69e6b62ed0724b9331d62ccb
+
+COCOAPODS: 1.7.2

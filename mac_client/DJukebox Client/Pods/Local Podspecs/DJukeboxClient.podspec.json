@@ -1,0 +1,27 @@
+{
+  "name": "DJukeboxClient",
+  "version": "0.0.1",
+  "summary": "DJukebox client code",
+  "description": "This is DJukebox common client code",
+  "homepage": "http://theory.org",
+  "license": "GPL",
+  "authors": {
+    "": ""
+  },
+  "platforms": {
+    "osx": "10.15"
+  },
+  "source": {
+    "git": "git@github.com:Automatic/swift-core.git",
+    "branch": "develop"
+  },
+  "source_files": "Sources/**/*.{swift}",
+  "dependencies": {
+    "DJukeboxCommon": [
+
+    ]
+  },
+  "pod_target_xcconfig": {
+    "SWIFT_VERSION": 5
+  }
+}

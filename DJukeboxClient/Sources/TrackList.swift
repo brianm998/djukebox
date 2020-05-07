@@ -46,7 +46,9 @@ struct TrackList: View {
               .onChanged { value in
                   print("onChanged value \(value)")
                   if !self.dragging {
+                      #if os(macOS)
                       self.makeNewWindow(atOrigin: value.location)
+                      #endif
                       self.dragging = true
                   }
               }
@@ -57,6 +59,7 @@ struct TrackList: View {
           )
     }
 
+    #if os(macOS)
     fileprivate func makeNewWindow(atOrigin origin: CGPoint) {
         let trackFetcher = TrackFetcher(withServer: self.serverConnection)
         trackFetcher.audioPlayer = self.audioPlayer.player
@@ -89,8 +92,11 @@ struct TrackList: View {
         window.setIsVisible(true)
         windows.append(window)
     }
+    #endif
 }
 
+#if os(macOS)
 // this is only here to avoid an autorelease crash upon release of sub-windows
 fileprivate var windows: [NSWindow] = [] 
+#endif
 

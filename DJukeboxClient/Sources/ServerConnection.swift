@@ -1,4 +1,4 @@
-import Cocoa
+import Foundation
 import SwiftUI
 import CryptoKit
 import DJukeboxCommon

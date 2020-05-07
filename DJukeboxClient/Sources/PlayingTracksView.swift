@@ -1,5 +1,11 @@
 import SwiftUI
 
+#if os(macOS)
+fileprivate let kkUTTypePlainText = kUTTypePlainText
+#else
+fileprivate let kkUTTypePlainText = "kUTTypePlainText"
+#endif
+
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
@@ -84,15 +90,15 @@ public struct PlayingTracksView: View {
               .disabled(trackFetcher.currentTrack == nil)
 
             PlayingQueueView(trackFetcher: trackFetcher, audioPlayer: self.audioPlayer)
-              .onDrop(of: [kUTTypePlainText as String], delegate: dropDelegate)
+              .onDrop(of: [kkUTTypePlainText as String], delegate: dropDelegate)
             
             /*
-              .onDrop(of: [kUTTypePlainText as String], isTargeted: nil) { providers in
+              .onDrop(of: [kkUTTypePlainText as String], isTargeted: nil) { providers in
                   for provider in providers {
                       print("fuck \(provider.registeredTypeIdentifiers())")
-                      if provider.hasItemConformingToTypeIdentifier(kUTTypePlainText as String) {
+                      if provider.hasItemConformingToTypeIdentifier(kkUTTypePlainText as String) {
                           print("FUCK YES")
-                          provider.loadItem(forTypeIdentifier: kUTTypePlainText as String) { item, error in
+                          provider.loadItem(forTypeIdentifier: kkUTTypePlainText as String) { item, error in
                               print("got item \(item) error \(error)")
                           }
                       } else {
@@ -133,7 +139,7 @@ public struct PlayingTracksView: View {
 
 struct MyDropDelegate: DropDelegate {
     func validateDrop(info: DropInfo) -> Bool {
-        return info.hasItemsConforming(to: [kUTTypePlainText as String])
+        return info.hasItemsConforming(to: [kkUTTypePlainText as String])
     }
     
     func dropEntered(info: DropInfo) {
@@ -148,8 +154,8 @@ struct MyDropDelegate: DropDelegate {
         //let gridPosition = getGridPosition(location: info.location)
         //self.active = gridPosition
         
-        if let item = info.itemProviders(for: [kUTTypePlainText as String]).first {
-            item.loadItem(forTypeIdentifier: kUTTypePlainText as String, options: nil) { (urlData, error) in
+        if let item = info.itemProviders(for: [kkUTTypePlainText as String]).first {
+            item.loadItem(forTypeIdentifier: kkUTTypePlainText as String, options: nil) { (urlData, error) in
                 //DispatchQueue.main.async {
                 print("UrlData \(urlData)")
                     if let urlData = urlData as? String {

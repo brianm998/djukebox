@@ -1,0 +1,32 @@
+bugs:
+ - deleting currently playing song while playing when paused causes immediate play of next song
+ - can't exit app anymore (close button should close the app, 'command Q' works)
+ 
+new features:
+
+test the server on linux (compiles, make sure it actually works too..)
+ - make sure the linux compilation still works, and test the audio there
+enable replays from history (dragging of rows?)
+figure out external accessability, right now only localhost works :( 
+better logging (copy from iOS)
+get custom swipe gestures working on lists, swiftui buttons disappear on lists :(
+synchronize the similar parts of the audio player into a superclass
+add volume control
+handle empty audio buffer better (wait to start playing until full, show in ui)
+move mp3 files to /tmp
+
+db access to record
+ - number of plays
+ - access creds?? (maybe not in DB)
+ - playlists
+ - audio level per track
+ - full set of tracks (faster server startup times)
+ - playing history
+
+
+
+
+
+
+
+
