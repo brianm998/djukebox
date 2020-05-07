@@ -60,7 +60,6 @@ struct PlayingTracksView: View {
                       .layoutPriority(1.0)
                     
                     ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
-                        print("remainingTimeText(\(amount))")
                         if amount < 60 {
                             return "\(Int(amount)) seconds left"
                         } else {

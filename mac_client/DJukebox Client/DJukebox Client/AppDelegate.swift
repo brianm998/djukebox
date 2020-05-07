@@ -13,29 +13,9 @@ import DJukeboxCommon
 let serverURL = "http://127.0.0.1:8080"
 let password = "foobar"
 
-// the server connection for tracks and history 
-let server: ServerType = ServerConnection(toUrl: serverURL, withPassword: password)
-
-
-// this is used for writing locally played tracks to the history on the server
-public class ServerHistoryWriter: HistoryWriterType {
-    public func writePlay(of sha1: String, at date: Date) throws {
-        let history = ServerHistoryEntry(hash: sha1,
-                                         time: Int(date.timeIntervalSince1970),
-                                         fullyPlayed: true)
-        server.post(history: history) { success, error in
-            print("wrote play of \(sha1)")
-        }
-    }
-
-    public func writeSkip(of sha1: String, at date: Date) throws {
-        let history = ServerHistoryEntry(hash: sha1,
-                                         time: Int(date.timeIntervalSince1970),
-                                         fullyPlayed: false)
-        server.post(history: history) { success, error in
-            print("wrote skip of \(sha1)")
-        }
-    }
+enum QueueType {
+    case local
+    case remote
 }
 
 @NSApplicationMain
@@ -43,46 +23,50 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     var window: NSWindow!
 
+    // set this to .local to play locally instead of on the server
+    let queueType: QueueType = .remote
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        // Create the SwiftUI view that provides the window contents.
+        // the server connection for tracks and history 
+        let server = ServerConnection(toUrl: serverURL, withPassword: password)
 
-        // an async audio player that subclasses the ServerConnection to play tracks on the server
-        let serverAudioPlayer: AsyncAudioPlayerType = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
-        
         // an observable view object for showing lots of track based info
-        let trackFetcher = TrackFetcher(withServer: server/*, audioPlayer: audioPlayerToUse*/)
+        let trackFetcher = TrackFetcher(withServer: server)
 
         // an observable object for keeping the history up to date from the server
         let historyFetcher = HistoryFetcher(withServer: server, trackFetcher: trackFetcher)
-        
-        // this monstrosity plays the files locally via streaming urls
-        let localAudioPlayer =
-          AsyncAudioPlayer(player: NetworkAudioPlayer(trackFinder: TrackFinder(trackFetcher: trackFetcher,
-                                                                               serverConnection: server),
-                                                      historyWriter: ServerHistoryWriter()),
-                           fetcher: trackFetcher,
-                           history: historyFetcher)
 
-        // we can play either locally or on the server
-        var audioPlayerToUse: AsyncAudioPlayerType = localAudioPlayer
+        // which queue do we play to?
+        var audioPlayer: AsyncAudioPlayerType!
 
-        var shouldPlayLocally = false
-        
-        if !shouldPlayLocally { // play on server ?
-            audioPlayerToUse = serverAudioPlayer
+        switch queueType {
+        case .local:
+            /*
+             this monstrosity plays the files locally via streaming urls on the server
+             */
+            let trackFinder = TrackFinder(trackFetcher: trackFetcher, serverConnection: server)
+            let player = NetworkAudioPlayer(trackFinder: trackFinder,
+                                            historyWriter: ServerHistoryWriter(server: server))
+            audioPlayer = AsyncAudioPlayer(player: player, fetcher: trackFetcher, history: historyFetcher)
+
+        case .remote:
+            /*
+             an audio player that subclasses the ServerConnection to use apis to manage a server queue
+            */
+            audioPlayer = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
         }
 
-        trackFetcher.audioPlayer = audioPlayerToUse
+        // set after init to avoid a circular dependency in the .local case above
+        trackFetcher.audioPlayer = audioPlayer
         
-        // an observable view object for the playing queue
-        let viewAudioPlayer = ViewObservableAudioPlayer(player: audioPlayerToUse)
-
         historyFetcher.refresh()
         
+        // Create the SwiftUI view that provides the window contents.
         let contentView = ContentView(trackFetcher: trackFetcher,
                                       historyFetcher: historyFetcher,
                                       serverConnection: server,
-                                      audioPlayer: viewAudioPlayer)
+                                      audioPlayer: ViewObservableAudioPlayer(player: audioPlayer))
+        
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             trackFetcher.refreshQueue()
             historyFetcher.refresh()

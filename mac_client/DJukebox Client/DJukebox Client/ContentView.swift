@@ -36,15 +36,17 @@ struct ContentView: View {
 }
 
 
+fileprivate let server: ServerType = ServerConnection(toUrl: serverURL, withPassword: password)
+
 // an async audio player that subclasses the ServerConnection to play tracks on the server
-let previewServerAudioPlayer: AsyncAudioPlayerType = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
+fileprivate let previewServerAudioPlayer: AsyncAudioPlayerType = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
 // an observable view object for showing lots of track based info
-let previewTrackFetcher = TrackFetcher(withServer: server)
+fileprivate let previewTrackFetcher = TrackFetcher(withServer: server)
 
 // an observable view object for the playing queue
-let previewViewAudioPlayer = ViewObservableAudioPlayer(player: previewServerAudioPlayer)
+fileprivate let previewViewAudioPlayer = ViewObservableAudioPlayer(player: previewServerAudioPlayer)
 
-let previewHistoryFetcher = HistoryFetcher(withServer: server, trackFetcher: previewTrackFetcher)
+fileprivate let previewHistoryFetcher = HistoryFetcher(withServer: server, trackFetcher: previewTrackFetcher)
 
 
 struct ContentView_Previews: PreviewProvider {

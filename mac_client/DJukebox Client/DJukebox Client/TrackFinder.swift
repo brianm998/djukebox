@@ -1,6 +1,7 @@
 import Foundation
 import DJukeboxCommon
 
+// finds tracks via server streaming url
 public class TrackFinder: TrackFinderType {
     
     public var tracks: [String : (AudioTrackType, [URL])]
