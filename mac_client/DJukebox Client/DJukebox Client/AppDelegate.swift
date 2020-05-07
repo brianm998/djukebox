@@ -25,8 +25,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // set this to .local to play locally instead of on the server
     let queueType: QueueType = .remote
-    
-    func applicationDidFinishLaunching(_ aNotification: Notification) {
+
+    var contentView: some View {
         // the server connection for tracks and history 
         let server = ServerConnection(toUrl: serverURL, withPassword: password)
 
@@ -72,6 +72,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             historyFetcher.refresh()
         }
 
+        return contentView
+    }
+    
+    func applicationDidFinishLaunching(_ aNotification: Notification) {
+
         // Create the window and set the content view. 
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
@@ -79,7 +84,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered, defer: false)
         window.center()
         window.setFrameAutosaveName("Main Window")
-        window.contentView = NSHostingView(rootView: contentView)
+        window.contentView = NSHostingView(rootView: self.contentView)
         window.makeKeyAndOrderFront(nil)
     }
 
