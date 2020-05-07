@@ -11,7 +11,8 @@ import CryptoKit
 import DJukeboxCommon
 import DJukeboxClient
 
-let serverURL = "http://127.0.0.1:8080"
+let serverURL = "http://192.168.1.164:8080"
+//let serverURL = "http://127.0.0.1:8080"
 let password = "foobar"
 
 enum QueueType {

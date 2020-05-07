@@ -14,8 +14,9 @@ import DJukeboxCommon
 //192.168.1.164 
 
 // XXX doesn't work:
-//let serverURL = "http://169.254.7.233:8080"
-let serverURL = "http://127.0.0.1:8080"
+
+let serverURL = "http://192.168.1.164:8080"
+//let serverURL = "http://127.0.0.1:8080"
 let password = "foobar"
 
 enum QueueType {
@@ -23,13 +24,13 @@ enum QueueType {
     case remote
 }
 
-
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
     // set this to .local to play locally instead of on the server
-    let queueType: QueueType = .remote
+    //let queueType: QueueType = .remote
+    let queueType: QueueType = .local
     
     var contentView: some View {
         // the server connection for tracks and history 

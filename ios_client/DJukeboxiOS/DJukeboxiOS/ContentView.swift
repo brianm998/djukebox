@@ -17,15 +17,15 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            PlayingTracksView(trackFetcher: trackFetcher,
-                              audioPlayer: audioPlayer)
-              .tabItem { Text("queue") }
-
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
                                  historyFetcher: historyFetcher,
                                  serverConnection: serverConnection,
                                  audioPlayer: audioPlayer)
               .tabItem { Text("tracks") }
+
+            PlayingTracksView(trackFetcher: trackFetcher,
+                              audioPlayer: audioPlayer)
+              .tabItem { Text("queue") }
 
             SearchView(trackFetcher: trackFetcher,
                        audioPlayer: audioPlayer)
