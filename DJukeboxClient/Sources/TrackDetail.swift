@@ -9,21 +9,42 @@ struct TrackDetail: View {
     
     var body: some View {
         HStack(alignment: .center) {
-            Button(action: {
-                self.trackFetcher.showAlbums(forArtist: self.track.Artist)
-            }) {
-                Text(track.Artist).underline().foregroundColor(Color.blue)
-            }.buttonStyle(PlainButtonStyle())
-            if self.hasAlbum(track) {
+            if layoutIsLarge() {
                 Button(action: {
-                    self.trackFetcher.showTracks(for: self.track)
-                }) {
-                    Text(track.Album!).underline().foregroundColor(Color.blue)
+                           self.trackFetcher.showAlbums(forArtist: self.track.Artist)
+                       }) {
+                    Text(track.Artist).underline().foregroundColor(Color.blue)
                 }.buttonStyle(PlainButtonStyle())
-            }
-            Text(track.Title)
-            if showDuration && track.Duration != nil {
-                Text(track.Duration!)
+                if self.hasAlbum(track) {
+                    Button(action: {
+                               self.trackFetcher.showTracks(for: self.track)
+                           }) {
+                        Text(track.Album!).underline().foregroundColor(Color.blue)
+                    }.buttonStyle(PlainButtonStyle())
+                }
+                Text(track.Title)
+                if showDuration && track.Duration != nil {
+                    Text(track.Duration!)
+                }
+            } else {
+                VStack {
+                    Button(action: {
+                               self.trackFetcher.showAlbums(forArtist: self.track.Artist)
+                           }) {
+                        Text(track.Artist).underline().foregroundColor(Color.blue)
+                    }.buttonStyle(PlainButtonStyle())
+                    if self.hasAlbum(track) {
+                        Button(action: {
+                                   self.trackFetcher.showTracks(for: self.track)
+                               }) {
+                            Text(track.Album!).underline().foregroundColor(Color.blue)
+                        }.buttonStyle(PlainButtonStyle())
+                    }
+                }
+                Text(track.Title)
+                if false && showDuration && track.Duration != nil {
+                    Text(track.Duration!)
+                }
             }
         }
           .onTapGesture {

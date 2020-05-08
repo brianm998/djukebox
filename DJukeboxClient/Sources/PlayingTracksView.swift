@@ -43,8 +43,6 @@ public struct PlayingTimeRemainingView: View {
 public struct BigButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
-    let buttonWidth: CGFloat = 100
-
     public init(trackFetcher: TrackFetcher) {
         self.trackFetcher = trackFetcher
     }
@@ -77,13 +75,13 @@ public struct BigButtonView: View {
             }
 
             VStack {
-                PlayRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
-                PlayNewRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                PlayRandomTrackButton(trackFetcher: trackFetcher)
+                PlayNewRandomTrackButton(trackFetcher: trackFetcher)
             }
-            ClearQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+            ClearQueueButton(trackFetcher: trackFetcher)
             VStack {
-                RefreshTracksFromServerButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
-                RefreshQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                RefreshTracksFromServerButton(trackFetcher: trackFetcher)
+                RefreshQueueButton(trackFetcher: trackFetcher)
             }
             Spacer()
         }
@@ -102,16 +100,6 @@ public struct SmallButtonView: View {
     public var body: some View {
         VStack {
             HStack {
-                Spacer()
-
-                if self.trackFetcher.queueType == .local {
-                    Text("Playing Local")
-                    UseRemoteQueueButton(trackFetcher: self.trackFetcher)
-                } else {
-                    Text("Playing Remote")
-                    UseLocalQueueButton(trackFetcher: self.trackFetcher)
-                }
-                
                 SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
                 
                 if(self.trackFetcher.audioPlayer.isPaused) {
@@ -120,23 +108,48 @@ public struct SmallButtonView: View {
                     PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
                 }
 
+                VStack {
+                    if self.trackFetcher.queueType == .local {
+                        Text("Playing Local")
+                        UseRemoteQueueButton(trackFetcher: self.trackFetcher)
+                    } else {
+                        Text("Playing Remote")
+                        UseLocalQueueButton(trackFetcher: self.trackFetcher)
+                    }
+                }
+                
+            }
+            HStack {
+                Spacer()
                 if trackFetcher.totalDuration > 0 {
                     PlayingTimeRemainingView(trackFetcher: trackFetcher)
                 }
+                PlayRandomTrackButton(trackFetcher: trackFetcher)
+                PlayNewRandomTrackButton(trackFetcher: trackFetcher)
             }
             HStack {
-                PlayRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
-                PlayNewRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
-            }
-            HStack {
-                ClearQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
-                RefreshTracksFromServerButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
-                RefreshQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                ClearQueueButton(trackFetcher: trackFetcher)
+                RefreshTracksFromServerButton(trackFetcher: trackFetcher)
+                RefreshQueueButton(trackFetcher: trackFetcher)
             }
         }
     }
 }
 
+public func layoutIsLarge() -> Bool {
+    #if os(iOS)// || os(watchOS) || os(tvOS)
+    if UIDevice.current.userInterfaceIdiom == .pad {
+        return true
+    }else{
+        return false
+    }
+    #elseif os(OSX)
+    return true
+    #else
+    return false
+    #endif
+}
+    
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -146,24 +159,10 @@ public struct PlayingTracksView: View {
     
     let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
 
-    private var useBigButtons: Bool {
-        #if os(iOS)// || os(watchOS) || os(tvOS)
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            return true
-        }else{
-            return false
-        }
-        #elseif os(OSX)
-        return true
-        #else
-        return false
-        #endif
-    }
-    
     public var body: some View {
         
         VStack(alignment: .leading) {
-            if self.useBigButtons {
+            if layoutIsLarge() {
                 BigButtonView(trackFetcher: trackFetcher)
             } else {
                 SmallButtonView(trackFetcher: trackFetcher)
@@ -173,24 +172,48 @@ public struct PlayingTracksView: View {
                 if trackFetcher.currentTrack == nil {
                     Text("Nothing Playing").foregroundColor(Color.gray)
                 } else {
-                    TrackDetail(track: trackFetcher.currentTrack!,
-                                trackFetcher: self.trackFetcher,
-                                showDuration: false,
-                                playOnTap: false)
-                      .layoutPriority(1.0)
-                    
-                    ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
-                        if amount < 60 {
-                            return "\(Int(amount)) seconds left"
-                        } else {
-                            let duration = Int(amount)
-                            let seconds = String(format: "%02d", duration % 60)
-                            let minutes = duration / 60
-                            return "\(minutes):\(seconds) left"
+                    if layoutIsLarge() {
+                        TrackDetail(track: trackFetcher.currentTrack!,
+                                    trackFetcher: self.trackFetcher,
+                                    showDuration: false,
+                                    playOnTap: false)
+                          .layoutPriority(1.0)
+                        
+                        ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
+                            if amount < 60 {
+                                return "\(Int(amount)) seconds left"
+                            } else {
+                                let duration = Int(amount)
+                                let seconds = String(format: "%02d", duration % 60)
+                                let minutes = duration / 60
+                                return "\(minutes):\(seconds) left"
+                            }
+                        }
+                          .layoutPriority(0.1)
+                          .frame(maxWidth: .infinity, maxHeight: 20)
+                    } else {
+                        VStack {
+                            ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
+                                if amount < 60 {
+                                    return "\(Int(amount)) seconds left"
+                                } else {
+                                    let duration = Int(amount)
+                                    let seconds = String(format: "%02d", duration % 60)
+                                    let minutes = duration / 60
+                                    return "\(minutes):\(seconds) left"
+                                }
+                            }
+                              .layoutPriority(0.1)
+                              .frame(maxWidth: .infinity, maxHeight: 40)
+
+                            TrackDetail(track: trackFetcher.currentTrack!,
+                                        trackFetcher: self.trackFetcher,
+                                        showDuration: false,
+                                        playOnTap: false)
+                              .layoutPriority(1.0)
+                            
                         }
                     }
-                      .layoutPriority(0.1)
-                      .frame(maxWidth: .infinity, maxHeight: 20)
                 }
                 Spacer()
             }

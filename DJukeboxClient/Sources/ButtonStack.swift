@@ -64,7 +64,7 @@ struct UseLocalQueueButton: View {
             try? self.trackFetcher.watch(queue: .local)
         }) {
             Text("Use Local")
-        }//.buttonStyle(PlainButtonStyle())
+        }
     }
 }
 
@@ -77,13 +77,12 @@ struct UseRemoteQueueButton: View {
         }) {
             Text("Use Remote")
               .underline().foregroundColor(Color.blue)
-        }//.buttonStyle(PlainButtonStyle())
+        }
     }
 }
 
 struct PlayRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
@@ -97,14 +96,12 @@ struct PlayRandomTrackButton: View {
             }
         }) {
             Text("Random")
-              .frame(width: buttonWidth)
         }
     }
 }
 
 struct PlayNewRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
@@ -118,14 +115,12 @@ struct PlayNewRandomTrackButton: View {
             }
         }) {
             Text("New Random")
-              .frame(width: buttonWidth)
         }
     }
 }
 
 struct ClearQueueButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
@@ -140,30 +135,25 @@ struct ClearQueueButton: View {
         }) {
             Text("Clear Queue")
               .foregroundColor(Color.red)
-              .frame(width: buttonWidth)
         }
     }
 }
 
 struct RefreshTracksFromServerButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: { self.trackFetcher.refreshTracks() }) {
             Text("Refresh")
-              .frame(width: buttonWidth)
         }
     }
 }
 struct RefreshQueueButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: { self.trackFetcher.refreshQueue() }) {
             Text("Refresh Q")
-              .frame(width: buttonWidth)
         }
     }
 }
