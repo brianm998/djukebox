@@ -140,8 +140,7 @@ public struct SmallButtonView: View {
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
-    public init(trackFetcher: TrackFetcher)
-    {
+    public init(trackFetcher: TrackFetcher) {
         self.trackFetcher = trackFetcher
     }
     

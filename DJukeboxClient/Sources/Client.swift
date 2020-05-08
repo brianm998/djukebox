@@ -2,8 +2,8 @@ import SwiftUI
 import DJukeboxCommon
 
 public class Client: ObservableObject {
-    @Published public var trackFetcher: TrackFetcher
-    @Published public var historyFetcher: HistoryFetcher
+    public var trackFetcher: TrackFetcher
+    public var historyFetcher: HistoryFetcher
     public let serverConnection: ServerType
 
     public func copy() -> Client {

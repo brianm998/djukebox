@@ -5,11 +5,9 @@ public struct HistoryView: View {
     @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var trackFetcher: TrackFetcher
 
-    public init(historyFetcher: HistoryFetcher,
-                trackFetcher: TrackFetcher)
-    {
-        self.historyFetcher = historyFetcher
-        self.trackFetcher = trackFetcher
+    public init(_ client: Client) {
+        self.historyFetcher = client.historyFetcher
+        self.trackFetcher = client.trackFetcher
     }
     
     public var body: some View {

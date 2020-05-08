@@ -1,7 +1,7 @@
 import SwiftUI
 
 public struct ArtistAlbumTrackList: View {
-    @ObservedObject var client: Client
+    private var client: Client
 
     public init(_ client: Client) { self.client = client }
 

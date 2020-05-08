@@ -10,7 +10,7 @@ import SwiftUI
 import DJukeboxClient
 
 struct ContentView: View {
-    @ObservedObject var client: Client
+    var client: Client
 
     init(_ client: Client) { self.client = client }
 
@@ -25,8 +25,7 @@ struct ContentView: View {
             SearchView(trackFetcher: client.trackFetcher)
               .tabItem { Text("search") }
 
-            HistoryView(historyFetcher: client.historyFetcher,
-                        trackFetcher: client.trackFetcher)
+            HistoryView(client)
               .tabItem { Text("history") }
         }
     }

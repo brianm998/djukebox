@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TrackList: View {
-    @ObservedObject var client: Client
+    var client: Client
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var dragging = false
     
