@@ -3,10 +3,9 @@ import SwiftUI
 public struct SearchView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var searchQuery: String = "" 
-
-    public init(trackFetcher: TrackFetcher)
-    {
-        self.trackFetcher = trackFetcher
+    
+    public init(_ client: Client) {
+        self.trackFetcher = client.trackFetcher
     }
 
     public var body: some View {

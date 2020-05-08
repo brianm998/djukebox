@@ -19,10 +19,10 @@ struct ContentView: View {
             ArtistAlbumTrackList(client)
               .tabItem { Text("tracks") }
 
-            PlayingTracksView(trackFetcher: client.trackFetcher)
+            PlayingTracksView(client)
               .tabItem { Text("queue") }
 
-            SearchView(trackFetcher: client.trackFetcher)
+            SearchView(client)
               .tabItem { Text("search") }
 
             HistoryView(client)

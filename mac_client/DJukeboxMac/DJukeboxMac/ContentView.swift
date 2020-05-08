@@ -16,13 +16,9 @@ struct ContentView: View {
     var body: some View {
         VStack {
             ArtistAlbumTrackList(client)
-            
-            PlayingTracksView(trackFetcher: client.trackFetcher)
-
-            SearchView(trackFetcher: client.trackFetcher)
-
+            PlayingTracksView(client)
+            SearchView(client)
             HistoryView(client)
-            
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
