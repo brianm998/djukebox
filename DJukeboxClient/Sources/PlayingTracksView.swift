@@ -24,6 +24,12 @@ public struct PlayingTracksView: View {
             HStack {
                 Spacer()
 
+                if self.trackFetcher.queueType == .local {
+                    UseRemoteQueueButton(trackFetcher: self.trackFetcher)
+                } else {
+                    UseLocalQueueButton(trackFetcher: self.trackFetcher)
+                }
+                
                 SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
                 
                 if(self.trackFetcher.audioPlayer.isPaused) {
