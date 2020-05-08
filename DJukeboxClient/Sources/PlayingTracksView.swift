@@ -6,27 +6,109 @@ fileprivate let kkUTTypePlainText = kUTTypePlainText
 fileprivate let kkUTTypePlainText = "kUTTypePlainText"
 #endif
 
-public struct PlayingTracksView: View {
+public struct PlayingTimeRemainingView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
-    public init(trackFetcher: TrackFetcher)
-    {
+    public init(trackFetcher: TrackFetcher) {
         self.trackFetcher = trackFetcher
     }
+
+    public var body: some View {
+        VStack {
+            Text(self.format(duration: trackFetcher.totalDuration))
+            Text(self.string(forTime: trackFetcher.completionTime))
+        }
+    }
+    func string(forTime date: Date) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .none
+        dateFormatter.timeStyle = .medium
+        return dateFormatter.string(from: date)
+    }
     
-    let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
+    func format(duration: TimeInterval) -> String {
+        let seconds = Int(duration) % 60
+        let minutes = Int(duration/60) % 60
+        let hours = Int(duration/(60*60))
+        if hours > 0 {
+            return "\(hours) hours"
+        } else if minutes > 0 {
+            return "\(minutes) minutes"
+        } else {
+            return "\(seconds) seconds"
+        }
+    }
+}
+
+public struct BigButtonView: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+
+    let buttonWidth: CGFloat = 100
+
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+
+    public var body: some View {
+        HStack {
+            Spacer()
+
+            VStack {
+                if self.trackFetcher.queueType == .local {
+                    Text("Playing Local")
+                    UseRemoteQueueButton(trackFetcher: self.trackFetcher)
+
+                } else {
+                    Text("Playing Remote")
+                    UseLocalQueueButton(trackFetcher: self.trackFetcher)
+                }
+            }
+            
+            SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
+            
+            if(self.trackFetcher.audioPlayer.isPaused) {
+                PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
+            } else {
+                PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
+            }
+
+            if trackFetcher.totalDuration > 0 {
+                PlayingTimeRemainingView(trackFetcher: trackFetcher)
+            }
+
+            VStack {
+                PlayRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                PlayNewRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+            }
+            ClearQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+            VStack {
+                RefreshTracksFromServerButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                RefreshQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+            }
+            Spacer()
+        }
+    }
+}
+
+public struct SmallButtonView: View {
+    @ObservedObject var trackFetcher: TrackFetcher
 
     let buttonWidth: CGFloat = 80
-    
+
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+
     public var body: some View {
-        
-        VStack(alignment: .leading) {
+        VStack {
             HStack {
                 Spacer()
 
                 if self.trackFetcher.queueType == .local {
+                    Text("Playing Local")
                     UseRemoteQueueButton(trackFetcher: self.trackFetcher)
                 } else {
+                    Text("Playing Remote")
                     UseLocalQueueButton(trackFetcher: self.trackFetcher)
                 }
                 
@@ -39,17 +121,54 @@ public struct PlayingTracksView: View {
                 }
 
                 if trackFetcher.totalDuration > 0 {
-                    Text(self.format(duration: trackFetcher.totalDuration))
-                    Text(self.string(forTime:trackFetcher.completionTime))
+                    PlayingTimeRemainingView(trackFetcher: trackFetcher)
                 }
-
+            }
+            HStack {
                 PlayRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
                 PlayNewRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+            }
+            HStack {
                 ClearQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
                 RefreshTracksFromServerButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
                 RefreshQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
             }
-            
+        }
+    }
+}
+
+public struct PlayingTracksView: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+
+    public init(trackFetcher: TrackFetcher)
+    {
+        self.trackFetcher = trackFetcher
+    }
+    
+    let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
+
+    private var useBigButtons: Bool {
+        #if os(iOS)// || os(watchOS) || os(tvOS)
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            return true
+        }else{
+            return false
+        }
+        #elseif os(OSX)
+        return true
+        #else
+        return false
+        #endif
+    }
+    
+    public var body: some View {
+        
+        VStack(alignment: .leading) {
+            if self.useBigButtons {
+                BigButtonView(trackFetcher: trackFetcher)
+            } else {
+                SmallButtonView(trackFetcher: trackFetcher)
+            }
             HStack {
                 Spacer()
                 if trackFetcher.currentTrack == nil {
@@ -105,25 +224,6 @@ public struct PlayingTracksView: View {
         }
     }
 
-    func string(forTime date: Date) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .none
-        dateFormatter.timeStyle = .medium
-        return dateFormatter.string(from: date)
-    }
-    
-    func format(duration: TimeInterval) -> String {
-        let seconds = Int(duration) % 60
-        let minutes = Int(duration/60) % 60
-        let hours = Int(duration/(60*60))
-        if hours > 0 {
-            return "\(hours) hours"
-        } else if minutes > 0 {
-            return "\(minutes) minutes"
-        } else {
-            return "\(seconds) seconds"
-        }
-    }
 }
 
 struct MyDropDelegate: DropDelegate {

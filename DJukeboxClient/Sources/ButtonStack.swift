@@ -76,6 +76,7 @@ struct UseRemoteQueueButton: View {
             try? self.trackFetcher.watch(queue: .remote)
         }) {
             Text("Use Remote")
+              .underline().foregroundColor(Color.blue)
         }//.buttonStyle(PlainButtonStyle())
     }
 }

@@ -14,6 +14,12 @@ struct ContentView: View {
     @ObservedObject var historyFetcher: HistoryFetcher
     var serverConnection: ServerType
 
+    init(_ client: Client) {
+        self.trackFetcher = client.trackFetcher
+        self.historyFetcher = client.historyFetcher
+        self.serverConnection = client.server
+    }
+
     var body: some View {
         TabView {
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
@@ -35,23 +41,11 @@ struct ContentView: View {
 }
 
 
-fileprivate let server: ServerType = ServerConnection(toUrl: serverURL, withPassword: password)
-
-// an async audio player that subclasses the ServerConnection to play tracks on the server
-fileprivate let previewServerAudioPlayer: AsyncAudioPlayerType = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
-// an observable view object for showing lots of track based info
-fileprivate let previewTrackFetcher = TrackFetcher(withServer: server)
-
-// an observable view object for the playing queue
-fileprivate let previewViewAudioPlayer = ViewObservableAudioPlayer(player: previewServerAudioPlayer)
-
-fileprivate let previewHistoryFetcher = HistoryFetcher(withServer: server, trackFetcher: previewTrackFetcher)
+fileprivate let previewClient = Client(serverURL: serverURL, password: password)
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(trackFetcher: previewTrackFetcher,
-                    historyFetcher: previewHistoryFetcher,
-                    serverConnection: server)
+        ContentView(previewClient)
     }
 }
 

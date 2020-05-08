@@ -24,70 +24,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
     
-    var contentView: some View { // XXX this method is identical to the mac one
-        // the server connection for tracks and history 
-        let server = ServerConnection(toUrl: serverURL, withPassword: password)
-
-        // an observable view object for showing lots of track based info
-        let trackFetcher = TrackFetcher(withServer: server)
-
-        // an observable object for keeping the history up to date from the server
-        let historyFetcher = HistoryFetcher(withServer: server, trackFetcher: trackFetcher)
-
-        // which queue do we play to?
-        var audioPlayer: AsyncAudioPlayerType!
-
-        let trackFinder = TrackFinder(trackFetcher: trackFetcher,
-                                      serverConnection: server)
-
-        /*
-         this monstrosity plays the files locally via streaming urls on the server
-         */
-        let player = NetworkAudioPlayer(trackFinder: trackFinder,
-                                        historyWriter: ServerHistoryWriter(server: server))
-        trackFetcher.add(queueType: .local,
-                         withPlayer: AsyncAudioPlayer(player: player,
-                                                      fetcher: trackFetcher,
-                                                      history: historyFetcher))
-        /*
-         an audio player that subclasses the ServerConnection to use apis to manage a server queue
-         */
-        trackFetcher.add(queueType: .remote,
-                         withPlayer: ServerAudioPlayer(toUrl: serverURL, withPassword: password))
-
-        do {
-            try trackFetcher.watch(queue: .remote)
-        } catch {
-            print("can't watch queue: \(error)")
-        }
-        
-        // set after init to avoid a circular dependency in the .local case above
-        //trackFetcher.audioPlayer = audioPlayer
-        
-        historyFetcher.refresh()
-        trackFetcher.refreshTracks()
-        trackFetcher.refreshQueue()
-        
-        // Create the SwiftUI view that provides the window contents.
-        let contentView = try ContentView(trackFetcher: trackFetcher,
-                                          historyFetcher: historyFetcher,
-                                          serverConnection: server) 
-        
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            trackFetcher.refreshQueue()
-            historyFetcher.refresh()
-        }
-
-        return contentView
-    }
-
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
         // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
 
         // Create the SwiftUI view that provides the window contents.
-        let contentView = self.contentView
+        let contentView = ContentView(Client(serverURL: serverURL, password: password))
 
         // Use a UIHostingController as window root view controller.
         if let windowScene = scene as? UIWindowScene {
