@@ -5,7 +5,7 @@ struct PlayButton: View {
     
     var body: some View {
         Button(action: {
-            self.audioPlayer.player.resumePlaying() { audioTrack, error in
+            self.audioPlayer.player?.resumePlaying() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else {
@@ -23,7 +23,7 @@ struct PauseButton: View {
     
     var body: some View {
         Button(action: {
-            self.audioPlayer.player.pausePlaying() { audioTrack, error in
+            self.audioPlayer.player?.pausePlaying() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else {
@@ -38,11 +38,10 @@ struct PauseButton: View {
 
 struct SkipCurrentTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
     var body: some View {
         Button(action: {
-                self.audioPlayer.player.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "",
+                self.trackFetcher.audioPlayer.player?.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "",
                                                          atIndex: -1) { audioTrack, error in
                 if let error = error {
                     print("DOH")
@@ -59,12 +58,11 @@ struct SkipCurrentTrackButton: View {
 
 struct PlayRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
-            self.audioPlayer.player.playRandomTrack() { audioTrack, error in
+            self.trackFetcher.audioPlayer.player?.playRandomTrack() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else if let audioTrack = audioTrack {
@@ -81,12 +79,11 @@ struct PlayRandomTrackButton: View {
 
 struct PlayNewRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
-            self.audioPlayer.player.playNewRandomTrack() { audioTrack, error in
+            self.trackFetcher.audioPlayer.player?.playNewRandomTrack() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else if let audioTrack = audioTrack {
@@ -103,12 +100,11 @@ struct PlayNewRandomTrackButton: View {
 
 struct ClearQueueButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     var buttonWidth: CGFloat
     
     var body: some View {
         Button(action: {
-            self.audioPlayer.player.stopAllTracks() { audioTrack, error in
+            self.trackFetcher.audioPlayer.player?.stopAllTracks() { audioTrack, error in
                 if let error = error {
                     print("DOH")
                 } else {

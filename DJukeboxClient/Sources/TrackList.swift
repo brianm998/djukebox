@@ -4,7 +4,6 @@ struct TrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
     var serverConnection: ServerType
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     @State private var dragging = false 
     
@@ -15,7 +14,7 @@ struct TrackList: View {
                 Text(trackFetcher.trackTitle)
                 if self.trackFetcher.tracks.count > 0 {
                     Button(action: {
-                            self.audioPlayer.player.playTracks(self.trackFetcher.tracks) { success, error in
+                            self.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks) { success, error in
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
@@ -29,7 +28,7 @@ struct TrackList: View {
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
                   .foregroundColor(self.historyFetcher.eventCount(for: track.SHA1) == 0 ? Color.green : Color.gray)
                   .onTapGesture {
-                      self.audioPlayer.player.playTrack(withHash: track.SHA1) { track, error in
+                      self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
                           self.trackFetcher.refreshQueue()
                           print("track \(track) error \(error)")
                       }
@@ -62,7 +61,7 @@ struct TrackList: View {
     #if os(macOS)
     fileprivate func makeNewWindow(atOrigin origin: CGPoint) {
         let trackFetcher = TrackFetcher(withServer: self.serverConnection)
-        trackFetcher.audioPlayer = self.audioPlayer.player
+        trackFetcher.audioPlayer.player = self.trackFetcher.audioPlayer.player
         trackFetcher.tracks = self.trackFetcher.tracks
         trackFetcher.desiredArtist = self.trackFetcher.desiredArtist
         trackFetcher.desiredAlbum = self.trackFetcher.desiredAlbum
@@ -76,10 +75,13 @@ struct TrackList: View {
         } else {
             trackFetcher.trackTitle = "FIX THIS!"
         }
+
+        trackFetcher.refreshTracks()
+        trackFetcher.refreshQueue()
+        
         let contentView = TrackList(trackFetcher: trackFetcher,
                                     historyFetcher: historyFetcher,
-                                    serverConnection: self.serverConnection,
-                                    audioPlayer: audioPlayer)
+                                    serverConnection: self.serverConnection)
         var window = NSWindow(
           contentRect: NSRect(x: origin.x, y: origin.y, // this position is ignored :(
                               width: 250, height: 300), 

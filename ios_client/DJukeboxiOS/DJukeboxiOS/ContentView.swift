@@ -13,27 +13,22 @@ struct ContentView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @ObservedObject var historyFetcher: HistoryFetcher
     var serverConnection: ServerType
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var body: some View {
         TabView {
             ArtistAlbumTrackList(trackFetcher: trackFetcher,
                                  historyFetcher: historyFetcher,
-                                 serverConnection: serverConnection,
-                                 audioPlayer: audioPlayer)
+                                 serverConnection: serverConnection)
               .tabItem { Text("tracks") }
 
-            PlayingTracksView(trackFetcher: trackFetcher,
-                              audioPlayer: audioPlayer)
+            PlayingTracksView(trackFetcher: trackFetcher)
               .tabItem { Text("queue") }
 
-            SearchView(trackFetcher: trackFetcher,
-                       audioPlayer: audioPlayer)
+            SearchView(trackFetcher: trackFetcher)
               .tabItem { Text("search") }
 
             HistoryView(historyFetcher: historyFetcher,
-                        trackFetcher: trackFetcher,
-                        audioPlayer: audioPlayer)
+                        trackFetcher: trackFetcher)
               .tabItem { Text("history") }
         }
     }
@@ -56,8 +51,7 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView(trackFetcher: previewTrackFetcher,
                     historyFetcher: previewHistoryFetcher,
-                    serverConnection: server,
-                    audioPlayer: previewViewAudioPlayer)
+                    serverConnection: server)
     }
 }
 

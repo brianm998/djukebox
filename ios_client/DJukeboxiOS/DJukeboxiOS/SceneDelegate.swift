@@ -10,10 +10,6 @@ import UIKit
 import SwiftUI
 import DJukeboxClient
 import DJukeboxCommon
-//169.254.7.233
-//192.168.1.164 
-
-// XXX doesn't work:
 
 let serverURL = "http://192.168.1.164:8080"
 //let serverURL = "http://127.0.0.1:8080"
@@ -27,12 +23,8 @@ enum QueueType {
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-
-    // set this to .local to play locally instead of on the server
-    //let queueType: QueueType = .remote
-    let queueType: QueueType = .local
     
-    var contentView: some View {
+    var contentView: some View { // XXX this method is identical to the mac one
         // the server connection for tracks and history 
         let server = ServerConnection(toUrl: serverURL, withPassword: password)
 
@@ -45,32 +37,48 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // which queue do we play to?
         var audioPlayer: AsyncAudioPlayerType!
 
-        switch queueType {
-        case .local:
-            let trackFinder = TrackFinder(trackFetcher: trackFetcher, serverConnection: server)
-            let player = NetworkAudioPlayer(trackFinder: trackFinder,
-                                            historyWriter: ServerHistoryWriter(server: server))
-            audioPlayer = AsyncAudioPlayer(player: player, fetcher: trackFetcher, history: historyFetcher)
+        let trackFinder = TrackFinder(trackFetcher: trackFetcher,
+                                      serverConnection: server)
 
-        case .remote:
-            /*
-             an audio player that subclasses the ServerConnection to use apis to manage a server queue
-            */
-            audioPlayer = ServerAudioPlayer(toUrl: serverURL, withPassword: password)
+        /*
+         this monstrosity plays the files locally via streaming urls on the server
+         */
+        let player = NetworkAudioPlayer(trackFinder: trackFinder,
+                                        historyWriter: ServerHistoryWriter(server: server))
+        trackFetcher.add(queueType: .local,
+                         withPlayer: AsyncAudioPlayer(player: player,
+                                                      fetcher: trackFetcher,
+                                                      history: historyFetcher))
+        /*
+         an audio player that subclasses the ServerConnection to use apis to manage a server queue
+         */
+        trackFetcher.add(queueType: .remote,
+                         withPlayer: ServerAudioPlayer(toUrl: serverURL, withPassword: password))
+
+        do {
+            try trackFetcher.watch(queue: .remote)
+        } catch {
+            print("can't watch queue: \(error)")
         }
         
         // set after init to avoid a circular dependency in the .local case above
-        trackFetcher.audioPlayer = audioPlayer
+        //trackFetcher.audioPlayer = audioPlayer
+        
+        historyFetcher.refresh()
+        trackFetcher.refreshTracks()
+        trackFetcher.refreshQueue()
+        
+        // Create the SwiftUI view that provides the window contents.
+        let contentView = try ContentView(trackFetcher: trackFetcher,
+                                          historyFetcher: historyFetcher,
+                                          serverConnection: server) 
         
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             trackFetcher.refreshQueue()
             historyFetcher.refresh()
         }
 
-        return ContentView(trackFetcher: trackFetcher,
-                           historyFetcher: historyFetcher,
-                           serverConnection: server,
-                           audioPlayer: ViewObservableAudioPlayer(player: audioPlayer))
+        return contentView
     }
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {

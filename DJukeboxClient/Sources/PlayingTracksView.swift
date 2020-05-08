@@ -8,13 +8,10 @@ fileprivate let kkUTTypePlainText = "kUTTypePlainText"
 
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
-    public init(trackFetcher: TrackFetcher,
-                audioPlayer: ViewObservableAudioPlayer)
+    public init(trackFetcher: TrackFetcher)
     {
         self.trackFetcher = trackFetcher
-        self.audioPlayer = audioPlayer
     }
     
     let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
@@ -27,13 +24,12 @@ public struct PlayingTracksView: View {
             HStack {
                 Spacer()
 
-                SkipCurrentTrackButton(trackFetcher: self.trackFetcher,
-                                       audioPlayer: self.audioPlayer)
+                SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
                 
-                if(self.audioPlayer.isPaused) {
-                    PlayButton(audioPlayer: self.audioPlayer)
+                if(self.trackFetcher.audioPlayer.isPaused) {
+                    PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
                 } else {
-                    PauseButton(audioPlayer: self.audioPlayer)
+                    PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
                 }
 
                 if trackFetcher.totalDuration > 0 {
@@ -41,23 +37,11 @@ public struct PlayingTracksView: View {
                     Text(self.string(forTime:trackFetcher.completionTime))
                 }
 
-                PlayRandomTrackButton(trackFetcher: trackFetcher,
-                                      audioPlayer: self.audioPlayer,
-                                      buttonWidth: buttonWidth)
-
-                PlayNewRandomTrackButton(trackFetcher: trackFetcher,
-                                      audioPlayer: self.audioPlayer,
-                                      buttonWidth: buttonWidth)
-                
-                ClearQueueButton(trackFetcher: trackFetcher,
-                                 audioPlayer: self.audioPlayer,
-                                 buttonWidth: buttonWidth)
-
-                RefreshTracksFromServerButton(trackFetcher: trackFetcher,
-                                              buttonWidth: buttonWidth)
-
-                RefreshQueueButton(trackFetcher: trackFetcher,
-                                   buttonWidth: buttonWidth)
+                PlayRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                PlayNewRandomTrackButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                ClearQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                RefreshTracksFromServerButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
+                RefreshQueueButton(trackFetcher: trackFetcher, buttonWidth: buttonWidth)
             }
             
             HStack {
@@ -67,7 +51,6 @@ public struct PlayingTracksView: View {
                 } else {
                     TrackDetail(track: trackFetcher.currentTrack!,
                                 trackFetcher: self.trackFetcher,
-                                audioPlayer: self.audioPlayer,
                                 showDuration: false,
                                 playOnTap: false)
                       .layoutPriority(1.0)
@@ -89,7 +72,7 @@ public struct PlayingTracksView: View {
             }
               .disabled(trackFetcher.currentTrack == nil)
 
-            PlayingQueueView(trackFetcher: trackFetcher, audioPlayer: self.audioPlayer)
+            PlayingQueueView(trackFetcher: trackFetcher)
               .onDrop(of: [kkUTTypePlainText as String], delegate: dropDelegate)
             
             /*

@@ -4,15 +4,12 @@ public struct HistoryView: View {
 
     @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     public init(historyFetcher: HistoryFetcher,
-                trackFetcher: TrackFetcher,
-                audioPlayer: ViewObservableAudioPlayer)
+                trackFetcher: TrackFetcher)
     {
         self.historyFetcher = historyFetcher
         self.trackFetcher = trackFetcher
-        self.audioPlayer = audioPlayer
     }
     
     public var body: some View {
@@ -27,8 +24,7 @@ public struct HistoryView: View {
             List {
                 ForEach(historyFetcher.recent, id: \.self) { historyEntry in
                     TrackDetail(track: historyEntry.track,
-                                trackFetcher: self.trackFetcher,
-                                audioPlayer: self.audioPlayer)
+                                trackFetcher: self.trackFetcher)
                 }
             }
         }

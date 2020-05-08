@@ -3,7 +3,6 @@ import SwiftUI
 struct AlbumList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     var serverConnection: ServerType
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
 
     var body: some View {
         VStack {
@@ -12,14 +11,14 @@ struct AlbumList: View {
                 Text(trackFetcher.albumTitle)
                 if self.trackFetcher.albums.count > 0 {
                     Button(action: {
-                        self.audioPlayer.player.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                        self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
                         Text("Random")
                     }
                     Button(action: {
-                        self.audioPlayer.player.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                        self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
                             self.trackFetcher.refreshQueue()
                         }
                     }) {

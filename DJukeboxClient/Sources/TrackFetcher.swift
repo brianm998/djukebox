@@ -2,8 +2,16 @@ import Foundation
 import SwiftUI
 import CryptoKit
 
-// this is a view model used to update SwiftUI
+// This allows any String, including literals, to be thrown as an Error
+extension String: Error {}
 
+public enum QueueType {
+    case local
+    case remote
+}
+
+
+// this is a view model used to update SwiftUI
 public class TrackFetcher: ObservableObject {
     var allTracks: [AudioTrack] = []
 
@@ -28,20 +36,41 @@ public class TrackFetcher: ObservableObject {
     @Published var completionTime: Date = Date()
     
     let server: ServerType
-    public var audioPlayer: AsyncAudioPlayerType?
 
+    @Published public var audioPlayer: ViewObservableAudioPlayer
+
+    @Published public var queueType: QueueType!
+    
     var desiredArtist: String?
     var desiredAlbum: String?
     
-    public init(withServer server: ServerType/*, audioPlayer: AsyncAudioPlayerType*/) {
+    var queues: [QueueType: AsyncAudioPlayerType] = [:]
+
+    public init(withServer server: ServerType) {
         self.server = server
-       // self.audioPlayer = audioPlayer
         self.albumTitle = "Albums"
         self.trackTitle = "Songs"
-        refreshTracks()
-        refreshQueue()
+        self.audioPlayer = ViewObservableAudioPlayer()
     }
 
+    public func add(queueType: QueueType, withPlayer player: AsyncAudioPlayerType) {
+        queues[queueType] = player
+    }
+    
+    public func watch(queue: QueueType) throws {
+        if let player = queues[queue] {
+            self.updatePlayingQueue(to: player)
+            self.queueType = queue
+        } else {
+            throw "no player for queue type \(queue)"
+        }
+    }
+    
+    fileprivate func updatePlayingQueue(to player: AsyncAudioPlayerType) {
+        self.audioPlayer.player = player
+        self.refreshQueue()
+    }
+    
     func search(for searchQuery: String) {
         print("self.allTracks.count \(self.allTracks.count)")
 
@@ -65,7 +94,7 @@ public class TrackFetcher: ObservableObject {
         }
     }
     
-    func refreshTracks() {
+    public func refreshTracks() {
         server.listTracks() { tracks, error in
             if let tracks = tracks {
                 var artistMap: [String:AudioTrack] = [:]
@@ -90,7 +119,7 @@ public class TrackFetcher: ObservableObject {
         guard index >= 0 else { return }
         guard index < playingQueue.count else { return }
 
-        audioPlayer?.stopPlayingTrack(withHash: playingQueue[index].SHA1, atIndex: index) { success, error in
+        audioPlayer.player?.stopPlayingTrack(withHash: playingQueue[index].SHA1, atIndex: index) { success, error in
             if success { self.refreshQueue() }
         }
     }
@@ -127,7 +156,7 @@ public class TrackFetcher: ObservableObject {
     }
     
     public func refreshQueue() {
-        audioPlayer?.listPlayingQueue() { playingQueue, error in
+        audioPlayer.player?.listPlayingQueue() { playingQueue, error in
             if let queue = playingQueue { self.update(playingQueue: queue) }
         }
     }

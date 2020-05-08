@@ -2,14 +2,11 @@ import SwiftUI
 
 public struct SearchView: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     @State private var searchQuery: String = "" 
 
-    public init(trackFetcher: TrackFetcher,
-                audioPlayer: ViewObservableAudioPlayer)
+    public init(trackFetcher: TrackFetcher)
     {
         self.trackFetcher = trackFetcher
-        self.audioPlayer = audioPlayer
     }
 
     public var body: some View {
@@ -27,8 +24,7 @@ public struct SearchView: View {
             List {
                 ForEach(trackFetcher.searchResults, id: \.self) { track in
                     TrackDetail(track: track,
-                                trackFetcher: self.trackFetcher,
-                                audioPlayer: self.audioPlayer)
+                                trackFetcher: self.trackFetcher)
                 }
             }
         }

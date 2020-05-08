@@ -2,14 +2,12 @@ import SwiftUI
 
 struct PlayingQueueView: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
     var body: some View {
         List {
             ForEach(trackFetcher.playingQueue, id: \.self) { track in
                 TrackDetail(track: track,
                             trackFetcher: self.trackFetcher,
-                            audioPlayer: self.audioPlayer,
                             playOnTap: false)
             }
               .onDelete(perform: delete)
@@ -35,9 +33,9 @@ struct PlayingQueueView: View {
         if startIndex < endIndex {
             let positionsAhead = endIndex-startIndex-1
             print("moving track \(trackToMove.SHA1) up \(positionsAhead) positions from \(startIndex)")
-            audioPlayer.player.movePlayingTrack(withHash: trackToMove.SHA1,
-                                                fromIndex: startIndex,
-                                                toIndex: startIndex + positionsAhead) { playingQueue, error in
+            trackFetcher.audioPlayer.player?.movePlayingTrack(withHash: trackToMove.SHA1,
+                                                              fromIndex: startIndex,
+                                                              toIndex: startIndex + positionsAhead) { playingQueue, error in
                 if let queue = playingQueue {
                     self.trackFetcher.update(playingQueue: queue)
                 }
@@ -45,9 +43,9 @@ struct PlayingQueueView: View {
         } else if startIndex > endIndex {
             let positionsBehind = startIndex-endIndex
             print("moving track \(trackToMove.SHA1) down \(positionsBehind) positions from \(startIndex)")
-            audioPlayer.player.movePlayingTrack(withHash: trackToMove.SHA1,
-                                                fromIndex: startIndex,
-                                                toIndex: startIndex - positionsBehind) { playingQueue, error in
+            trackFetcher.audioPlayer.player?.movePlayingTrack(withHash: trackToMove.SHA1,
+                                                              fromIndex: startIndex,
+                                                              toIndex: startIndex - positionsBehind) { playingQueue, error in
                 if let queue = playingQueue {
                     self.trackFetcher.update(playingQueue: queue)
                 }
