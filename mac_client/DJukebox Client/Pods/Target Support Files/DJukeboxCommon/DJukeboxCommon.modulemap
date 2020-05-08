@@ -1,6 +1,0 @@
-framework module DJukeboxCommon {
-  umbrella header "DJukeboxCommon-umbrella.h"
-
-  export *
-  module * { export * }
-}

@@ -9,7 +9,7 @@ install! 'cocoapods', :disable_input_output_paths => true
 # https://github.com/CocoaPods/CocoaPods/issues/8073
 # https://openradar.appspot.com/41126633
 
-target 'DJukebox Client' do
+target 'DJukeboxMac' do
   use_frameworks!
 
   pod 'DJukeboxCommon', :path => "../../DjukeboxCommon"

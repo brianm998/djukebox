@@ -12,21 +12,21 @@
 		D38250B8244A6FA3009CB365 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D38250B7244A6FA3009CB365 /* Assets.xcassets */; };
 		D38250BB244A6FA3009CB365 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D38250BA244A6FA3009CB365 /* Preview Assets.xcassets */; };
 		D38250BE244A6FA3009CB365 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D38250BC244A6FA3009CB365 /* Main.storyboard */; };
-		D9B0B98D54DA2D884748291B /* Pods_DJukebox_Client.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D15829096085A560975CC93 /* Pods_DJukebox_Client.framework */; };
+		D9B0B98D54DA2D884748291B /* Pods_DJukeboxMac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D15829096085A560975CC93 /* Pods_DJukeboxMac.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		7D15829096085A560975CC93 /* Pods_DJukebox_Client.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DJukebox_Client.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		7FCABF6C6765506E9DBC44A1 /* Pods-DJukebox Client.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DJukebox Client.release.xcconfig"; path = "Target Support Files/Pods-DJukebox Client/Pods-DJukebox Client.release.xcconfig"; sourceTree = "<group>"; };
-		AED522EEC5D46C7542831EF0 /* Pods-DJukebox Client.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DJukebox Client.debug.xcconfig"; path = "Target Support Files/Pods-DJukebox Client/Pods-DJukebox Client.debug.xcconfig"; sourceTree = "<group>"; };
-		D38250B0244A6FA2009CB365 /* DJukebox Client.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DJukebox Client.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7D15829096085A560975CC93 /* Pods_DJukeboxMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DJukeboxMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		7FCABF6C6765506E9DBC44A1 /* Pods-DJukeboxMac.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DJukeboxMac.release.xcconfig"; path = "Target Support Files/Pods-DJukeboxMac/Pods-DJukeboxMac.release.xcconfig"; sourceTree = "<group>"; };
+		AED522EEC5D46C7542831EF0 /* Pods-DJukeboxMac.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DJukeboxMac.debug.xcconfig"; path = "Target Support Files/Pods-DJukeboxMac/Pods-DJukeboxMac.debug.xcconfig"; sourceTree = "<group>"; };
+		D38250B0244A6FA2009CB365 /* DJukeboxMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DJukeboxMac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D38250B3244A6FA2009CB365 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D38250B5244A6FA2009CB365 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		D38250B7244A6FA3009CB365 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D38250BA244A6FA3009CB365 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		D38250BD244A6FA3009CB365 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		D38250BF244A6FA3009CB365 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D38250C0244A6FA3009CB365 /* DJukebox_Client.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DJukebox_Client.entitlements; sourceTree = "<group>"; };
+		D38250C0244A6FA3009CB365 /* DJukeboxMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DJukeboxMac.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -34,7 +34,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D9B0B98D54DA2D884748291B /* Pods_DJukebox_Client.framework in Frameworks */,
+				D9B0B98D54DA2D884748291B /* Pods_DJukeboxMac.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,8 +44,8 @@
 		59294FE52DE1741BA91C94E6 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				AED522EEC5D46C7542831EF0 /* Pods-DJukebox Client.debug.xcconfig */,
-				7FCABF6C6765506E9DBC44A1 /* Pods-DJukebox Client.release.xcconfig */,
+				AED522EEC5D46C7542831EF0 /* Pods-DJukeboxMac.debug.xcconfig */,
+				7FCABF6C6765506E9DBC44A1 /* Pods-DJukeboxMac.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -53,7 +53,7 @@
 		D38250A7244A6FA2009CB365 = {
 			isa = PBXGroup;
 			children = (
-				D38250B2244A6FA2009CB365 /* DJukebox Client */,
+				D38250B2244A6FA2009CB365 /* DJukeboxMac */,
 				D38250B1244A6FA2009CB365 /* Products */,
 				D3E73BEB2460A7A600F8F937 /* Frameworks */,
 				59294FE52DE1741BA91C94E6 /* Pods */,
@@ -63,12 +63,12 @@
 		D38250B1244A6FA2009CB365 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D38250B0244A6FA2009CB365 /* DJukebox Client.app */,
+				D38250B0244A6FA2009CB365 /* DJukeboxMac.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D38250B2244A6FA2009CB365 /* DJukebox Client */ = {
+		D38250B2244A6FA2009CB365 /* DJukeboxMac */ = {
 			isa = PBXGroup;
 			children = (
 				D38250B3244A6FA2009CB365 /* AppDelegate.swift */,
@@ -76,10 +76,10 @@
 				D38250B7244A6FA3009CB365 /* Assets.xcassets */,
 				D38250BC244A6FA3009CB365 /* Main.storyboard */,
 				D38250BF244A6FA3009CB365 /* Info.plist */,
-				D38250C0244A6FA3009CB365 /* DJukebox_Client.entitlements */,
+				D38250C0244A6FA3009CB365 /* DJukeboxMac.entitlements */,
 				D38250B9244A6FA3009CB365 /* Preview Content */,
 			);
-			path = "DJukebox Client";
+			path = "DJukeboxMac";
 			sourceTree = "<group>";
 		};
 		D38250B9244A6FA3009CB365 /* Preview Content */ = {
@@ -93,7 +93,7 @@
 		D3E73BEB2460A7A600F8F937 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				7D15829096085A560975CC93 /* Pods_DJukebox_Client.framework */,
+				7D15829096085A560975CC93 /* Pods_DJukeboxMac.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -101,9 +101,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		D38250AF244A6FA2009CB365 /* DJukebox Client */ = {
+		D38250AF244A6FA2009CB365 /* DJukeboxMac */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D38250C3244A6FA3009CB365 /* Build configuration list for PBXNativeTarget "DJukebox Client" */;
+			buildConfigurationList = D38250C3244A6FA3009CB365 /* Build configuration list for PBXNativeTarget "DJukeboxMac" */;
 			buildPhases = (
 				5243F3E63B2BDAEE0F6C447F /* [CP] Check Pods Manifest.lock */,
 				D38250AC244A6FA2009CB365 /* Sources */,
@@ -116,9 +116,9 @@
 			dependencies = (
 				D3C5B4332460AD0A00CC2794 /* PBXTargetDependency */,
 			);
-			name = "DJukebox Client";
-			productName = "DJukebox Client";
-			productReference = D38250B0244A6FA2009CB365 /* DJukebox Client.app */;
+			name = "DJukeboxMac";
+			productName = "DJukeboxMac";
+			productReference = D38250B0244A6FA2009CB365 /* DJukeboxMac.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -135,7 +135,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D38250AB244A6FA2009CB365 /* Build configuration list for PBXProject "DJukebox Client" */;
+			buildConfigurationList = D38250AB244A6FA2009CB365 /* Build configuration list for PBXProject "DJukeboxMac" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -148,7 +148,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D38250AF244A6FA2009CB365 /* DJukebox Client */,
+				D38250AF244A6FA2009CB365 /* DJukeboxMac */,
 			);
 		};
 /* End PBXProject section */
@@ -179,7 +179,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DJukebox Client/Pods-DJukebox Client-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DJukeboxMac/Pods-DJukeboxMac-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		5243F3E63B2BDAEE0F6C447F /* [CP] Check Pods Manifest.lock */ = {
@@ -197,7 +197,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-DJukebox Client-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-DJukeboxMac-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -351,17 +351,17 @@
 		};
 		D38250C4244A6FA3009CB365 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = AED522EEC5D46C7542831EF0 /* Pods-DJukebox Client.debug.xcconfig */;
+			baseConfigurationReference = AED522EEC5D46C7542831EF0 /* Pods-DJukeboxMac.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "DJukebox Client/DJukebox_Client.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "DJukeboxMac/DJukeboxMac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_ASSET_PATHS = "\"DJukebox Client/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"DJukeboxMac/Preview Content\"";
 				DEVELOPMENT_TEAM = MWN7U2PDAG;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = "DJukebox Client/Info.plist";
+				INFOPLIST_FILE = "DJukeboxMac/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -375,17 +375,17 @@
 		};
 		D38250C5244A6FA3009CB365 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7FCABF6C6765506E9DBC44A1 /* Pods-DJukebox Client.release.xcconfig */;
+			baseConfigurationReference = 7FCABF6C6765506E9DBC44A1 /* Pods-DJukeboxMac.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = "DJukebox Client/DJukebox_Client.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "DJukeboxMac/DJukeboxMac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_ASSET_PATHS = "\"DJukebox Client/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"DJukeboxMac/Preview Content\"";
 				DEVELOPMENT_TEAM = MWN7U2PDAG;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = "DJukebox Client/Info.plist";
+				INFOPLIST_FILE = "DJukeboxMac/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -400,7 +400,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D38250AB244A6FA2009CB365 /* Build configuration list for PBXProject "DJukebox Client" */ = {
+		D38250AB244A6FA2009CB365 /* Build configuration list for PBXProject "DJukeboxMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D38250C1244A6FA3009CB365 /* Debug */,
@@ -409,7 +409,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D38250C3244A6FA3009CB365 /* Build configuration list for PBXNativeTarget "DJukebox Client" */ = {
+		D38250C3244A6FA3009CB365 /* Build configuration list for PBXNativeTarget "DJukeboxMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D38250C4244A6FA3009CB365 /* Debug */,

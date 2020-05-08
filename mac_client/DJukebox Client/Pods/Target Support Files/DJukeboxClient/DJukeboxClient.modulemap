@@ -1,6 +1,0 @@
-framework module DJukeboxClient {
-  umbrella header "DJukeboxClient-umbrella.h"
-
-  export *
-  module * { export * }
-}
