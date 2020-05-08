@@ -1,0 +1,424 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D38250B4244A6FA2009CB365 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38250B3244A6FA2009CB365 /* AppDelegate.swift */; };
+		D38250B6244A6FA2009CB365 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38250B5244A6FA2009CB365 /* ContentView.swift */; };
+		D38250B8244A6FA3009CB365 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D38250B7244A6FA3009CB365 /* Assets.xcassets */; };
+		D38250BB244A6FA3009CB365 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D38250BA244A6FA3009CB365 /* Preview Assets.xcassets */; };
+		D38250BE244A6FA3009CB365 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D38250BC244A6FA3009CB365 /* Main.storyboard */; };
+		D9B0B98D54DA2D884748291B /* Pods_DJukebox_Client.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D15829096085A560975CC93 /* Pods_DJukebox_Client.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		7D15829096085A560975CC93 /* Pods_DJukebox_Client.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DJukebox_Client.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		7FCABF6C6765506E9DBC44A1 /* Pods-DJukebox Client.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DJukebox Client.release.xcconfig"; path = "Target Support Files/Pods-DJukebox Client/Pods-DJukebox Client.release.xcconfig"; sourceTree = "<group>"; };
+		AED522EEC5D46C7542831EF0 /* Pods-DJukebox Client.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DJukebox Client.debug.xcconfig"; path = "Target Support Files/Pods-DJukebox Client/Pods-DJukebox Client.debug.xcconfig"; sourceTree = "<group>"; };
+		D38250B0244A6FA2009CB365 /* DJukebox Client.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DJukebox Client.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D38250B3244A6FA2009CB365 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		D38250B5244A6FA2009CB365 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D38250B7244A6FA3009CB365 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D38250BA244A6FA3009CB365 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		D38250BD244A6FA3009CB365 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		D38250BF244A6FA3009CB365 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D38250C0244A6FA3009CB365 /* DJukebox_Client.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DJukebox_Client.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D38250AD244A6FA2009CB365 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D9B0B98D54DA2D884748291B /* Pods_DJukebox_Client.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		59294FE52DE1741BA91C94E6 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				AED522EEC5D46C7542831EF0 /* Pods-DJukebox Client.debug.xcconfig */,
+				7FCABF6C6765506E9DBC44A1 /* Pods-DJukebox Client.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		D38250A7244A6FA2009CB365 = {
+			isa = PBXGroup;
+			children = (
+				D38250B2244A6FA2009CB365 /* DJukebox Client */,
+				D38250B1244A6FA2009CB365 /* Products */,
+				D3E73BEB2460A7A600F8F937 /* Frameworks */,
+				59294FE52DE1741BA91C94E6 /* Pods */,
+			);
+			sourceTree = "<group>";
+		};
+		D38250B1244A6FA2009CB365 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D38250B0244A6FA2009CB365 /* DJukebox Client.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D38250B2244A6FA2009CB365 /* DJukebox Client */ = {
+			isa = PBXGroup;
+			children = (
+				D38250B3244A6FA2009CB365 /* AppDelegate.swift */,
+				D38250B5244A6FA2009CB365 /* ContentView.swift */,
+				D38250B7244A6FA3009CB365 /* Assets.xcassets */,
+				D38250BC244A6FA3009CB365 /* Main.storyboard */,
+				D38250BF244A6FA3009CB365 /* Info.plist */,
+				D38250C0244A6FA3009CB365 /* DJukebox_Client.entitlements */,
+				D38250B9244A6FA3009CB365 /* Preview Content */,
+			);
+			path = "DJukebox Client";
+			sourceTree = "<group>";
+		};
+		D38250B9244A6FA3009CB365 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				D38250BA244A6FA3009CB365 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		D3E73BEB2460A7A600F8F937 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				7D15829096085A560975CC93 /* Pods_DJukebox_Client.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D38250AF244A6FA2009CB365 /* DJukebox Client */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D38250C3244A6FA3009CB365 /* Build configuration list for PBXNativeTarget "DJukebox Client" */;
+			buildPhases = (
+				5243F3E63B2BDAEE0F6C447F /* [CP] Check Pods Manifest.lock */,
+				D38250AC244A6FA2009CB365 /* Sources */,
+				D38250AD244A6FA2009CB365 /* Frameworks */,
+				D38250AE244A6FA2009CB365 /* Resources */,
+				163C300F3AFC530EAFC01E89 /* [CP] Embed Pods Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D3C5B4332460AD0A00CC2794 /* PBXTargetDependency */,
+			);
+			name = "DJukebox Client";
+			productName = "DJukebox Client";
+			productReference = D38250B0244A6FA2009CB365 /* DJukebox Client.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D38250A8244A6FA2009CB365 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1140;
+				LastUpgradeCheck = 1140;
+				TargetAttributes = {
+					D38250AF244A6FA2009CB365 = {
+						CreatedOnToolsVersion = 11.4.1;
+					};
+				};
+			};
+			buildConfigurationList = D38250AB244A6FA2009CB365 /* Build configuration list for PBXProject "DJukebox Client" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = D38250A7244A6FA2009CB365;
+			productRefGroup = D38250B1244A6FA2009CB365 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D38250AF244A6FA2009CB365 /* DJukebox Client */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D38250AE244A6FA2009CB365 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D38250BE244A6FA3009CB365 /* Main.storyboard in Resources */,
+				D38250BB244A6FA3009CB365 /* Preview Assets.xcassets in Resources */,
+				D38250B8244A6FA3009CB365 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		163C300F3AFC530EAFC01E89 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DJukebox Client/Pods-DJukebox Client-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		5243F3E63B2BDAEE0F6C447F /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-DJukebox Client-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D38250AC244A6FA2009CB365 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D38250B6244A6FA2009CB365 /* ContentView.swift in Sources */,
+				D38250B4244A6FA2009CB365 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D3C5B4332460AD0A00CC2794 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		D38250BC244A6FA3009CB365 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D38250BD244A6FA3009CB365 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		D38250C1244A6FA3009CB365 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		D38250C2244A6FA3009CB365 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		D38250C4244A6FA3009CB365 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AED522EEC5D46C7542831EF0 /* Pods-DJukebox Client.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "DJukebox Client/DJukebox_Client.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_ASSET_PATHS = "\"DJukebox Client/Preview Content\"";
+				DEVELOPMENT_TEAM = MWN7U2PDAG;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "DJukebox Client/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.DJukebox-Client";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D38250C5244A6FA3009CB365 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7FCABF6C6765506E9DBC44A1 /* Pods-DJukebox Client.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "DJukebox Client/DJukebox_Client.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_ASSET_PATHS = "\"DJukebox Client/Preview Content\"";
+				DEVELOPMENT_TEAM = MWN7U2PDAG;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "DJukebox Client/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.DJukebox-Client";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D38250AB244A6FA2009CB365 /* Build configuration list for PBXProject "DJukebox Client" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D38250C1244A6FA3009CB365 /* Debug */,
+				D38250C2244A6FA3009CB365 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D38250C3244A6FA3009CB365 /* Build configuration list for PBXNativeTarget "DJukebox Client" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D38250C4244A6FA3009CB365 /* Debug */,
+				D38250C5244A6FA3009CB365 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D38250A8244A6FA2009CB365 /* Project object */;
+}
