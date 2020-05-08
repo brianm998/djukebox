@@ -3,6 +3,10 @@ import SwiftUI
 struct ArtistList: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
+    public init(_ client: Client) {
+        self.trackFetcher = client.trackFetcher
+    }
+
     var body: some View {
         VStack {
             Spacer()
@@ -12,7 +16,6 @@ struct ArtistList: View {
                   .onTapGesture {
                       self.trackFetcher.showAlbums(forArtist: artist.Artist)
                   }
-               
             }
         }
     }

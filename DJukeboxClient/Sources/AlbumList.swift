@@ -1,8 +1,13 @@
 import SwiftUI
 
 struct AlbumList: View {
+    @ObservedObject var client: Client
     @ObservedObject var trackFetcher: TrackFetcher
-    var serverConnection: ServerType
+
+    public init(_ client: Client) {
+        self.client = client
+        self.trackFetcher = client.trackFetcher
+    }
 
     var body: some View {
         VStack {

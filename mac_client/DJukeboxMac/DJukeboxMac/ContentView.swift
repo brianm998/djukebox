@@ -9,28 +9,19 @@ import SwiftUI
 import DJukeboxClient
 
 struct ContentView: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-    @ObservedObject var historyFetcher: HistoryFetcher
-    var serverConnection: ServerType
+    @ObservedObject var client: Client
 
-    init(_ client: Client) {
-        self.trackFetcher = client.trackFetcher
-        self.historyFetcher = client.historyFetcher
-        self.serverConnection = client.server
-    }
+    init(_ client: Client) { self.client = client }
 
     var body: some View {
         VStack {
-            ArtistAlbumTrackList(trackFetcher: trackFetcher,
-                                 historyFetcher: historyFetcher,
-                                 serverConnection: serverConnection)
-
+            ArtistAlbumTrackList(client)
             
-            PlayingTracksView(trackFetcher: trackFetcher)
+            PlayingTracksView(trackFetcher: client.trackFetcher)
 
-            SearchView(trackFetcher: trackFetcher)
+            SearchView(trackFetcher: client.trackFetcher)
 
-            HistoryView(historyFetcher: historyFetcher, trackFetcher: trackFetcher)
+            HistoryView(historyFetcher: client.historyFetcher, trackFetcher: client.trackFetcher)
             
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }

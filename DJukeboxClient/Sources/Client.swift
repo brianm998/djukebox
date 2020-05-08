@@ -1,32 +1,49 @@
 import SwiftUI
 import DJukeboxCommon
 
-public class Client {
-    public let trackFetcher: TrackFetcher
-    public let historyFetcher: HistoryFetcher
-    public let server: ServerType
+public class Client: ObservableObject {
+    @Published public var trackFetcher: TrackFetcher
+    @Published public var historyFetcher: HistoryFetcher
+    public let serverConnection: ServerType
 
+    public func copy() -> Client {
+        return Client(trackFetcher: self.trackFetcher,
+                      historyFetcher: self.historyFetcher,
+                      serverConnection: self.serverConnection)
+    }
+
+    fileprivate init(trackFetcher: TrackFetcher,
+                     historyFetcher: HistoryFetcher,
+                     serverConnection: ServerType)
+    {
+        self.trackFetcher = trackFetcher
+        self.historyFetcher = historyFetcher
+        self.serverConnection = serverConnection
+    }
+    
     public init(serverURL: String, password: String, initialQueueType initialQueue: QueueType = .remote) {
         // the server connection for tracks and history 
-        self.server = ServerConnection(toUrl: serverURL, withPassword: password)
+        self.serverConnection = ServerConnection(toUrl: serverURL, withPassword: password)
 
+        let fetcher = TrackFetcher(withServer: serverConnection)
+        
         // an observable view object for showing lots of track based info
-        self.trackFetcher = TrackFetcher(withServer: server)
+        self.trackFetcher = fetcher
 
         // an observable object for keeping the history up to date from the server
-        self.historyFetcher = HistoryFetcher(withServer: server, trackFetcher: trackFetcher)
+        self.historyFetcher = HistoryFetcher(withServer: serverConnection, trackFetcher: fetcher)
 
         // which queue do we play to?
         var audioPlayer: AsyncAudioPlayerType!
 
         let trackFinder = TrackFinder(trackFetcher: trackFetcher,
-                                      serverConnection: server)
+                                      serverConnection: serverConnection)
 
         /*
          this monstrosity plays the files locally via streaming urls on the server
          */
         let player = NetworkAudioPlayer(trackFinder: trackFinder,
-                                        historyWriter: ServerHistoryWriter(server: server))
+                                        historyWriter: ServerHistoryWriter(server: serverConnection))
         trackFetcher.add(queueType: .local,
                          withPlayer: AsyncAudioPlayer(player: player,
                                                       fetcher: trackFetcher,
