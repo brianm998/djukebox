@@ -51,7 +51,7 @@ public struct PlayingHistory: Content {
     let skips: [String: [Double]]
 }
 
-func routes(_ app: Application) throws {
+func trackServingRoutes(_ app: Application) throws {
 
     // Json list of all known tracks
     // curl localhost:8080/tracks
@@ -83,6 +83,53 @@ func routes(_ app: Application) throws {
             return track
         }
     }
+
+}
+
+func historyRoutes(_ app: Application) throws {
+    // json content of played tracks
+    app.get("history") { req -> PlayingHistory in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            return history.all
+        }
+    }
+
+    // json content of played tracks
+    app.get("history",  ":since") { req -> PlayingHistory in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            if let sinceString = req.parameters.get("since"),
+               let since = Double(sinceString)
+            {
+                let date = Date(timeIntervalSince1970: since)
+                return history.since(time: date)
+            }
+            throw Abort(.notFound)
+        }
+    }
+
+    // curl -H 'Authorization: foo' -H 'content-type: application/json' -d '{"hash":"foo","time":41220,"fullyPlayed":true}' http://127.0.0.1:8080/history
+    // this writes to a history entry
+    app.post("history") { req -> Response in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            let entry = try req.content.decode(HistoryEntry.self)
+
+            if entry.fullyPlayed {
+                try historyWriter.writePlay(of: entry.hash,
+                                            at: Date(timeIntervalSince1970: Double(entry.time)))
+            } else {
+                try historyWriter.writeSkip(of: entry.hash,
+                                            at: Date(timeIntervalSince1970: Double(entry.time)))
+            }
+            return Response(status: .ok)
+        }
+    }
+    
+}
+
+func playerRoutes(_ app: Application) throws {
 
     // Play a track by hash.
     // curl localhost:8080/play/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
@@ -306,46 +353,6 @@ func routes(_ app: Application) throws {
         }
     }
 
-    // json content of played tracks
-    app.get("history") { req -> PlayingHistory in
-        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            return history.all
-        }
-    }
-
-    // json content of played tracks
-    app.get("history",  ":since") { req -> PlayingHistory in
-        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            if let sinceString = req.parameters.get("since"),
-               let since = Double(sinceString)
-            {
-                let date = Date(timeIntervalSince1970: since)
-                return history.since(time: date)
-            }
-            throw Abort(.notFound)
-        }
-    }
-
-    // curl -H 'Authorization: foo' -H 'content-type: application/json' -d '{"hash":"foo","time":41220,"fullyPlayed":true}' http://127.0.0.1:8080/history
-    // this writes to a history entry
-    app.post("history") { req -> Response in
-        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            let entry = try req.content.decode(HistoryEntry.self)
-
-            if entry.fullyPlayed {
-                try historyWriter.writePlay(of: entry.hash,
-                                            at: Date(timeIntervalSince1970: Double(entry.time)))
-            } else {
-                try historyWriter.writeSkip(of: entry.hash,
-                                            at: Date(timeIntervalSince1970: Double(entry.time)))
-            }
-            return Response(status: .ok)
-        }
-    }
-    
     func isInQueue(_ hash: String) -> Bool {
         if let playingTrack = audioPlayer.playingTrack,
            playingTrack.SHA1 == hash
@@ -375,3 +382,11 @@ func routes(_ app: Application) throws {
                             playingTrackPosition: audioPlayer.playingTrackPosition)
     }
 }
+
+func routes(_ app: Application) throws {
+    
+    try trackServingRoutes(app)
+    try historyRoutes(app)
+    try playerRoutes(app)
+}
+
