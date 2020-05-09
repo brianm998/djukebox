@@ -16,16 +16,30 @@ public class TrackFetcher: ObservableObject {
     var allTracks: [AudioTrack] = []
 
     var trackMap: [String:AudioTrack] = [:]
-    
+
+    // what is shown on the artists list
     @Published var artists: [AudioTrack] = [] // XXX use different model objects for artists and albums
+
+    // what is shown on the albums list
     @Published var albums: [AudioTrack] = []
+
+    // what is shown on the tracks list
     @Published var tracks: [AudioTrack] = []
 
+    // the text at the top of the albums list
     @Published var albumTitle: String
+
+    // the text at the top of the tracks list
     @Published var trackTitle: String
 
+    // currentTrack is the first item in the playing queue, if any
     @Published var currentTrack: AudioTrack?
-    @Published var playingQueue: [AudioTrack] = []
+
+    // pendingTracks contains of the rest of the playing queue from the server
+    @Published var pendingTracks: [AudioTrack] = []
+
+    // this is the direct PlayingQueue json object we get from the server
+    @Published var playingQueue: PlayingQueue?
 
     @Published var searchResults: [AudioTrack] = []
 
@@ -66,7 +80,7 @@ public class TrackFetcher: ObservableObject {
         }
     }
     
-    fileprivate func updatePlayingQueue(to player: AsyncAudioPlayerType) {
+    fileprivate func updatePlayingQueue(to player: AsyncAudioPlayerType) { // XXX rename this to changeXXX
         self.audioPlayer.player = player
         self.refreshQueue()
     }
@@ -117,28 +131,31 @@ public class TrackFetcher: ObservableObject {
 
     func removeItemFromPlayingQueue(at index: Int) {
         guard index >= 0 else { return }
-        guard index < playingQueue.count else { return }
+        guard index < pendingTracks.count else { return }
 
-        audioPlayer.player?.stopPlayingTrack(withHash: playingQueue[index].SHA1, atIndex: index) { success, error in
+        audioPlayer.player?.stopPlayingTrack(withHash: pendingTracks[index].SHA1, atIndex: index) { success, error in
             if success { self.refreshQueue() }
         }
     }
 
     func update(playingQueue: PlayingQueue) {
         DispatchQueue.main.async {
+            self.playingQueue = playingQueue
+            
             if playingQueue.tracks.count > 0 {
                 self.currentTrack = playingQueue.tracks[0]
 
                 if playingQueue.tracks.count > 1 {
-                    self.playingQueue = Array(playingQueue.tracks[1..<playingQueue.tracks.count])
+                    self.pendingTracks = Array(playingQueue.tracks[1..<playingQueue.tracks.count])
                 } else {
-                    self.playingQueue = []
+                    self.pendingTracks = []
                 }
             } else {
                 self.currentTrack = nil
-                self.playingQueue = []
+                self.pendingTracks = []
             }
             var totalDuration: TimeInterval = 0
+            // XXX make this track the PlayingQueue directly
             if let duration = playingQueue.playingTrackDuration,
                let position = playingQueue.playingTrackPosition
             {

@@ -5,7 +5,7 @@ struct PlayingQueueView: View {
     
     var body: some View {
         List {
-            ForEach(trackFetcher.playingQueue, id: \.self) { track in
+            ForEach(trackFetcher.pendingTracks, id: \.self) { track in
                 TrackDetail(track: track,
                             trackFetcher: self.trackFetcher,
                             playOnTap: false)
@@ -29,7 +29,7 @@ struct PlayingQueueView: View {
     private func move(source: IndexSet, destination: Int) {
         let startIndex = source.sorted()[0]
         let endIndex = destination
-        let trackToMove = trackFetcher.playingQueue[startIndex]
+        let trackToMove = trackFetcher.pendingTracks[startIndex]
         if startIndex < endIndex {
             let positionsAhead = endIndex-startIndex-1
             print("moving track \(trackToMove.SHA1) up \(positionsAhead) positions from \(startIndex)")

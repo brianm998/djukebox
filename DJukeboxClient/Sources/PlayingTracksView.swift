@@ -91,8 +91,6 @@ public struct BigButtonView: View {
 public struct SmallButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
-    let buttonWidth: CGFloat = 80
-
     public init(trackFetcher: TrackFetcher) {
         self.trackFetcher = trackFetcher
     }
@@ -102,7 +100,7 @@ public struct SmallButtonView: View {
             HStack {
                 SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
                 
-                if(self.trackFetcher.audioPlayer.isPaused) {
+                if(self.trackFetcher.playingQueue?.isPaused ?? false) {
                     PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
                 } else {
                     PauseButton(audioPlayer: self.trackFetcher.audioPlayer)

@@ -3,14 +3,17 @@ import DJukeboxCommon
 
 // copied from the server
 public class PlayingQueue: Decodable, Identifiable, ObservableObject {
+    let isPaused: Bool
     let tracks: [AudioTrack]
     let playingTrackDuration: TimeInterval?
     let playingTrackPosition: TimeInterval?
 
-    init(tracks: [AudioTrack],
+    init(isPaused: Bool,
+         tracks: [AudioTrack],
          playingTrackDuration: TimeInterval?,
          playingTrackPosition: TimeInterval?)
     {
+        self.isPaused = isPaused
         self.tracks = tracks
         self.playingTrackDuration = playingTrackDuration
         self.playingTrackPosition = playingTrackPosition
@@ -112,8 +115,8 @@ public class AudioTrack: Decodable,
                 if lhsAlbum == rhsAlbum,
                    let lhsTrackNumberStr = lhs.TrackNumber,
                    let rhsTrackNumberStr = rhs.TrackNumber,
-                   let lhsTrackNumber = Int(lhsTrackNumberStr),
-                   let rhsTrackNumber = Int(rhsTrackNumberStr)
+                   let lhsTrackNumber = trackNumber(from: lhsTrackNumberStr),
+                   let rhsTrackNumber = trackNumber(from: rhsTrackNumberStr)
                 {
                     return lhsTrackNumber < rhsTrackNumber
                 } else {
@@ -125,6 +128,17 @@ public class AudioTrack: Decodable,
         } else {
             return lhs.Artist < rhs.Artist
         }
+    }
+    
+    fileprivate static func trackNumber(from stringForm: String) -> Int? {
+        // handle "3"
+        if let number = Int(stringForm) { return number }
+
+        // handle "3/9"
+        let parts = stringForm.components(separatedBy: "/")
+        if parts.count == 2, let number = Int(parts[0]) { return number }
+
+        return nil
     }
     
     public static func == (lhs: AudioTrack, rhs: AudioTrack) -> Bool {

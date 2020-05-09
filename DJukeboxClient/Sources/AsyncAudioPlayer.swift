@@ -2,7 +2,8 @@ import Foundation
 import DJukeboxCommon
 
 // this class takes an AudioPlayerType and makes it async with closures so the UI can use it
-// a lot of this logic mirrors that in routes.swift on the server
+// a lot of this logic mirrors that in routes.swift on the server,
+// so that clients can have their own local playing queue
 public class AsyncAudioPlayer: AsyncAudioPlayerType {
     let player: AudioPlayerType
     let fetcher: TrackFetcher
@@ -53,15 +54,16 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
                 print("HOLY FUCK")
             }
         }
-        return PlayingQueue(tracks: trackQueue,
+        return PlayingQueue(isPaused: !player.isPlaying,
+                            tracks: trackQueue,
                             playingTrackDuration: player.playingTrackDuration,
                             playingTrackPosition: player.playingTrackPosition)
     }
     
     public func movePlayingTrack(withHash hash: String,
-                          fromIndex: Int,
-                          toIndex: Int,
-                          closure: @escaping (PlayingQueue?, Error?) -> Void) {
+                                 fromIndex: Int,
+                                 toIndex: Int,
+                                 closure: @escaping (PlayingQueue?, Error?) -> Void) {
         if let track = fetcher.trackMap[hash],
            player.move(track: track, fromIndex: fromIndex, toIndex: toIndex)
         {
