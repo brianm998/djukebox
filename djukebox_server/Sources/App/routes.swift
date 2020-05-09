@@ -41,6 +41,7 @@ public struct AudioTrack: Content, AudioTrackType {
 }
 
 public struct PlayingQueue: Content {
+    let isPaused: Bool
     let tracks: [AudioTrack]
     let playingTrackDuration: TimeInterval?
     let playingTrackPosition: TimeInterval?
@@ -84,6 +85,25 @@ func trackServingRoutes(_ app: Application) throws {
         }
     }
 
+    // curl -H 'Authorization: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425' -H 'Path: /Volumes/Temp/mp3' http://127.0.0.1:8080/discover
+    app.get("discover") { req -> Response in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            var path: String?
+            for header in req.headers {
+                if header.name == "Path" {
+                    path = header.value
+                }
+            }
+            if let path = path {
+                print("finding at path \(path)")
+                trackFinder.find(atFilePath: path)
+                return Response(status: .ok)
+            } else {
+                throw Abort(.badRequest)
+            }
+        }
+    }
 }
 
 func historyRoutes(_ app: Application) throws {
@@ -377,7 +397,8 @@ func playerRoutes(_ app: Application) throws {
                 tracks.append(track)
             }
         }
-        return PlayingQueue(tracks: tracks,
+        return PlayingQueue(isPaused: !audioPlayer.isPlaying, // XXX centralize paused state
+                            tracks: tracks,
                             playingTrackDuration: audioPlayer.playingTrackDuration,
                             playingTrackPosition: audioPlayer.playingTrackPosition)
     }
