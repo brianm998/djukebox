@@ -40,10 +40,10 @@ public class Client: ObservableObject {
                                       serverConnection: serverConnection)
 
         /*
-         this monstrosity plays the files locally via streaming urls on the server
+         plays tracks locally via streaming urls on the server
          */
-        let player = NetworkAudioPlayer(trackFinder: trackFinder,
-                                        historyWriter: ServerHistoryWriter(server: serverConnection))
+        let player = AudioPlayer(trackFinder: trackFinder,
+                                 historyWriter: ServerHistoryWriter(server: serverConnection))
         trackFetcher.add(queueType: .local,
                          withPlayer: AsyncAudioPlayer(player: player,
                                                       fetcher: trackFetcher,
