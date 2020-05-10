@@ -21,7 +21,7 @@ public class Client: ObservableObject {
         self.serverConnection = serverConnection
     }
     
-    public init(serverURL: String, password: String, initialQueueType initialQueue: QueueType = .remote) {
+    public init(serverURL: String, password: String, initialQueueType initialQueue: QueueType = .local) {
         // the server connection for tracks and history 
         self.serverConnection = ServerConnection(toUrl: serverURL, withPassword: password)
 

@@ -56,7 +56,7 @@ public class AudioPlayer: NSObject, AudioPlayerType {
 
     let historyWriter: HistoryWriterType
     
-    var player = AVQueuePlayer(items: [])
+    let player = AVQueuePlayer(items: [])
     
     public init(trackFinder: TrackFinderType,
                 historyWriter: HistoryWriterType)
@@ -69,6 +69,7 @@ public class AudioPlayer: NSObject, AudioPlayerType {
                                                selector: #selector(playerDidFinishPlaying),
                                                name: .AVPlayerItemDidPlayToEndTime,
                                                object: nil)
+
     }
 
     deinit {
@@ -130,6 +131,13 @@ public class AudioPlayer: NSObject, AudioPlayerType {
 
     // skips the currently playing song, removing it from the playlist
     public func skip() {
+        if let track = self.playingTrack {
+            do {
+                try historyWriter.writeSkip(of: track.SHA1, at: Date())
+            } catch {
+                print("coudn't write history: \(error)")
+            }
+        }
         player.advanceToNextItem()
     }
 
@@ -150,6 +158,15 @@ public class AudioPlayer: NSObject, AudioPlayerType {
 
     @objc func playerDidFinishPlaying(note: NSNotification) {
         print("playerDidFinishPlaying")
+
+        if let track = self.playingTrack {
+            do {
+                try historyWriter.writePlay(of: track.SHA1, at: Date())
+            } catch {
+                print("coudn't write history: \(error)")
+            }
+        }
+
         // called every time each song finishes playing.
         // we could trim the trackMap here of already played tracks
     }
