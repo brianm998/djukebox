@@ -1,4 +1,5 @@
 import SwiftUI
+import DJukeboxCommon
 
 struct TrackList: View {
     var client: Client
@@ -33,7 +34,7 @@ struct TrackList: View {
                   .onTapGesture {
                       self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
                           self.trackFetcher.refreshQueue()
-                          print("track \(track) error \(error)")
+                          Log.d("track \(track) error \(error)")
                       }
                   }
                   .onDrag {
@@ -46,7 +47,7 @@ struct TrackList: View {
           .gesture(
             DragGesture(minimumDistance: 100)
               .onChanged { value in
-                  print("onChanged value \(value)")
+                  Log.d("onChanged value \(value)")
                   if !self.dragging {
                       #if os(macOS)
                       self.makeNewWindow(atOrigin: value.location)
@@ -55,7 +56,7 @@ struct TrackList: View {
                   }
               }
               .onEnded { value in
-                  print("onEnded value \(value)")
+                  Log.d("onEnded value \(value)")
                   self.dragging = false
               }
           )

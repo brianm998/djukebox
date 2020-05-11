@@ -3,8 +3,9 @@ import AVFoundation
 import Dispatch
 import DJukeboxCommon
 
-// this class uses AVQueuePlayer to play remote audio urls locally
-// third try at proper background audio, only keep one thing in the AVQueuePlayer at a time
+// this class uses AVQueuePlayer to play remote audio urls locally, keeping it in a doghouse.
+
+// The 'doghouse' is that we only keep a single item in the AVQueuePlayer's queue at a time.
 // this approach seems to avoid problems seen with other approaches, specifically running in the
 // background properly, and playing each track fully without skipping back
 public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
@@ -70,11 +71,11 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
             let seconds = Double(currentTime.value)/Double(currentTime.timescale)
             switch self.player.timeControlStatus {
             case .paused:
-                print("player rate \(self.player.rate) seconds \(seconds) paused")
+                Log.d("player rate \(self.player.rate) seconds \(seconds) paused")
             case .waitingToPlayAtSpecifiedRate:
-                print("player rate \(self.player.rate) seconds \(seconds) waitingToPlayAtSpecifiedRate")
+                Log.d("player rate \(self.player.rate) seconds \(seconds) waitingToPlayAtSpecifiedRate")
             case .playing:
-                print("player rate \(self.player.rate) seconds \(seconds) playing")
+                Log.d("player rate \(self.player.rate) seconds \(seconds) playing")
             }
         }
     }
@@ -102,7 +103,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
     }
     
     public func stopPlaying(sha1Hash: String, atIndex index: Int) {
-        print("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
+        Log.d("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
 
         if index == -1,
            let playingTrack = playingTrack,
@@ -111,11 +112,11 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
             self.skip()
         } else {
             for (trackIndex, hash) in trackQueue.enumerated() {
-                print("index \(trackIndex) hash \(sha1Hash)")
+                Log.d("index \(trackIndex) hash \(sha1Hash)")
                 if hash == sha1Hash,
                    index == trackIndex
                 {
-                    print("index \(index) needs to be removed")
+                    Log.d("index \(index) needs to be removed")
                     self.trackQueue.remove(at: index)
                 }
             }
@@ -149,7 +150,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
             do {
                 try historyWriter.writeSkip(of: track.SHA1, at: Date())
             } catch {
-                print("coudn't write history: \(error)")
+                Log.d("coudn't write history: \(error)")
             }
         }
         serviceQueue()
@@ -161,7 +162,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
             isPaused = false
             self.player.play()
         } else {
-            print("calling pause isPaused \(isPaused)")
+            Log.d("calling pause isPaused \(isPaused)")
             isPaused = true
             self.player.pause()
         }
@@ -179,13 +180,13 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
     }
     
     @objc func playerDidFinishPlaying(note: NSNotification) {
-        print("playerDidFinishPlaying")
+        Log.d("playerDidFinishPlaying")
 
         if let track = self.playingTrack {
             do {
                 try historyWriter.writePlay(of: track.SHA1, at: Date())
             } catch {
-                print("coudn't write history: \(error)")
+                Log.d("coudn't write history: \(error)")
             }
         }
 

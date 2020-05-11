@@ -86,7 +86,7 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
     
     public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         // XXX this delegate method never gets called :(
-        print("song did finish")
+        Log.d("song did finish")
         //playingDone()
     }
 
@@ -95,26 +95,26 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
             do {
                 try historyWriter.writePlay(of: track.SHA1, at: Date())
             } catch {
-                print("coudn't write history: \(error)")
+                Log.e("coudn't write history: \(error)")
             }
         }
         
         self.playingTrack = nil
         self.isPlaying = false
         self.player = nil
-        print("calling serviceQueue from playingDone()")
+        Log.d("calling serviceQueue from playingDone()")
         self.serviceQueue()
     }
     
     public func stopPlaying(sha1Hash: String, atIndex index: Int) {
-        print("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
+        Log.d("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
         self.trackQueueSemaphore.wait()
         for (trackIndex, hash) in trackQueue.enumerated() {
-            print("index \(trackIndex) hash \(sha1Hash)")
+            Log.d("index \(trackIndex) hash \(sha1Hash)")
             if hash == sha1Hash,
                index == trackIndex
             {
-                print("index \(index) needs to be removed")
+                Log.d("index \(index) needs to be removed")
                 self.trackQueue.remove(at: index)
             }
         }
@@ -126,7 +126,7 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         self.trackQueueSemaphore.wait()
         trackQueue.append(sha1Hash)
         self.trackQueueSemaphore.signal()
-        print("calling serviceQueue from play")
+        Log.d("calling serviceQueue from play")
         serviceQueue()
     }
 
@@ -136,7 +136,7 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
             do {
                 try historyWriter.writeSkip(of: track.SHA1, at: Date())
             } catch {
-                print("coudn't write history: \(error)")
+                Log.d("coudn't write history: \(error)")
             }
             self.playingTrack = nil // set to keep skipped songs out of history (track these?)
         }
@@ -148,7 +148,7 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
     }
 
     public func pause() {
-        print("calling pause")
+        Log.d("calling pause")
         isPaused = true
         self.player?.pause()
     }
@@ -172,27 +172,27 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         isPlaying = true
         do {
             if let (_, url) = self.trackFinder.track(forHash: nextTrackHash) {
-                print("about to play \(url)")
+                Log.d("about to play \(url)")
                 let player = try AVAudioPlayer(contentsOf: url)
                 player.delegate = self
                 player.play()
                 self.player = player
-                print("player woot2 player.isPlaying \(player.isPlaying)")
+                Log.d("player woot2 player.isPlaying \(player.isPlaying)")
 
-                print("starting timer")
+                Log.d("starting timer")
 
                 if self.vaporTimer == nil {
                     self.vaporTimer = VaporTimer(withMillisecondInterval: 200) {
-                        //print("vapor timer fired \(self.player) \(self.player?.isPlaying)")
+                        //Log.d("vapor timer fired \(self.player) \(self.player?.isPlaying)")
                         if let player = self.player, !player.isPlaying, !self.isPaused {
-                            print("vapor timer calling playingDone")
+                            Log.d("vapor timer calling playingDone")
                             self.playingDone()
                         }
                     }
                 }
             }
         } catch {
-            print("error \(error)")
+            Log.e("error \(error)")
         }
     }
 }

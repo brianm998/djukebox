@@ -56,12 +56,12 @@ public class TrackFinder: TrackFinderType {
                             tracks[audioTrack.SHA1] = (audioTrack, [trackUrl])
                         }
                     } else {
-                        print("FAILED ON \(trackUrl)")
+                        Log.d("FAILED ON \(trackUrl)")
                     }
                 }
             }
         } catch {
-            print("DOH \(url) \(error)")
+            Log.d("DOH \(url) \(error)")
         }
     }    
 }

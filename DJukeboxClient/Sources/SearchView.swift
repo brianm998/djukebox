@@ -1,4 +1,5 @@
 import SwiftUI
+import DJukeboxCommon
 
 public struct SearchView: View {
     @ObservedObject var trackFetcher: TrackFetcher
@@ -15,7 +16,7 @@ public struct SearchView: View {
                 TextField(
                     "search here",
                     text: $searchQuery,
-                    onEditingChanged: { foo in print("edit cha\(foo) \(self.searchQuery)") },
+                    onEditingChanged: { foo in Log.d("edit cha\(foo) \(self.searchQuery)") },
                     onCommit: { self.trackFetcher.search(for: self.searchQuery) }
                 )
                 Spacer()

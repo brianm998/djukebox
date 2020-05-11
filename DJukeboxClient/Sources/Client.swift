@@ -21,6 +21,7 @@ public class Client: ObservableObject {
         self.serverConnection = serverConnection
     }
     
+
     public init(serverURL: String, password: String, initialQueueType initialQueue: QueueType = .local) {
         // the server connection for tracks and history 
         self.serverConnection = ServerConnection(toUrl: serverURL, withPassword: password)
@@ -59,7 +60,7 @@ public class Client: ObservableObject {
         do {
             try trackFetcher.watch(queue: initialQueue)
         } catch {
-            print("can't watch queue: \(error)") // XXX handle this better
+            Log.e("can't watch queue: \(error)") // XXX handle this better
         }
         
         historyFetcher.refresh()

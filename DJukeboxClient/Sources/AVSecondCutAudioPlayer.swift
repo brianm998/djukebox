@@ -139,7 +139,7 @@ public class AudioPlayer: NSObject, AudioPlayerType {
             do {
                 try historyWriter.writeSkip(of: track.SHA1, at: Date())
             } catch {
-                print("coudn't write history: \(error)")
+                Log.d("coudn't write history: \(error)")
             }
         }
         player.advanceToNextItem()
@@ -150,7 +150,7 @@ public class AudioPlayer: NSObject, AudioPlayerType {
             isPaused = false
             self.player.play()
         } else {
-            print("calling pause isPaused \(isPaused)")
+            Log.d("calling pause isPaused \(isPaused)")
             isPaused = true
             self.player.pause()
         }
@@ -161,13 +161,13 @@ public class AudioPlayer: NSObject, AudioPlayerType {
     }
 
     @objc func playerDidFinishPlaying(note: NSNotification) {
-        print("playerDidFinishPlaying")
+        Log.d("playerDidFinishPlaying")
 
         if let track = self.playingTrack {
             do {
                 try historyWriter.writePlay(of: track.SHA1, at: Date())
             } catch {
-                print("coudn't write history: \(error)")
+                Log.d("coudn't write history: \(error)")
             }
         }
 

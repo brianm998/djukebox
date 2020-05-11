@@ -1,4 +1,5 @@
 import Vapor
+import DJukeboxCommon
 
 public protocol HistoryType {
     var plays: [String: [Double]] { get }
@@ -58,7 +59,7 @@ public class History: HistoryType {
         } else if var list = skips[hash] {
             list.append(time)
         } else {
-            print("DOH")
+            Log.d("DOH")
         }
     }
     
@@ -68,15 +69,15 @@ public class History: HistoryType {
 
     public func recordPlay(of hash: String, at time: Double) {
         if plays[hash] == nil {
-            print("fuck1")
+            Log.d("fuck1")
             plays[hash] = [time]
         } else if var list = plays[hash] {
-            print("fuck2")
+            Log.d("fuck2")
             list.append(time)
         } else {
-            print("DOH")
+            Log.d("DOH")
         }
-        print("record play plays \(plays)")
+        Log.d("record play plays \(plays)")
     }
     
     public func recordPlay(of hash: String, at time: Date) {
@@ -91,7 +92,7 @@ public class History: HistoryType {
                     let string = try String(contentsOf: url)
                     let lines = string.split { $0.isNewline }
                     for line in lines {
-                        print("line \(line)")
+                        Log.d("line \(line)")
                         let data = line.split { $0 == "," }
                         if data.count == 3,
                            let time = Double(data[1])
@@ -103,17 +104,17 @@ public class History: HistoryType {
                             } else if played_fully == "0" {
                                 self.recordSkip(of: hash, at: time)
                             } else {
-                                print("bad played_fully \(played_fully)")
+                                Log.d("bad played_fully \(played_fully)")
                             }
-                            print("YES: line \(line)")
+                            Log.d("YES: line \(line)")
                         } else {
-                            print("FUCK: line \(line)")
+                            Log.d("FUCK: line \(line)")
                         }
                     }
                 }
             }
         } catch {
-            print("DOH \(url) \(error)")
+            Log.e("DOH \(url) \(error)")
         }
     }    
 }

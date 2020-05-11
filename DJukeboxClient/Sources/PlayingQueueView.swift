@@ -1,4 +1,5 @@
 import SwiftUI
+import DJukeboxCommon
 
 struct PlayingQueueView: View {
     @ObservedObject var trackFetcher: TrackFetcher
@@ -18,7 +19,7 @@ struct PlayingQueueView: View {
     private func drop(at index: Int, _ items: [NSItemProvider]) {
         for item in items {
             _ = item.loadObject(ofClass: URL.self) { url, error in
-                print("url \(url) error \(error)")
+                Log.d("url \(url) error \(error)")
                 //DispatchQueue.main.async {
                     //url.map { self.links.insert($0, at: index) }
             //}
@@ -32,7 +33,7 @@ struct PlayingQueueView: View {
         let trackToMove = trackFetcher.pendingTracks[startIndex]
         if startIndex < endIndex {
             let positionsAhead = endIndex-startIndex-1
-            print("moving track \(trackToMove.SHA1) up \(positionsAhead) positions from \(startIndex)")
+            Log.d("moving track \(trackToMove.SHA1) up \(positionsAhead) positions from \(startIndex)")
             trackFetcher.audioPlayer.player?.movePlayingTrack(withHash: trackToMove.SHA1,
                                                               fromIndex: startIndex,
                                                               toIndex: startIndex + positionsAhead) { playingQueue, error in
@@ -42,7 +43,7 @@ struct PlayingQueueView: View {
             }
         } else if startIndex > endIndex {
             let positionsBehind = startIndex-endIndex
-            print("moving track \(trackToMove.SHA1) down \(positionsBehind) positions from \(startIndex)")
+            Log.d("moving track \(trackToMove.SHA1) down \(positionsBehind) positions from \(startIndex)")
             trackFetcher.audioPlayer.player?.movePlayingTrack(withHash: trackToMove.SHA1,
                                                               fromIndex: startIndex,
                                                               toIndex: startIndex - positionsBehind) { playingQueue, error in
@@ -51,15 +52,15 @@ struct PlayingQueueView: View {
                 }
             }
         } else {
-            print("not moving at all")
+            Log.d("not moving at all")
         }
     }
 
     func delete (at offsets: IndexSet) {
-        print("delete @ \(offsets)")
+        Log.d("delete @ \(offsets)")
 
         offsets.forEach { index in
-            print("index \(index)")
+            Log.d("index \(index)")
             trackFetcher.removeItemFromPlayingQueue(at: index)
         }
     }

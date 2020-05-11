@@ -22,7 +22,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
 
-        let contentView = ContentView(Client(serverURL: serverURL, password: password))
+#if DEBUG
+        Log.handlers = 
+          [
+            .console: ConsoleLogHandler(at: .info),
+            .file   : FileLogHandler(at: .error),
+  //          .alert  : AlertLogHandler(at: .warn),
+          ]
+#else
+        Log.handlers = 
+          [
+            .console: ConsoleLogHandler(at: .warn),
+          ]
+#endif
+
+        let contentView = ContentView(Client(serverURL: serverURL,
+                                             password: password,
+                                             initialQueueType: .remote))
         
         // Create the window and set the content view. 
         window = NSWindow(

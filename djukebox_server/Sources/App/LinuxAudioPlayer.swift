@@ -40,16 +40,16 @@ public class LinuxAudioPlayer: AudioPlayerType {
     fileprivate func playingDone() {
         self.playingTrack = nil
         self.isPlaying = false
-        print("calling serviceQueue from playingDone()")
+        Log.d("calling serviceQueue from playingDone()")
         self.serviceQueue()
     }
     
     public func stopPlaying(sha1Hash: String, atIndex index: Int) {
-        print("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
+        Log.d("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
         for (index, hash) in trackQueue.enumerated() {
-            print("index \(index) hash \(sha1Hash)")
+            Log.d("index \(index) hash \(sha1Hash)")
             if hash == sha1Hash {
-                print("index \(index) needs to be removed")
+                Log.d("index \(index) needs to be removed")
                 if index == 0 {
                     trackQueue = Array(trackQueue[1..<trackQueue.count])
                 } else if index == trackQueue.count - 1 {
@@ -57,7 +57,7 @@ public class LinuxAudioPlayer: AudioPlayerType {
                 } else if index < trackQueue.count {
                     trackQueue = Array(trackQueue[0..<index]) + Array(trackQueue[index+1..<trackQueue.count])
                 } else {
-                    print("DOH")
+                    Log.d("DOH")
                 }
             }
         }
@@ -66,7 +66,7 @@ public class LinuxAudioPlayer: AudioPlayerType {
     public func play(sha1Hash: String) {
         // XXX look up this hash beforehand, and throw error if not found?
         trackQueue.append(sha1Hash)
-        print("calling serviceQueue from play")
+        Log.d("calling serviceQueue from play")
         serviceQueue()
     }
 
@@ -81,18 +81,18 @@ public class LinuxAudioPlayer: AudioPlayerType {
     }
 
     public func pause() {
-        print("calling pause")
+        Log.d("calling pause")
         if let process = self.process,
            process.isRunning
         {
-            print("calling suspend on pid \(process.processIdentifier)")
+            Log.d("calling suspend on pid \(process.processIdentifier)")
             if process.suspend() {
-                print("suspended properly?")
+                Log.d("suspended properly?")
             } else {
-                print("not suspended properly?")
+                Log.d("not suspended properly?")
             }
         } else {
-            print("no process")
+            Log.d("no process")
         }
     }
     
@@ -114,16 +114,16 @@ public class LinuxAudioPlayer: AudioPlayerType {
         dispatchQueue.async {
             do {
                 if let (audioTrack, url) = self.trackFinder.track(forHash: nextTrackHash) {
-                    print("playing \(audioTrack.Title)")
+                    Log.d("playing \(audioTrack.Title)")
                     try self.play(filename: url.path)
                 } else {
-                    print("no track exists for hash \(nextTrackHash)")
+                    Log.d("no track exists for hash \(nextTrackHash)")
                     // XXX throw missing value for hash
                 }
             } catch {
-                print("error \(error)")
+                Log.d("error \(error)")
             }
-            print("linux calling playingDone")
+            Log.d("linux calling playingDone")
             self.playingDone()
         }
     }

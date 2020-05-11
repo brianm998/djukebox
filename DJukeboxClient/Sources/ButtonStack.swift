@@ -1,4 +1,5 @@
 import SwiftUI
+import DJukeboxCommon
 
 struct PlayButton: View {
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
@@ -7,9 +8,9 @@ struct PlayButton: View {
         Button(action: {
             self.audioPlayer.player?.resumePlaying() { audioTrack, error in
                 if let error = error {
-                    print("DOH")
+                    Log.e("DOH")
                 } else {
-                    print("enqueued: \(audioTrack)")
+                    Log.d("play: \(audioTrack)")
                 }
             }
         }) {
@@ -25,9 +26,9 @@ struct PauseButton: View {
         Button(action: {
             self.audioPlayer.player?.pausePlaying() { audioTrack, error in
                 if let error = error {
-                    print("DOH")
+                    Log.e("DOH")
                 } else {
-                    print("enqueued: \(audioTrack)")
+                    Log.d("pause: \(audioTrack)")
                 }
             }
         }) {
@@ -44,9 +45,9 @@ struct SkipCurrentTrackButton: View {
                 self.trackFetcher.audioPlayer.player?.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "",
                                                          atIndex: -1) { audioTrack, error in
                 if let error = error {
-                    print("DOH")
+                    Log.e("DOH")
                 } else {
-                    print("enqueued: \(audioTrack)")
+                    Log.d("skip: \(audioTrack)")
                 }
                 self.trackFetcher.refreshQueue()
             }
@@ -88,9 +89,9 @@ struct PlayRandomTrackButton: View {
         Button(action: {
             self.trackFetcher.audioPlayer.player?.playRandomTrack() { audioTrack, error in
                 if let error = error {
-                    print("DOH")
+                    Log.e("DOH")
                 } else if let audioTrack = audioTrack {
-                    print("enqueued: \(audioTrack.Title)")
+                    Log.d("random enqueued: \(audioTrack.Title)")
                 }
                 self.trackFetcher.refreshQueue()
             }
@@ -107,9 +108,9 @@ struct PlayNewRandomTrackButton: View {
         Button(action: {
             self.trackFetcher.audioPlayer.player?.playNewRandomTrack() { audioTrack, error in
                 if let error = error {
-                    print("DOH")
+                    Log.e("DOH")
                 } else if let audioTrack = audioTrack {
-                    print("enqueued: \(audioTrack.Title)")
+                    Log.d("new random enqueued: \(audioTrack.Title)")
                 }
                 self.trackFetcher.refreshQueue()
             }
@@ -126,9 +127,9 @@ struct ClearQueueButton: View {
         Button(action: {
             self.trackFetcher.audioPlayer.player?.stopAllTracks() { audioTrack, error in
                 if let error = error {
-                    print("DOH")
+                    Log.e("DOH")
                 } else {
-                    print("enqueued: \(audioTrack)")
+                    Log.d("clear queue: \(audioTrack)")
                 }
                 self.trackFetcher.refreshQueue()
             }

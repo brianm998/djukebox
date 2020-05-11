@@ -96,7 +96,7 @@ func trackServingRoutes(_ app: Application) throws {
                 }
             }
             if let path = path {
-                print("finding at path \(path)")
+                Log.d("finding at path \(path)")
                 trackFinder.find(atFilePath: path)
                 return Response(status: .ok)
             } else {
@@ -289,7 +289,7 @@ func playerRoutes(_ app: Application) throws {
                 if let playingTrack = audioPlayer.playingTrack,
                    playingTrack.SHA1 == track.SHA1
                 {
-                    print("skip")
+                    Log.d("skip")
                     audioPlayer.skip()
                     return Response(status: .ok)
                 } else {
@@ -302,14 +302,14 @@ func playerRoutes(_ app: Application) throws {
     // Stop playing a particular track at in index
     // curl localhost:8080/stop/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c/3
     app.get("stop", ":sha1", ":index") { req -> Response in
-        print("stop at index")
+        Log.d("stop at index")
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.headerAuth(request: req) {
             return try authControl.track(from: req) { track, _ in
                 if let indexStr = req.parameters.get("index"),
                    let index = Int(indexStr)
                 {
-                    print("index \(index)")
+                    Log.d("index \(index)")
                     if index == -1 {
                         audioPlayer.skip()
                     } else {

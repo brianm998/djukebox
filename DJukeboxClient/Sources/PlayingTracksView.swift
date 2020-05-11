@@ -1,4 +1,5 @@
 import SwiftUI
+import DJukeboxCommon
 
 #if os(macOS)
 fileprivate let kkUTTypePlainText = kUTTypePlainText
@@ -223,18 +224,18 @@ public struct PlayingTracksView: View {
             /*
               .onDrop(of: [kkUTTypePlainText as String], isTargeted: nil) { providers in
                   for provider in providers {
-                      print("fuck \(provider.registeredTypeIdentifiers())")
+                      Log.d("fuck \(provider.registeredTypeIdentifiers())")
                       if provider.hasItemConformingToTypeIdentifier(kkUTTypePlainText as String) {
-                          print("FUCK YES")
+                          Log.d("FUCK YES")
                           provider.loadItem(forTypeIdentifier: kkUTTypePlainText as String) { item, error in
-                              print("got item \(item) error \(error)")
+                              Log.d("got item \(item) error \(error)")
                           }
                       } else {
-                          print("FUCK NO")
+                          Log.d("FUCK NO")
                       }
                       
                       provider.loadObject(ofClass: String.self) { string,two  in
-                          print("woot! \(string) \(two)")
+                          Log.d("woot! \(string) \(two)")
                       }
 
                   }
@@ -252,12 +253,12 @@ struct MyDropDelegate: DropDelegate {
     }
     
     func dropEntered(info: DropInfo) {
-        print("dropEntered")
+        Log.d("dropEntered")
         //NSSound(named: "Morse")?.play()
     }
     
     func performDrop(info: DropInfo) -> Bool {
-        print("performDrop")
+        Log.d("performDrop")
         //NSSound(named: "Submarine")?.play()
         
         //let gridPosition = getGridPosition(location: info.location)
@@ -266,11 +267,11 @@ struct MyDropDelegate: DropDelegate {
         if let item = info.itemProviders(for: [kkUTTypePlainText as String]).first {
             item.loadItem(forTypeIdentifier: kkUTTypePlainText as String, options: nil) { (urlData, error) in
                 //DispatchQueue.main.async {
-                print("UrlData \(urlData)")
+                Log.d("UrlData \(urlData)")
                     if let urlData = urlData as? String {
-                        print("FUCK: \(urlData)")
+                        Log.d("FUCK: \(urlData)")
                     } else {
-                        print("FAILED1")
+                        Log.d("FAILED1")
                     }
             //}
             }
@@ -279,7 +280,7 @@ struct MyDropDelegate: DropDelegate {
             return true
             
         } else {
-            print("FAILED")
+            Log.d("FAILED")
             return false
         }
     }

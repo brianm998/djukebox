@@ -8,11 +8,28 @@
 
 import UIKit
 import AVFoundation
+import DJukeboxCommon
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+
+#if DEBUG
+        Log.handlers = 
+          [
+            .console: ConsoleLogHandler(at: .debug),
+            .file   : FileLogHandler(at: .error),
+            .alert  : AlertLogHandler(at: .warn),
+          ]
+#else
+        Log.handlers = 
+          [
+            .console: ConsoleLogHandler(at: .warn),
+          ]
+#endif
+
+        Log.i("Application Starting")
 
         // make sure that the app can play audio in the background
         let session = AVAudioSession.sharedInstance()
@@ -21,7 +38,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                                     mode: AVAudioSession.Mode.default,
                                     options: [])
         } catch let error as NSError {
-            print("Failed to set the audio session category and mode: \(error.localizedDescription)")
+            Log.e("Failed to set the audio session category and mode: \(error.localizedDescription)")
         }
         
         return true

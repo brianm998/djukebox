@@ -51,7 +51,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
             if let queueTrack = fetcher.trackMap[queueHash] {
                 trackQueue.append(queueTrack)
             } else {
-                print("HOLY FUCK")
+                Log.e("HOLY FUCK")
             }
         }
         return PlayingQueue(isPaused: !player.isPlaying,
@@ -74,7 +74,6 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     }
     
     public func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
-        print("listPlayingQueue")
         closure(self.playingQueue, nil)
     }
     

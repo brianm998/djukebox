@@ -84,19 +84,19 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType {
             do {
                 try historyWriter.writePlay(of: track.SHA1, at: Date())
             } catch {
-                print("coudn't write history: \(error)")
+                Log.e("coudn't write history: \(error)")
             }
         }
         
         self.playingTrack = nil
         self.isPlaying = false
         self.player = nil
-        print("calling serviceQueue from playingDone()")
+        Log.d("calling serviceQueue from playingDone()")
         self.serviceQueue()
     }
     
     public func stopPlaying(sha1Hash: String, atIndex index: Int) {
-        print("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
+        Log.d("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
 
         if index == -1,
            let playingTrack = playingTrack,
@@ -106,11 +106,11 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType {
         } else {
             self.trackQueueSemaphore.wait()
             for (trackIndex, hash) in trackQueue.enumerated() {
-                print("index \(trackIndex) hash \(sha1Hash)")
+                Log.d("index \(trackIndex) hash \(sha1Hash)")
                 if hash == sha1Hash,
                    index == trackIndex
                 {
-                    print("index \(index) needs to be removed")
+                    Log.d("index \(index) needs to be removed")
                     self.trackQueue.remove(at: index)
                 }
             }
@@ -123,7 +123,7 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType {
         self.trackQueueSemaphore.wait()
         trackQueue.append(sha1Hash)
         self.trackQueueSemaphore.signal()
-        print("calling serviceQueue from play")
+        Log.d("calling serviceQueue from play")
         serviceQueue()
     }
 
@@ -133,7 +133,7 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType {
             do {
                 try historyWriter.writeSkip(of: track.SHA1, at: Date())
             } catch {
-                print("coudn't write history: \(error)")
+                Log.d("coudn't write history: \(error)")
             }
             self.playingTrack = nil // set to keep skipped songs out of history (track these?)
         }
@@ -149,7 +149,7 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType {
             isPaused = false
             self.player?.play()
         } else {
-            print("calling pause isPaused \(isPaused)")
+            Log.d("calling pause isPaused \(isPaused)")
             isPaused = true
             self.player?.pause()
         }
@@ -174,11 +174,11 @@ public class NetworkAudioPlayer: NSObject, AudioPlayerType {
         self.trackQueueSemaphore.signal()
         self.playingTrack = trackFinder.audioTrack(forHash: nextTrackHash)
 
-        print("fuck self.playingTrack \(self.playingTrack)")
+        Log.d("fuck self.playingTrack \(self.playingTrack)")
         
         isPlaying = true
         if let (_, url) = self.trackFinder.track(forHash: nextTrackHash) {
-            print("about to play \(url)")
+            Log.d("about to play \(url)")
             let player = AVPlayer(url: url)
             player.play()
             self.player = player

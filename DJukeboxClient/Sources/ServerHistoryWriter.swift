@@ -15,7 +15,7 @@ public class ServerHistoryWriter: HistoryWriterType {
                                          time: Int(date.timeIntervalSince1970),
                                          fullyPlayed: true)
         server.post(history: history) { success, error in
-            print("wrote play of \(sha1)")
+            Log.d("wrote play of \(sha1)")
         }
     }
 
@@ -24,7 +24,7 @@ public class ServerHistoryWriter: HistoryWriterType {
                                          time: Int(date.timeIntervalSince1970),
                                          fullyPlayed: false)
         server.post(history: history) { success, error in
-            print("wrote skip of \(sha1)")
+            Log.d("wrote skip of \(sha1)")
         }
     }
 }

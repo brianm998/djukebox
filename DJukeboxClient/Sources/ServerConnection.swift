@@ -103,7 +103,7 @@ public class ServerConnection: ObservableObject, ServerType {
             let jsonString = try encoder.encode(history)
             self.post(body: jsonString, toPath: "history", closure: closure)
         } catch {
-            print("json error \(error)")
+            Log.e("json error \(error)")
         }
     }
     

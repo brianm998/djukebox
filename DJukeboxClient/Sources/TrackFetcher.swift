@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import CryptoKit
+import DJukeboxCommon
 
 // This allows any String, including literals, to be thrown as an Error
 extension String: Error {}
@@ -86,7 +87,7 @@ public class TrackFetcher: ObservableObject {
     }
     
     func search(for searchQuery: String) {
-        print("self.allTracks.count \(self.allTracks.count)")
+        Log.d("self.allTracks.count \(self.allTracks.count)")
 
         var results: [AudioTrack] = []
 
@@ -115,7 +116,7 @@ public class TrackFetcher: ObservableObject {
                 var sha1Map: [String:AudioTrack] = [:]
                 for track in tracks {
                     if track.Album == nil {
-                        print("artist \(track.Artist) has orphaned tracks")
+                        Log.d("artist \(track.Artist) has orphaned tracks")
                     }
                     artistMap[track.Artist] = track
                     sha1Map[track.SHA1] = track
@@ -218,7 +219,7 @@ public class TrackFetcher: ObservableObject {
     }
     
     func showAlbums(forArtist artist: String) {
-        print("for artist \(artist)")
+        Log.d("for artist \(artist)")
         var albums: [String] = []
 
         var albumMap: [String:AudioTrack] = [:]
@@ -231,7 +232,7 @@ public class TrackFetcher: ObservableObject {
                     albumMap[album] = track
                 } else {
                     albumMap[singles] = track
-                    print("missing album for track \(track.Artist) \(track.Title)")
+                    Log.d("missing album for track \(track.Artist) \(track.Title)")
                 }
             }
         }

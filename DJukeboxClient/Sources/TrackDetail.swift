@@ -1,4 +1,5 @@
 import SwiftUI
+import DJukeboxCommon
 
 struct TrackDetail: View {
     @ObservedObject var track: AudioTrack
@@ -51,7 +52,7 @@ struct TrackDetail: View {
               if self.playOnTap {
                   self.trackFetcher.audioPlayer.player?.playTrack(withHash: self.track.SHA1) { track, error in
                       self.trackFetcher.refreshQueue()
-                      print("track \(track) error \(error)")
+                      Log.d("track \(track) error \(error)")
                   }
               }
           }

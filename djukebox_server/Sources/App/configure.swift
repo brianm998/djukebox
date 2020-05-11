@@ -89,21 +89,20 @@ public class HistoryWriter: HistoryWriterType {
 
 // configures your application
 public func configure(_ app: Application) throws {
+    Log.handlers = 
+      [
+        .console: ConsoleLogHandler(at: .debug),
+      ]
 
-    // still need to grab list of paths from the config
+    Log.i("server starting")
     
+    // still need to grab list of paths from the config
+    //trackFinder.find(atFilePath: "/Volumes/Temp/mp3/Apocalyptica")
     trackFinder.find(atFilePath: "/Volumes/Temp/mp3/")
-    //trackFinder.find(atFilePath: "/Volumes/Temp/mp3/Yes")
-    //trackFinder.find(atFilePath: "/mnt/tree/mp3")
-    //trackFinder.find(atFilePath: "/mnt/root/mp3/Yes")
-    //trackFinder.find(atFilePath: "/mnt/tree/mp3/Das_Ich")
-
-    //trackFinder.find(atFilePath: "/mnt/root/Behemoth/xfer/work/mp3")
-    //trackFinder.find(atFilePath: "/mnt/root/mp3")
 
     history.find(atFilePath: historyDir)
 
-    print("test finder has found \(trackFinder.tracks.count) tracks")
+    Log.d("test finder has found \(trackFinder.tracks.count) tracks")
     
     // register routes
     try routes(app)
