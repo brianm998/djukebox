@@ -11,6 +11,9 @@ public enum QueueType {
     case remote
 }
 
+public struct LocalTrackCache {
+    var tracks: [String: URL]
+}
 
 // this is a view model used to update SwiftUI
 public class TrackFetcher: ObservableObject {
@@ -18,6 +21,16 @@ public class TrackFetcher: ObservableObject {
 
     var trackMap: [String:AudioTrack] = [:]
 
+    var localTracks: LocalTracks?
+    
+    // turn on to not use streaming for tracks (offline mode)
+    var useLocalContentOnly = false {
+        didSet(oldValue) {
+            refreshTracks()
+            // refresh
+        }
+    }
+    
     // what is shown on the artists list
     @Published var artists: [AudioTrack] = [] // XXX use different model objects for artists and albums
 
@@ -108,23 +121,36 @@ public class TrackFetcher: ObservableObject {
             self.searchResults = results
         }
     }
+
+    // updates the ui to show the current set of tracks we have
+    fileprivate func update(with tracks: [AudioTrack]) {
+        var artistMap: [String:AudioTrack] = [:]
+        var sha1Map: [String:AudioTrack] = [:]
+        for track in tracks {
+            if track.Album == nil {
+                Log.d("artist \(track.Artist) has orphaned tracks")
+            }
+            artistMap[track.Artist] = track
+            sha1Map[track.SHA1] = track
+        }
+        DispatchQueue.main.async {
+            self.allTracks = tracks
+            self.artists = Array(artistMap.values).sorted()
+            self.trackMap = sha1Map
+        }
+    }
     
     public func refreshTracks() {
-        server.listTracks() { tracks, error in
-            if let tracks = tracks {
-                var artistMap: [String:AudioTrack] = [:]
-                var sha1Map: [String:AudioTrack] = [:]
-                for track in tracks {
-                    if track.Album == nil {
-                        Log.d("artist \(track.Artist) has orphaned tracks")
-                    }
-                    artistMap[track.Artist] = track
-                    sha1Map[track.SHA1] = track
-                }
-                DispatchQueue.main.async {
-                    self.allTracks = tracks
-                    self.artists = Array(artistMap.values).sorted()
-                    self.trackMap = sha1Map
+        if useLocalContentOnly {
+            if let tracks = localTracks?.downloadedTracks {
+                self.update(with: tracks)
+            } else {
+                self.update(with: []) // XXX should show an error here
+            }
+        } else {
+            server.listTracks() { tracks, error in
+                if let tracks = tracks {
+                    self.update(with: tracks)
                 }
             }
         }
@@ -250,5 +276,39 @@ public class TrackFetcher: ObservableObject {
             }
         }
         return ret
+    }
+}
+
+// tell the client which url to use for which track hash
+extension TrackFetcher: TrackFinderType {
+    public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
+
+        if let localTracks = localTracks,
+           let (track, url) = localTracks.track(forHash: sha1Hash)
+        {
+            return (track, url)
+        }
+        
+        if let track = self.trackMap[sha1Hash],
+           let url = URL(string: "\(self.server.url)/stream/\(self.server.authHeaderValue)/\(sha1Hash)")
+        {
+            //Log.d(url)
+            return (track, url)
+        }
+        return nil
+    }
+    
+    public func audioTrack(forHash sha1Hash: String) -> AudioTrackType? {
+
+        if let localTracks = localTracks,
+           let track = localTracks.audioTrack(forHash: sha1Hash)
+        {
+            return track
+        }
+        
+        if let track = self.trackMap[sha1Hash] {
+            return track
+        }
+        return nil
     }
 }

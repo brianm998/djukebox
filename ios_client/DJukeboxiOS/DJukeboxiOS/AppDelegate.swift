@@ -9,6 +9,7 @@
 import UIKit
 import AVFoundation
 import DJukeboxCommon
+import DJukeboxClient
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {

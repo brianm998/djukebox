@@ -103,6 +103,7 @@ public class AudioTrack: Decodable,
                          Identifiable,
                          Comparable,
                          Hashable,
+                         Encodable,
                          ObservableObject,
                          AudioTrackType
 {

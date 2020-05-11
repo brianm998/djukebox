@@ -57,31 +57,6 @@ struct SkipCurrentTrackButton: View {
     }
 }
 
-struct UseLocalQueueButton: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-    
-    var body: some View {
-        Button(action: {
-            try? self.trackFetcher.watch(queue: .local)
-        }) {
-            Text("Use Local")
-        }
-    }
-}
-
-struct UseRemoteQueueButton: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-    
-    var body: some View {
-        Button(action: {
-            try? self.trackFetcher.watch(queue: .remote)
-        }) {
-            Text("Use Remote")
-              .underline().foregroundColor(Color.blue)
-        }
-    }
-}
-
 struct PlayRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     

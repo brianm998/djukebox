@@ -26,9 +26,8 @@ public class Client: ObservableObject {
         // the server connection for tracks and history 
         self.serverConnection = ServerConnection(toUrl: serverURL, withPassword: password)
 
-        let fetcher = TrackFetcher(withServer: serverConnection)
-        
         // an observable view object for showing lots of track based info
+        let fetcher = TrackFetcher(withServer: serverConnection)
         self.trackFetcher = fetcher
 
         // an observable object for keeping the history up to date from the server
@@ -37,15 +36,12 @@ public class Client: ObservableObject {
         // which queue do we play to?
         var audioPlayer: AsyncAudioPlayerType!
 
-        let trackFinder = TrackFinder(trackFetcher: trackFetcher,
-                                      serverConnection: serverConnection)
-
         /*
          plays tracks locally via streaming urls on the server.
 
          The doghouse treats the AVQueuePlayer like a little dog, only giving it one dog a a time
          */
-        let player = AVDoghouseAudioPlayer(trackFinder: trackFinder,
+        let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher,
                                            historyWriter: ServerHistoryWriter(server: serverConnection))
         trackFetcher.add(queueType: .local,
                          withPlayer: AsyncAudioPlayer(player: player,
@@ -66,6 +62,10 @@ public class Client: ObservableObject {
         historyFetcher.refresh()
         trackFetcher.refreshTracks()
         trackFetcher.refreshQueue()
+
+        // this allows clients to keep some tracks locally (i.e. offline)
+        let localTracks = LocalTracks(trackFinder: self.trackFetcher)
+        trackFetcher.localTracks = localTracks
         
         // Create the SwiftUI view that provides the window contents.
         

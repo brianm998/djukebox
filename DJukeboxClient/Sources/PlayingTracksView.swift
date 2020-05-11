@@ -41,6 +41,56 @@ public struct PlayingTimeRemainingView: View {
     }
 }
 
+struct UseLocalQueueButton: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    
+    var body: some View {
+        Button(action: {
+            try? self.trackFetcher.watch(queue: .local)
+        }) {
+            Text("Play Locally")
+        }
+    }
+}
+
+struct UseRemoteQueueButton: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    
+    var body: some View {
+        Button(action: {
+            try? self.trackFetcher.watch(queue: .remote)
+        }) {
+            Text("Play Remotely")
+              .underline().foregroundColor(Color.blue)
+        }
+    }
+}
+
+struct UseLocalSourceButton: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    
+    var body: some View {
+        Button(action: {
+            self.trackFetcher.useLocalContentOnly = true
+        }) {
+            Text("Source Locally")
+        }
+    }
+}
+
+struct UseRemoteSourceButton: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    
+    var body: some View {
+        Button(action: {
+            self.trackFetcher.useLocalContentOnly = false
+        }) {
+            Text("Source Remotely")
+              .underline().foregroundColor(Color.blue)
+        }
+    }
+}
+
 public struct BigButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -48,10 +98,29 @@ public struct BigButtonView: View {
         self.trackFetcher = trackFetcher
     }
 
+    #if os(iOS)
+    fileprivate let canStoreLocally = true
+    #else
+    fileprivate let canStoreLocally = false
+    #endif
+    
     public var body: some View {
         HStack {
             Spacer()
 
+            if canStoreLocally {
+                VStack {
+                    if self.trackFetcher.useLocalContentOnly {
+                        Text("Local Source")
+                        UseRemoteSourceButton(trackFetcher: self.trackFetcher)
+                    } else {
+                        Text("Remote Source")
+                        UseLocalSourceButton(trackFetcher: self.trackFetcher)
+                    }
+                }
+                
+            }
+            
             VStack {
                 if self.trackFetcher.queueType == .local {
                     Text("Playing Local")
