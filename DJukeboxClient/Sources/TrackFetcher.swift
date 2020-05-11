@@ -21,13 +21,12 @@ public class TrackFetcher: ObservableObject {
 
     var trackMap: [String:AudioTrack] = [:]
 
-    var localTracks: LocalTracks?
+    var localTracks: LocalTrackType?
     
     // turn on to not use streaming for tracks (offline mode)
     var useLocalContentOnly = false {
         didSet(oldValue) {
             refreshTracks()
-            // refresh
         }
     }
     

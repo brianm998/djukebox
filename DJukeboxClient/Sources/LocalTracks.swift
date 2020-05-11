@@ -1,9 +1,14 @@
 import Foundation
 import DJukeboxCommon
 
-// XXX local storage experimental after here
+public protocol LocalTrackType: TrackFinderType {
+    func keepLocal(sha1Hash: String, closure: @escaping (Bool) -> Void)
+    var downloadedTracks: [AudioTrack] { get }
+    var downloadedTrackMap: [String: AudioTrack] { get }
+}
 
-public class LocalTracks: TrackFinderType {
+// allow keeping some tracks locally for offline access 
+public class LocalTracks: LocalTrackType {
 
     private var libDir: URL? {
         if let libraryPathURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first {
@@ -118,8 +123,8 @@ public class LocalTracks: TrackFinderType {
         }
     }
 
-    var downloadedTracks: [AudioTrack] = []
-    var downloadedTrackMap: [String: AudioTrack] = [:]
+    public var downloadedTracks: [AudioTrack] = []
+    public var downloadedTrackMap: [String: AudioTrack] = [:]
     
     func sanitizeDownloadedTracks() {
         var map: [AudioTrack: Bool] = [:]
@@ -158,7 +163,7 @@ public class LocalTracks: TrackFinderType {
         return nil
     }
     
-    func keepLocal(sha1Hash: String, closure: @escaping (Bool) -> Void) {
+    public func keepLocal(sha1Hash: String, closure: @escaping (Bool) -> Void) {
         self.download(sha1Hash: sha1Hash) { track in
             if let track = track as? AudioTrack,
                let tracksJsonURL = self.tracksJsonURL
