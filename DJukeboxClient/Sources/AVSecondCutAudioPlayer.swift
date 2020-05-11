@@ -4,6 +4,10 @@ import Dispatch
 import DJukeboxCommon
 
 // this class uses AVQueuePlayer to play remote audio urls locally
+// while it can play more than one track in sequence while the app is in the background,
+// it appears to fall into lower level bugs when playing subsequent tracks, oftentimes skipping back
+// to the beginning of the song after the first 50 seconds.
+// The second play then goes all the way to the end from the start.
 public class AudioPlayer: NSObject, AudioPlayerType {
 
     public var isPlaying = false

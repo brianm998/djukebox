@@ -40,10 +40,12 @@ public class Client: ObservableObject {
                                       serverConnection: serverConnection)
 
         /*
-         plays tracks locally via streaming urls on the server
+         plays tracks locally via streaming urls on the server.
+
+         The doghouse treats the AVQueuePlayer like a little dog, only giving it one dog a a time
          */
-        let player = AudioPlayer(trackFinder: trackFinder,
-                                 historyWriter: ServerHistoryWriter(server: serverConnection))
+        let player = AVDoghouseAudioPlayer(trackFinder: trackFinder,
+                                           historyWriter: ServerHistoryWriter(server: serverConnection))
         trackFetcher.add(queueType: .local,
                          withPlayer: AsyncAudioPlayer(player: player,
                                                       fetcher: trackFetcher,
