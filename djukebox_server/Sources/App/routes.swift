@@ -9,7 +9,9 @@ public struct HistoryEntry: Content {
 
 public struct AudioTrack: Content, AudioTrackType {
     public let Artist: String
+    public let Band: String
     public let Album: String?
+    public let Conductor: String?
     public let Title: String
     public let Filename: String
     public let SHA1: String
@@ -18,6 +20,7 @@ public struct AudioTrack: Content, AudioTrackType {
     public let SampleRate: String?
     public let TrackNumber: String?
     public let Genre: String?
+    public let Year: String?
     public let OriginalDate: String?
 
     public var timeInterval: Double? {

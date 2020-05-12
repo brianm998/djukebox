@@ -12,7 +12,7 @@ struct TrackDetail: View {
         HStack(alignment: .center) {
             if layoutIsLarge() {
                 Button(action: {
-                           self.trackFetcher.showAlbums(forArtist: self.track.Artist)
+                           self.trackFetcher.showAlbums(forBand: self.track.Artist)
                        }) {
                     Text(track.Artist).underline().foregroundColor(Color.blue)
                 }.buttonStyle(PlainButtonStyle())
@@ -30,7 +30,7 @@ struct TrackDetail: View {
             } else {
                 VStack {
                     Button(action: {
-                               self.trackFetcher.showAlbums(forArtist: self.track.Artist)
+                               self.trackFetcher.showAlbums(forBand: self.track.Artist)
                            }) {
                         Text(track.Artist).underline().foregroundColor(Color.blue)
                     }.buttonStyle(PlainButtonStyle())

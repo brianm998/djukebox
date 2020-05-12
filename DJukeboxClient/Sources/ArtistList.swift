@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ArtistList: View {
+struct BandList: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
     public init(_ client: Client) {
@@ -10,11 +10,11 @@ struct ArtistList: View {
     var body: some View {
         VStack {
             Spacer()
-            Text("Artists")
-            List(trackFetcher.artists) { artist in
-                Text(artist.Artist)
+            Text("Bands")
+            List(trackFetcher.bands) { band in
+                Text(band.Band)
                   .onTapGesture {
-                      self.trackFetcher.showAlbums(forArtist: artist.Artist)
+                      self.trackFetcher.showAlbums(forBand: band.Band)
                   }
             }
         }

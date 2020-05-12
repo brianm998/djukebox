@@ -108,7 +108,7 @@ public class AudioTrack: Decodable,
                          AudioTrackType
 {
     public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
-        if lhs.Artist == rhs.Artist {
+        if lhs.Band == rhs.Band {
             // dig in deeper
             if let lhsAlbum = lhs.Album,
                let rhsAlbum = rhs.Album
@@ -127,7 +127,7 @@ public class AudioTrack: Decodable,
                 return lhs.Title < rhs.Title
             }
         } else {
-            return lhs.Artist < rhs.Artist
+            return lhs.Band < rhs.Band
         }
     }
     
@@ -185,7 +185,9 @@ public class AudioTrack: Decodable,
     }
 
     public let Artist: String
+    public let Band: String
     public let Album: String?
+    public let Conductor: String?
     public let Title: String
     public let Filename: String
     public let SHA1: String
@@ -194,6 +196,7 @@ public class AudioTrack: Decodable,
     public let SampleRate: String?
     public let TrackNumber: String?
     public let Genre: String?
+    public let Year: String?
     public let OriginalDate: String?
 }
 

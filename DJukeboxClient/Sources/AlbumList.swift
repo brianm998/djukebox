@@ -16,14 +16,14 @@ struct AlbumList: View {
                 Text(trackFetcher.albumTitle)
                 if self.trackFetcher.albums.count > 0 {
                     Button(action: {
-                        self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                        self.trackFetcher.audioPlayer.player?.playRandomTrack(forBand: self.trackFetcher.albums[0].Band) { success, error in
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
                         Text("Random")
                     }
                     Button(action: {
-                        self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                        self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forBand: self.trackFetcher.albums[0].Band) { success, error in
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
@@ -31,11 +31,11 @@ struct AlbumList: View {
                     }
                 }
             }
-            List(trackFetcher.albums) { artist in
-                Text(artist.Album ?? "Singles") // XXX constant
-                  .foregroundColor(artist.Album == nil ? Color.red : Color.black)
+            List(trackFetcher.albums) { band in
+                Text(band.Album ?? "Singles") // XXX constant
+                  .foregroundColor(band.Album == nil ? Color.red : Color.black)
                   .onTapGesture {
-                      self.trackFetcher.showTracks(for: artist)
+                      self.trackFetcher.showTracks(for: band)
                   }
             }
         }

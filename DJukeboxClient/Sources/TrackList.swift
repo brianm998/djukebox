@@ -69,14 +69,14 @@ struct TrackList: View {
         newClient.trackFetcher = TrackFetcher(withServer: self.client.serverConnection)
         newClient.trackFetcher.audioPlayer.player = self.trackFetcher.audioPlayer.player
         newClient.trackFetcher.tracks = self.trackFetcher.tracks
-        newClient.trackFetcher.desiredArtist = self.trackFetcher.desiredArtist
+        newClient.trackFetcher.desiredBand = self.trackFetcher.desiredBand
         newClient.trackFetcher.desiredAlbum = self.trackFetcher.desiredAlbum
 
-        if let artist = newClient.trackFetcher.desiredArtist {
+        if let band = newClient.trackFetcher.desiredBand {
             if let album = newClient.trackFetcher.desiredAlbum {
-                newClient.trackFetcher.trackTitle = "\(artist) \(album) songs"
+                newClient.trackFetcher.trackTitle = "\(band) \(album) songs"
             } else {
-                newClient.trackFetcher.trackTitle = "\(artist) singles"
+                newClient.trackFetcher.trackTitle = "\(band) singles"
             }
         } else {
             newClient.trackFetcher.trackTitle = "FIX THIS!"

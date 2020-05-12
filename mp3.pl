@@ -34,6 +34,10 @@ sub writeJson {
       $outputs->{Title} = $1;
     } elsif (/Artist\s+:\s*(.*)\s*/) {
       $outputs->{Artist} = $1;
+    } elsif (/Conductor\s+:\s*(.*)\s*/) {
+      $outputs->{Conductor} = $1;
+    } elsif (/Band\s+:\s*(.*)\s*/) {
+      $outputs->{Band} = $1;
     } elsif (/Album\s+:\s*(.*)\s*/) {
       $outputs->{Album} = $1;
     } elsif (/Year\s+:\s*(.*)\s*/) {
@@ -56,11 +60,13 @@ sub writeJson {
 
   if ($json_filename =~ m~^([^./=]+)=([^=]+)=([^=]+)=([^=]+)[.]~) {
     $outputs->{Artist} = $1;
+    $outputs->{Band} = $1;
     $outputs->{Album} = $2;
     $outputs->{TrackNumber} = $3;
     $outputs->{Title} = $4;
   } elsif ($json_filename =~ m~^([^./=]+)=([^=]+)[.]~) {
     $outputs->{Artist} = $1;
+    $outputs->{Band} = $1;
     $outputs->{Title} = $2;
   } else {
     warn "no regex for $json_filename\n";

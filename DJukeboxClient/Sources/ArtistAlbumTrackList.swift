@@ -7,7 +7,7 @@ public struct ArtistAlbumTrackList: View {
 
     public var body: some View {
         HStack {
-            ArtistList(client)
+            BandList(client)
             AlbumList(client)
             TrackList(client)
         }

@@ -30,8 +30,8 @@ public class TrackFetcher: ObservableObject {
         }
     }
     
-    // what is shown on the artists list
-    @Published var artists: [AudioTrack] = [] // XXX use different model objects for artists and albums
+    // what is shown on the bands list
+    @Published var bands: [AudioTrack] = [] // XXX use different model objects for bands and albums
 
     // what is shown on the albums list
     @Published var albums: [AudioTrack] = []
@@ -68,7 +68,7 @@ public class TrackFetcher: ObservableObject {
 
     @Published public var queueType: QueueType!
     
-    var desiredArtist: String?
+    var desiredBand: String?
     var desiredAlbum: String?
     
     var queues: [QueueType: AsyncAudioPlayerType] = [:]
@@ -106,7 +106,7 @@ public class TrackFetcher: ObservableObject {
         let lowerCaseQuery = searchQuery.lowercased()
         
         for track in self.allTracks {
-            if track.Artist.lowercased().contains(lowerCaseQuery) {
+            if track.Band.lowercased().contains(lowerCaseQuery) {
                 results.append(track)
             } else if let album = track.Album,
                 album.lowercased().contains(lowerCaseQuery) {
@@ -123,18 +123,18 @@ public class TrackFetcher: ObservableObject {
 
     // updates the ui to show the current set of tracks we have
     fileprivate func update(with tracks: [AudioTrack]) {
-        var artistMap: [String:AudioTrack] = [:]
+        var bandMap: [String:AudioTrack] = [:]
         var sha1Map: [String:AudioTrack] = [:]
         for track in tracks {
             if track.Album == nil {
-                Log.d("artist \(track.Artist) has orphaned tracks")
+                Log.d("band \(track.Band) has orphaned tracks")
             }
-            artistMap[track.Artist] = track
+            bandMap[track.Band] = track
             sha1Map[track.SHA1] = track
         }
         DispatchQueue.main.async {
             self.allTracks = tracks
-            self.artists = Array(artistMap.values).sorted()
+            self.bands = Array(bandMap.values).sorted()
             self.trackMap = sha1Map
         }
     }
@@ -204,16 +204,16 @@ public class TrackFetcher: ObservableObject {
         }
     }
 
-    // show all tracks for the artist/album combo in the passed AudioTrack
+    // show all tracks for the band/album combo in the passed AudioTrack
     func showTracks(for audioTrack: AudioTrack) {
         var tracks: [AudioTrack] = []
 
-        desiredArtist = audioTrack.Artist
+        desiredBand = audioTrack.Band
         desiredAlbum = audioTrack.Album
 
         if let desiredAlbum = desiredAlbum {
             for track in allTracks {
-                if track.Artist == desiredArtist,
+                if track.Band == desiredBand,
                    track.Album == desiredAlbum
                 {
                     tracks.append(track)
@@ -221,7 +221,7 @@ public class TrackFetcher: ObservableObject {
             }
         } else {
             for track in allTracks {
-                if track.Artist == desiredArtist,
+                if track.Band == desiredBand,
                    track.Album == nil
                 {
                     tracks.append(track)
@@ -229,22 +229,22 @@ public class TrackFetcher: ObservableObject {
             }
         }
 
-        self.showAlbums(forArtist: audioTrack.Artist)
+        self.showAlbums(forBand: audioTrack.Band)
         
         DispatchQueue.main.async {
             self.tracks = tracks.sorted()
             if let desiredAlbum = self.desiredAlbum {
                 self.trackTitle = "\(desiredAlbum)"
-            } else if let desiredArtist = self.desiredArtist {
-                self.trackTitle = "\(desiredArtist)"
+            } else if let desiredBand = self.desiredBand {
+                self.trackTitle = "\(desiredBand)"
             } else {
                 self.trackTitle = "songs" // XXX
             }
         }
     }
     
-    func showAlbums(forArtist artist: String) {
-        Log.d("for artist \(artist)")
+    func showAlbums(forBand band: String) {
+        Log.d("for band \(band)")
         var albums: [String] = []
 
         var albumMap: [String:AudioTrack] = [:]
@@ -252,25 +252,25 @@ public class TrackFetcher: ObservableObject {
         let singles = "Singles"
         
         for track in allTracks {
-            if track.Artist == artist {
+            if track.Band == band {
                 if let album = track.Album {
                     albumMap[album] = track
                 } else {
                     albumMap[singles] = track
-                    Log.d("missing album for track \(track.Artist) \(track.Title)")
+                    Log.d("missing album for track \(track.Band) \(track.Title)")
                 }
             }
         }
         DispatchQueue.main.async {
             self.albums = Array(albumMap.values).sorted()
-            self.albumTitle = "\(artist)"
+            self.albumTitle = "\(band)"
         }
     }
 
-    public func tracks(forArtist artist: String) -> [AudioTrack] {
+    public func tracks(forBand band: String) -> [AudioTrack] {
         var ret: [AudioTrack] = []
         for track in allTracks {
-            if track.Artist == artist {
+            if track.Band == band {
                 ret.append(track)
             }
         }
