@@ -277,6 +277,10 @@ public class TrackFetcher: ObservableObject {
         }
     }
 
+    public func cacheTracks(forBand band: String) {
+        self.cache(tracks: self.tracks(forBand: band))
+    }
+
     public func tracks(forBand band: String) -> [AudioTrack] {
         var ret: [AudioTrack] = []
         for track in allTracks {

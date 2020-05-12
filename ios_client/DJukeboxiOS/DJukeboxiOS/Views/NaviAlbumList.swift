@@ -30,7 +30,9 @@ public struct NaviAlbumList: View {
           .actionSheet(isPresented: $showingActionSheet) {
               ActionSheet(title: Text(""),
                           buttons: [
-                            // XXX add cache all here
+                            .default(Text("Cache All")) {
+                                self.client.trackFetcher.cacheTracks(forBand: self.bands[0].Band)
+                            },
                             .default(Text("Play New Random Track")) {
                                 self.client.trackFetcher.audioPlayer.player?.playNewRandomTrack(forBand: self.bands[0].Band) { success, error in
                                     self.client.trackFetcher.refreshQueue()
