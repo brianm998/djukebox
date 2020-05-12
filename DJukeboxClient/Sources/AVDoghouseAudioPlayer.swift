@@ -86,6 +86,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
     
     public func clearQueue() {
         player.removeAllItems()
+        trackQueue = []
     }
 
     public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {

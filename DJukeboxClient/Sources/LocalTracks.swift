@@ -3,6 +3,7 @@ import DJukeboxCommon
 
 public protocol LocalTrackType: TrackFinderType {
     func keepLocal(sha1Hash: String, closure: @escaping (Bool) -> Void)
+    func clearLocalStore()
     var downloadedTracks: [AudioTrack] { get }
     var downloadedTrackMap: [String: AudioTrack] { get }
 }
@@ -39,11 +40,21 @@ public class LocalTracks: LocalTrackType {
         }
     }
 
-    func scan(dir: URL) {
-        if let enm = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil) {
-            for url in enm {
-                Log.d(url)
+    public func clearLocalStore() {
+        Log.d()
+        do {
+            if let cacheDir = self.cacheDir {
+                let list = try FileManager.default.contentsOfDirectory(at: cacheDir,
+                                                                       includingPropertiesForKeys: nil)
+
+                for url in list {
+                    try FileManager.default.removeItem(at: url)
+                }
             }
+            self.downloadedTracks = []
+            self.downloadedTrackMap = [:]
+        } catch {
+            Log.e("error \(error)")
         }
     }
     
@@ -157,7 +168,7 @@ public class LocalTracks: LocalTrackType {
                 return try JSONDecoder().decode([AudioTrack].self,
                                                 from: try Data(contentsOf: tracksJsonURL))
             } catch {
-                Log.e("error: \(error)")
+                Log.i("error: \(error)")
             }
         }
         return nil

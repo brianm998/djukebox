@@ -310,4 +310,24 @@ extension TrackFetcher: TrackFinderType {
         }
         return nil
     }
+
+    public func clearCache() {
+        Log.d("cacheQueue")
+        localTracks?.clearLocalStore()
+    }
+    
+    public func cacheQueue() {
+        if let localTracks = localTracks {
+            if let currentTrack = currentTrack {
+                localTracks.keepLocal(sha1Hash: currentTrack.SHA1) { success in
+                    Log.w(success)
+                }
+            }
+            for track in pendingTracks {
+                localTracks.keepLocal(sha1Hash: track.SHA1) { success in
+                    Log.w(success)
+                }
+            }
+        }
+    }
 }

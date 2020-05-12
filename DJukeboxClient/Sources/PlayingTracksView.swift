@@ -66,31 +66,6 @@ struct UseRemoteQueueButton: View {
     }
 }
 
-struct UseLocalSourceButton: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-    
-    var body: some View {
-        Button(action: {
-            self.trackFetcher.useLocalContentOnly = true
-        }) {
-            Text("Source Locally")
-        }
-    }
-}
-
-struct UseRemoteSourceButton: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-    
-    var body: some View {
-        Button(action: {
-            self.trackFetcher.useLocalContentOnly = false
-        }) {
-            Text("Source Remotely")
-              .underline().foregroundColor(Color.blue)
-        }
-    }
-}
-
 public struct BigButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -105,20 +80,26 @@ public struct BigButtonView: View {
     #endif
     
     public var body: some View {
-        HStack {
+        let onToggle = Binding<Bool>(get: { self.trackFetcher.useLocalContentOnly },
+                                     set: { self.trackFetcher.useLocalContentOnly = $0 })
+        return HStack {
             Spacer()
 
             if canStoreLocally {
-                VStack {
-                    if self.trackFetcher.useLocalContentOnly {
-                        Text("Local Source")
-                        UseRemoteSourceButton(trackFetcher: self.trackFetcher)
-                    } else {
-                        Text("Remote Source")
-                        UseLocalSourceButton(trackFetcher: self.trackFetcher)
-                    }
+                Button(action: {
+                           self.trackFetcher.clearCache()
+                       }) {
+                    Text("Clear Cache")
+                      .underline().foregroundColor(Color.red)
                 }
-                
+                Button(action: {
+                           self.trackFetcher.cacheQueue()
+                       }) {
+                    Text("Cache Queue")
+                      .underline().foregroundColor(Color.blue)
+                }
+                Text("Offline:")
+                Toggle("", isOn: onToggle).labelsHidden()
             }
             
             VStack {
