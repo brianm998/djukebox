@@ -276,6 +276,39 @@ public class TrackFetcher: ObservableObject {
         }
         return ret
     }
+
+    public func clearPlayingQueue() {
+        self.audioPlayer.player?.stopAllTracks() { audioTrack, error in
+            if let error = error {
+                Log.e("DOH")
+            } else {
+                Log.d("clear queue: \(audioTrack)")
+            }
+            self.refreshQueue()
+        }
+    }
+
+    public func playRandomTrack() {
+        self.audioPlayer.player?.playRandomTrack() { audioTrack, error in
+            if let error = error {
+                Log.e("DOH")
+            } else if let audioTrack = audioTrack {
+                Log.d("random enqueued: \(audioTrack.Title)")
+            }
+            self.refreshQueue()
+        }
+    }
+
+    public func playNewRandomTrack() {
+        self.audioPlayer.player?.playNewRandomTrack() { audioTrack, error in
+            if let error = error {
+                Log.e("DOH")
+            } else if let audioTrack = audioTrack {
+                Log.d("new random enqueued: \(audioTrack.Title)")
+            }
+            self.refreshQueue()
+        }
+    }
 }
 
 // tell the client which url to use for which track hash

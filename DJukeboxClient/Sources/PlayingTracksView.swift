@@ -118,7 +118,8 @@ public struct BigButtonView: View {
 
 public struct SmallButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
-
+    @State private var showingActionSheet = false
+    
     public init(trackFetcher: TrackFetcher) {
         self.trackFetcher = trackFetcher
     }
@@ -129,56 +130,53 @@ public struct SmallButtonView: View {
         let localPlayToggle = Binding<Bool>(get: { self.trackFetcher.queueType == .local },
                                             set: { try? self.trackFetcher.watch(queue: $0 ? .local : .remote) })
         return VStack {
-            if canStoreLocally {
+
                 HStack {
-                    Button(action: {
-                        self.trackFetcher.clearCache()
-                    }) {
-                        Text("Clear Cache")
-                          .underline().foregroundColor(Color.red)
-                    }
-                    Button(action: {
-                        self.trackFetcher.cacheQueue()
-                    }) {
-                        Text("Cache Queue")
-                          .underline().foregroundColor(Color.blue)
-                    }
+                    Text("Actions")
+                      .underline().foregroundColor(Color.blue)
+                      .onTapGesture { self.showingActionSheet = true }
+                      .actionSheet(isPresented: $showingActionSheet) {
+                          ActionSheet(title: Text(""),
+                                      //message: Text(""),
+                                      buttons: [
+                                        .default(Text("Play New Random Track")) { self.trackFetcher.playNewRandomTrack() },
+                                        .default(Text("Play Random Track")) { self.trackFetcher.playRandomTrack() },
+                                        .default(Text("Refresh Queue")) { self.trackFetcher.refreshQueue() },
+                                        .default(Text("Refresh Tracks")) { self.trackFetcher.refreshTracks() },
+                                        .default(Text("Cache Current Queue")) { self.trackFetcher.cacheQueue() },
+                                        .destructive(Text("Clear Cache")) { self.trackFetcher.clearCache() },
+                                        .destructive(Text("Clear Queue")) { self.trackFetcher.clearPlayingQueue() },
+                                        .cancel()
+                                      ])
+                      }
                     Text("Offline:")
                     Toggle("", isOn: offlineToggle).labelsHidden()
                 }
-            }
-            
-            
-            HStack {
+                    
+                HStack {
+                    SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
+                    
+                    if(self.trackFetcher.playingQueue?.isPaused ?? false) {
+                        PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
+                    } else {
+                        PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
+                    }
 
-                SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
-                
-                if(self.trackFetcher.playingQueue?.isPaused ?? false) {
-                    PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
-                } else {
-                    PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
-                }
-
-                VStack {
-                    HStack {
-                        Text("Play Local:")
-                        Toggle("", isOn: localPlayToggle).labelsHidden()
+                    VStack {
+                        HStack {
+                            Text("Play Local:")
+                            Toggle("", isOn: localPlayToggle).labelsHidden()
+                        }
                     }
                 }
-            }
-            HStack {
-                Spacer()
-                if trackFetcher.totalDuration > 0 {
-                    PlayingTimeRemainingView(trackFetcher: trackFetcher)
+
+                
+                HStack {
+                    Spacer()
+                    if trackFetcher.totalDuration > 0 {
+                        PlayingTimeRemainingView(trackFetcher: trackFetcher)
+                    }
                 }
-                PlayRandomTrackButton(trackFetcher: trackFetcher)
-                PlayNewRandomTrackButton(trackFetcher: trackFetcher)
-            }
-            HStack {
-                ClearQueueButton(trackFetcher: trackFetcher)
-                RefreshTracksFromServerButton(trackFetcher: trackFetcher)
-                RefreshQueueButton(trackFetcher: trackFetcher)
-            }
         }
     }
 }

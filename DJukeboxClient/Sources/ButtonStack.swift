@@ -62,14 +62,7 @@ struct PlayRandomTrackButton: View {
     
     var body: some View {
         Button(action: {
-            self.trackFetcher.audioPlayer.player?.playRandomTrack() { audioTrack, error in
-                if let error = error {
-                    Log.e("DOH")
-                } else if let audioTrack = audioTrack {
-                    Log.d("random enqueued: \(audioTrack.Title)")
-                }
-                self.trackFetcher.refreshQueue()
-            }
+            self.trackFetcher.playRandomTrack()
         }) {
             Text("Random")
         }
@@ -99,16 +92,7 @@ struct ClearQueueButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     
     var body: some View {
-        Button(action: {
-            self.trackFetcher.audioPlayer.player?.stopAllTracks() { audioTrack, error in
-                if let error = error {
-                    Log.e("DOH")
-                } else {
-                    Log.d("clear queue: \(audioTrack)")
-                }
-                self.trackFetcher.refreshQueue()
-            }
-        }) {
+        Button(action: { self.trackFetcher.clearPlayingQueue() }) {
             Text("Clear Queue")
               .foregroundColor(Color.red)
         }
