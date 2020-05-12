@@ -16,8 +16,16 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            ArtistAlbumTrackList(client)
-              .tabItem { Text("tracks") }
+            if layoutIsLarge() {
+                ArtistAlbumTrackList(client) // looks ok on iPad, even mini
+                  .tabItem { Text("tracks") }
+            } else {
+                NavigationView {
+                    NaviBandList(client)
+                      .navigationBarTitle("Bands", displayMode: .inline)
+                }
+                 .tabItem { Text("tracks") }
+            }
 
             PlayingTracksView(client)
               .tabItem { Text("queue") }

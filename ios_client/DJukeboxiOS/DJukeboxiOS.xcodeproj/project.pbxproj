@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		BE25B3A2E7F911355D2CBCCC /* Pods_DJukeboxiOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CC54196058B38E3C3F2FFD91 /* Pods_DJukeboxiOS.framework */; };
+		D39AB1CC246B523C00D79F11 /* NaviTrackList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39AB1C9246B523C00D79F11 /* NaviTrackList.swift */; };
+		D39AB1CD246B523C00D79F11 /* NaviAlbumList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39AB1CA246B523C00D79F11 /* NaviAlbumList.swift */; };
+		D39AB1CE246B523C00D79F11 /* NaviBandList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39AB1CB246B523C00D79F11 /* NaviBandList.swift */; };
 		D3FD29E224648927009C41A2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FD29E124648927009C41A2 /* AppDelegate.swift */; };
 		D3FD29E424648927009C41A2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FD29E324648927009C41A2 /* SceneDelegate.swift */; };
 		D3FD29E624648927009C41A2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FD29E524648927009C41A2 /* ContentView.swift */; };
@@ -20,6 +23,9 @@
 		858DD2BF27DB9E175872EF37 /* Pods-DJukeboxiOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DJukeboxiOS.debug.xcconfig"; path = "Target Support Files/Pods-DJukeboxiOS/Pods-DJukeboxiOS.debug.xcconfig"; sourceTree = "<group>"; };
 		B6A4EBAFA9A7801539B1D4FE /* Pods-DJukeboxiOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DJukeboxiOS.release.xcconfig"; path = "Target Support Files/Pods-DJukeboxiOS/Pods-DJukeboxiOS.release.xcconfig"; sourceTree = "<group>"; };
 		CC54196058B38E3C3F2FFD91 /* Pods_DJukeboxiOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_DJukeboxiOS.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D39AB1C9246B523C00D79F11 /* NaviTrackList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = NaviTrackList.swift; path = Views/NaviTrackList.swift; sourceTree = "<group>"; };
+		D39AB1CA246B523C00D79F11 /* NaviAlbumList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = NaviAlbumList.swift; path = Views/NaviAlbumList.swift; sourceTree = "<group>"; };
+		D39AB1CB246B523C00D79F11 /* NaviBandList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = NaviBandList.swift; path = Views/NaviBandList.swift; sourceTree = "<group>"; };
 		D3FD29DE24648927009C41A2 /* DJukebox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DJukebox.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3FD29E124648927009C41A2 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D3FD29E324648927009C41A2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -72,6 +78,9 @@
 		D3FD29E024648927009C41A2 /* DJukeboxiOS */ = {
 			isa = PBXGroup;
 			children = (
+				D39AB1CA246B523C00D79F11 /* NaviAlbumList.swift */,
+				D39AB1CB246B523C00D79F11 /* NaviBandList.swift */,
+				D39AB1C9246B523C00D79F11 /* NaviTrackList.swift */,
 				D3FD29E124648927009C41A2 /* AppDelegate.swift */,
 				D3FD29E324648927009C41A2 /* SceneDelegate.swift */,
 				D3FD29E524648927009C41A2 /* ContentView.swift */,
@@ -213,6 +222,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				D3FD29E224648927009C41A2 /* AppDelegate.swift in Sources */,
+				D39AB1CC246B523C00D79F11 /* NaviTrackList.swift in Sources */,
+				D39AB1CE246B523C00D79F11 /* NaviBandList.swift in Sources */,
+				D39AB1CD246B523C00D79F11 /* NaviAlbumList.swift in Sources */,
 				D3FD29E424648927009C41A2 /* SceneDelegate.swift in Sources */,
 				D3FD29E624648927009C41A2 /* ContentView.swift in Sources */,
 			);

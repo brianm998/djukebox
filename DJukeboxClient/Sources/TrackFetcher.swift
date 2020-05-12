@@ -31,10 +31,10 @@ public class TrackFetcher: ObservableObject {
     }
     
     // what is shown on the bands list
-    @Published var bands: [AudioTrack] = [] // XXX use different model objects for bands and albums
+    @Published public var bands: [AudioTrack] = [] // XXX use different model objects for bands and albums
 
     // what is shown on the albums list
-    @Published var albums: [AudioTrack] = []
+    @Published public var albums: [AudioTrack] = []
 
     // what is shown on the tracks list
     @Published var tracks: [AudioTrack] = []
@@ -204,8 +204,7 @@ public class TrackFetcher: ObservableObject {
         }
     }
 
-    // show all tracks for the band/album combo in the passed AudioTrack
-    func showTracks(for audioTrack: AudioTrack) {
+    public func tracks(for audioTrack: AudioTrack) -> [AudioTrack] {
         var tracks: [AudioTrack] = []
 
         desiredBand = audioTrack.Band
@@ -228,6 +227,12 @@ public class TrackFetcher: ObservableObject {
                 }
             }
         }
+        return tracks
+    }
+    
+    // show all tracks for the band/album combo in the passed AudioTrack
+    func showTracks(for audioTrack: AudioTrack) {
+        var tracks = self.tracks(for: audioTrack)
 
         self.showAlbums(forBand: audioTrack.Band)
         
@@ -243,9 +248,8 @@ public class TrackFetcher: ObservableObject {
         }
     }
     
-    func showAlbums(forBand band: String) {
+    public func albums(forBand band: String) -> [AudioTrack] {
         Log.d("for band \(band)")
-        var albums: [String] = []
 
         var albumMap: [String:AudioTrack] = [:]
 
@@ -261,8 +265,14 @@ public class TrackFetcher: ObservableObject {
                 }
             }
         }
+        return Array(albumMap.values).sorted()
+    }
+    
+    func showAlbums(forBand band: String) {
+        let albums = self.albums(forBand: band)
         DispatchQueue.main.async {
-            self.albums = Array(albumMap.values).sorted()
+            Log.d("show albums for \(band)")
+            self.albums = albums
             self.albumTitle = "\(band)"
         }
     }
@@ -345,8 +355,15 @@ extension TrackFetcher: TrackFinderType {
     }
 
     public func clearCache() {
-        Log.d("cacheQueue")
         localTracks?.clearLocalStore()
+    }
+
+    public func cache(tracks: [AudioTrack]) {
+        for track in tracks {
+            localTracks?.keepLocal(sha1Hash: track.SHA1) { success in
+                Log.d("success \(success)")
+            }
+        }
     }
     
     public func cacheQueue() {

@@ -7,6 +7,20 @@ fileprivate let kkUTTypePlainText = kUTTypePlainText
 fileprivate let kkUTTypePlainText = "kUTTypePlainText"
 #endif
 
+public func layoutIsLarge() -> Bool {
+    #if os(iOS)// || os(watchOS) || os(tvOS)
+    if UIDevice.current.userInterfaceIdiom == .pad {
+        return true
+    }else{
+        return false
+    }
+    #elseif os(OSX)
+    return true
+    #else
+    return false
+    #endif
+}
+
 public struct PlayingTimeRemainingView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -116,6 +130,7 @@ public struct BigButtonView: View {
     }
 }
 
+#if os(iOS) 
 public struct SmallButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var showingActionSheet = false
@@ -180,20 +195,7 @@ public struct SmallButtonView: View {
         }
     }
 }
-
-public func layoutIsLarge() -> Bool {
-    #if os(iOS)// || os(watchOS) || os(tvOS)
-    if UIDevice.current.userInterfaceIdiom == .pad {
-        return true
-    }else{
-        return false
-    }
-    #elseif os(OSX)
-    return true
-    #else
-    return false
-    #endif
-}
+#endif
     
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
@@ -210,7 +212,9 @@ public struct PlayingTracksView: View {
             if layoutIsLarge() {
                 BigButtonView(trackFetcher: trackFetcher)
             } else {
+                #if os(iOS)
                 SmallButtonView(trackFetcher: trackFetcher)
+                #endif
             }
             HStack {
                 Spacer()
