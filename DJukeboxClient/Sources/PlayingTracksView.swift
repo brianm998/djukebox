@@ -66,6 +66,12 @@ struct UseRemoteQueueButton: View {
     }
 }
 
+    #if os(iOS)
+    fileprivate let canStoreLocally = true
+    #else
+    fileprivate let canStoreLocally = false
+    #endif
+    
 public struct BigButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -73,12 +79,6 @@ public struct BigButtonView: View {
         self.trackFetcher = trackFetcher
     }
 
-    #if os(iOS)
-    fileprivate let canStoreLocally = true
-    #else
-    fileprivate let canStoreLocally = false
-    #endif
-    
     public var body: some View {
         let onToggle = Binding<Bool>(get: { self.trackFetcher.useLocalContentOnly },
                                      set: { self.trackFetcher.useLocalContentOnly = $0 })
@@ -147,7 +147,29 @@ public struct SmallButtonView: View {
     }
 
     public var body: some View {
-        VStack {
+        let onToggle = Binding<Bool>(get: { self.trackFetcher.useLocalContentOnly },
+                                     set: { self.trackFetcher.useLocalContentOnly = $0 })
+        return VStack {
+            if canStoreLocally {
+                HStack {
+                    Button(action: {
+                        self.trackFetcher.clearCache()
+                    }) {
+                        Text("Clear Cache")
+                          .underline().foregroundColor(Color.red)
+                    }
+                    Button(action: {
+                        self.trackFetcher.cacheQueue()
+                    }) {
+                        Text("Cache Queue")
+                          .underline().foregroundColor(Color.blue)
+                    }
+                    Text("Offline:")
+                    Toggle("", isOn: onToggle).labelsHidden()
+                }
+            }
+            
+            
             HStack {
                 SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
                 

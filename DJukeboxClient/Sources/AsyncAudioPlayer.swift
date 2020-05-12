@@ -51,7 +51,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
             if let queueTrack = fetcher.trackMap[queueHash] {
                 trackQueue.append(queueTrack)
             } else {
-                Log.e("HOLY FUCK")
+                Log.i("HOLY FUCK")
             }
         }
         return PlayingQueue(isPaused: !player.isPlaying,
