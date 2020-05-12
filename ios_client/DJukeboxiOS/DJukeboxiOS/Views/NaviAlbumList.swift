@@ -16,10 +16,10 @@ public struct NaviAlbumList: View {
     public var body: some View {
         List(self.bands) { band in
             NavigationLink( destination: NaviTrackList(self.client,
-                                                       tracks: self.client.trackFetcher.tracks(for: band),
-                                                       title: band.Album ?? "FUCKK"))
+                                                       tracks: self.client.trackFetcher.tracks(for: band).sorted(),
+                                                       title: band.Album ?? ""))
             {
-                Text(band.Album ?? "FUCK")
+                Text(band.Album ?? "")
             }
         }
           .navigationBarTitle(Text(title), displayMode: .inline)

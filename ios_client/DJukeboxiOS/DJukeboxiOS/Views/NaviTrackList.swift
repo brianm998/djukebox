@@ -45,7 +45,7 @@ public struct NaviTrackList: View {
               ActionSheet(title: Text(""),
                           buttons: [
                             .default(Text("Play All")) {
-                                self.client.trackFetcher.audioPlayer.player?.playTracks(self.tracks) { success, error in
+                                self.client.trackFetcher.audioPlayer.player?.playTracks(self.tracks.sorted()) { success, error in
                                     self.client.trackFetcher.refreshQueue()
                                     withAnimation { self.showAllTracksToast = true }
                                 }

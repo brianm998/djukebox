@@ -18,23 +18,38 @@ struct ContentView: View {
         TabView {
             if layoutIsLarge() {
                 ArtistAlbumTrackList(client) // looks ok on iPad, even mini
-                  .tabItem { Text("tracks") }
+                  .tabItem {
+                      Image(systemName: "list.dash")
+                      Text("tracks")
+                  }
             } else {
                 NavigationView {
                     NaviBandList(client)
                       .navigationBarTitle("Bands", displayMode: .inline)
                 }
-                 .tabItem { Text("tracks") }
+                  .tabItem {
+                      Image(systemName: "list.dash")
+                      Text("tracks")
+                  }
             }
 
             PlayingTracksView(client)
-              .tabItem { Text("queue") }
+              .tabItem {
+                  Image(systemName: "music.note.list")
+                  Text("playing")
+              }
 
             SearchView(client)
-              .tabItem { Text("search") }
+              .tabItem {
+                  Image(systemName: "magnifyingglass.circle.fill")
+                  Text("search")
+              }
 
             HistoryView(client)
-              .tabItem { Text("history") }
+              .tabItem {
+                  Image(systemName: "gobackward")
+                  Text("history")
+              }
         }
     }
 }
