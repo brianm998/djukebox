@@ -41,30 +41,6 @@ public struct PlayingTimeRemainingView: View {
     }
 }
 
-struct UseLocalQueueButton: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-    
-    var body: some View {
-        Button(action: {
-            try? self.trackFetcher.watch(queue: .local)
-        }) {
-            Text("Play Locally")
-        }
-    }
-}
-
-struct UseRemoteQueueButton: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-    
-    var body: some View {
-        Button(action: {
-            try? self.trackFetcher.watch(queue: .remote)
-        }) {
-            Text("Play Remotely")
-              .underline().foregroundColor(Color.blue)
-        }
-    }
-}
 
     #if os(iOS)
     fileprivate let canStoreLocally = true
@@ -80,8 +56,12 @@ public struct BigButtonView: View {
     }
 
     public var body: some View {
-        let onToggle = Binding<Bool>(get: { self.trackFetcher.useLocalContentOnly },
-                                     set: { self.trackFetcher.useLocalContentOnly = $0 })
+        let offlineToggle = Binding<Bool>(get: { self.trackFetcher.useLocalContentOnly },
+                                          set: { self.trackFetcher.useLocalContentOnly = $0 })
+
+        let localPlayToggle = Binding<Bool>(get: { self.trackFetcher.queueType == .local },
+                                            set: { try? self.trackFetcher.watch(queue: $0 ? .local : .remote) })
+
         return HStack {
             Spacer()
 
@@ -99,17 +79,14 @@ public struct BigButtonView: View {
                       .underline().foregroundColor(Color.blue)
                 }
                 Text("Offline:")
-                Toggle("", isOn: onToggle).labelsHidden()
+                Toggle("", isOn: offlineToggle).labelsHidden()
             }
-            
-            VStack {
-                if self.trackFetcher.queueType == .local {
-                    Text("Playing Local")
-                    UseRemoteQueueButton(trackFetcher: self.trackFetcher)
 
-                } else {
-                    Text("Playing Remote")
-                    UseLocalQueueButton(trackFetcher: self.trackFetcher)
+                   
+            VStack {
+                HStack {
+                    Text("Play Local:")
+                    Toggle("", isOn: localPlayToggle).labelsHidden()
                 }
             }
             
@@ -147,8 +124,10 @@ public struct SmallButtonView: View {
     }
 
     public var body: some View {
-        let onToggle = Binding<Bool>(get: { self.trackFetcher.useLocalContentOnly },
-                                     set: { self.trackFetcher.useLocalContentOnly = $0 })
+        let offlineToggle = Binding<Bool>(get: { self.trackFetcher.useLocalContentOnly },
+                                          set: { self.trackFetcher.useLocalContentOnly = $0 })
+        let localPlayToggle = Binding<Bool>(get: { self.trackFetcher.queueType == .local },
+                                            set: { try? self.trackFetcher.watch(queue: $0 ? .local : .remote) })
         return VStack {
             if canStoreLocally {
                 HStack {
@@ -165,12 +144,13 @@ public struct SmallButtonView: View {
                           .underline().foregroundColor(Color.blue)
                     }
                     Text("Offline:")
-                    Toggle("", isOn: onToggle).labelsHidden()
+                    Toggle("", isOn: offlineToggle).labelsHidden()
                 }
             }
             
             
             HStack {
+
                 SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
                 
                 if(self.trackFetcher.playingQueue?.isPaused ?? false) {
@@ -180,15 +160,11 @@ public struct SmallButtonView: View {
                 }
 
                 VStack {
-                    if self.trackFetcher.queueType == .local {
-                        Text("Playing Local")
-                        UseRemoteQueueButton(trackFetcher: self.trackFetcher)
-                    } else {
-                        Text("Playing Remote")
-                        UseLocalQueueButton(trackFetcher: self.trackFetcher)
+                    HStack {
+                        Text("Play Local:")
+                        Toggle("", isOn: localPlayToggle).labelsHidden()
                     }
                 }
-                
             }
             HStack {
                 Spacer()
