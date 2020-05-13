@@ -73,8 +73,6 @@ public class TrackFetcher: ObservableObject {
     // this is the direct PlayingQueue json object we get from the server
     @Published var playingQueue: PlayingQueue?
 
-    @Published var searchResults: [AudioTrack] = []
-
     @Published var progressBarLevel: ProgressBar.State?
     
     @Published var totalDuration: TimeInterval = 0
@@ -117,11 +115,13 @@ public class TrackFetcher: ObservableObject {
         self.refreshQueue()
     }
     
-    func search(for searchQuery: String) {
+    func search(for searchQuery: String) -> [AudioTrack] {
         Log.d("self.allTracks.count \(self.allTracks.count)")
 
         var results: [AudioTrack] = []
 
+        guard searchQuery.count > 3 else { return results }
+        
         let lowerCaseQuery = searchQuery.lowercased()
         
         for track in self.allTracks {
@@ -134,12 +134,10 @@ public class TrackFetcher: ObservableObject {
                 results.append(track)
             }
         }
-        
-        DispatchQueue.main.async {
-            self.searchResults = results
-        }
-    }
 
+        return results
+    }
+    
     // updates the ui to show the current set of tracks we have
     fileprivate func update(with tracks: [AudioTrack]) {
         var bandMap: [String:AudioTrack] = [:]

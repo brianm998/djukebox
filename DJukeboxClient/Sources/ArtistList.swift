@@ -1,7 +1,9 @@
 import SwiftUI
+import DJukeboxCommon
 
 struct BandList: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    @State private var searchQuery: String = "" 
 
     public init(_ client: Client) {
         self.trackFetcher = client.trackFetcher
@@ -11,7 +13,11 @@ struct BandList: View {
         VStack {
             Spacer()
             Text("Bands")
-            List(trackFetcher.bands) { band in
+            HStack {
+                Spacer()
+                TextField("search here", text: $searchQuery)
+            }
+            List(trackFetcher.bands(matching: self.searchQuery)) { band in
                 Text(band.Band)
                   .onTapGesture {
                       self.trackFetcher.showAlbums(forBand: band.Band)

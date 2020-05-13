@@ -14,11 +14,7 @@ public struct NaviBandList: View {
 
     public var body: some View {
         VStack {
-            TextField(
-              "search here",
-              text: $searchQuery,
-              onCommit: { Log.d(self.searchQuery) }
-            )
+            TextField("search here", text: $searchQuery)
             Spacer()
             
             List(trackFetcher.bands(matching: self.searchQuery)) { (band: AudioTrack) in

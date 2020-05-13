@@ -13,16 +13,11 @@ public struct SearchView: View {
         VStack {
             HStack {
                 Spacer()
-                TextField(
-                    "search here",
-                    text: $searchQuery,
-                    onEditingChanged: { foo in Log.d("edit cha\(foo) \(self.searchQuery)") },
-                    onCommit: { self.trackFetcher.search(for: self.searchQuery) }
-                )
+                TextField("search here", text: $searchQuery)
                 Spacer()
             }
             List {
-                ForEach(trackFetcher.searchResults, id: \.self) { track in
+                ForEach(trackFetcher.search(for: self.searchQuery), id: \.self) { track in
                     TrackDetail(track: track,
                                 trackFetcher: self.trackFetcher)
                 }
