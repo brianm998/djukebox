@@ -33,6 +33,25 @@ public class TrackFetcher: ObservableObject {
     // what is shown on the bands list
     @Published public var bands: [AudioTrack] = [] // XXX use different model objects for bands and albums
 
+    public func bands(matching queryString: String) -> [AudioTrack] {
+        Log.i(queryString)
+        if queryString.count == 0 {
+            return self.bands
+        } else {
+            // filter bands by
+            var ret: [AudioTrack] = []
+
+            let lowerCaseQuery = queryString.lowercased()
+            
+            for band in bands {
+                if band.Band.lowercased().contains(lowerCaseQuery) {
+                    ret.append(band)
+                }
+            }
+            return ret
+        }
+    }
+    
     // what is shown on the albums list
     @Published public var albums: [AudioTrack] = []
 
