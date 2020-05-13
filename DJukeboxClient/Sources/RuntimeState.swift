@@ -41,11 +41,16 @@ public class RuntimeState: LocalCache, Encodable, Decodable {
 
     func save() {
         let encoder = JSONEncoder()
+        encoder.nonConformingFloatEncodingStrategy =
+          .convertToString(positiveInfinity: "+Infinity",
+                          negativeInfinity: "-Infinity",
+                          nan: "NaN")
         if let url = RuntimeState.url {
             do {
                 let jsonData = try encoder.encode(self)
                 try jsonData.write(to: url)
             } catch {
+                Log.i(self)
                 Log.e("error: \(error)")
             }
         } else {

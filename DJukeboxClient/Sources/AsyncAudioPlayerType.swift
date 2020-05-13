@@ -3,6 +3,8 @@ import Foundation
 public protocol AsyncAudioPlayerType {
     var isPaused: Bool { get }
 
+    var playingTrackPosition: TimeInterval { get }
+    
     func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void)
     func playTracks(_ tracks: [AudioTrack], closure: @escaping (Bool, Error?) -> Void)
     func stopPlayingTrack(withHash hash: String,

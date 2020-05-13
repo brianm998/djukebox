@@ -9,7 +9,7 @@ public protocol AudioPlayerType {
     var playingTrackDuration: TimeInterval? { get }
 
     // The playback point, in seconds, within the timeline of the sound associated with the audio player.
-    var playingTrackPosition: TimeInterval? { get }
+    var playingTrackPosition: TimeInterval? { get set }
     
     func play(sha1Hash: String)
     func stopPlaying(sha1Hash: String, atIndex index: Int)

@@ -25,11 +25,28 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
         return nil
     }
 
+    var seekTime: CMTime?
+    
     // The total duration, in seconds, of the sound associated with the audio player.
     public var playingTrackPosition: TimeInterval? { // ?? ?
-        let currentTime = player.currentTime()
-        // convert to seconds
-        return Double(currentTime.value)/Double(currentTime.timescale)
+        get {
+            let currentTime = player.currentTime()
+            // convert to seconds
+            return Double(currentTime.value)/Double(currentTime.timescale)
+        }
+        set(newValue) {
+            if let newValue = newValue {
+                let seekTime = CMTime(value: Int64(newValue), timescale: 1)
+                self.logPlayerStatus()
+                Log.i("trying to seek to \(seekTime)")
+                if player.timeControlStatus == .paused {
+                    // keep the seek time around for later
+                    self.seekTime = seekTime
+                } else {
+                    self.seek(to: seekTime)
+                }
+            }
+        }
     }
 
     public var playingTrackDuration: TimeInterval? {
@@ -44,7 +61,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
             if isPaused {
                 player.pause()
             } else {
-                player.play()
+                startPlayer()
             }
         }
     }
@@ -54,6 +71,17 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
     let historyWriter: HistoryWriterType
     
     let player = AVQueuePlayer(items: [])
+
+    fileprivate func logPlayerStatus() {
+        switch player.timeControlStatus {
+        case .paused:
+            Log.i("paused")
+        case .waitingToPlayAtSpecifiedRate:
+            Log.i("waitingToPlayAtSpecifiedRate")
+        case .playing:
+            Log.i("playing")
+        }
+    }
     
     public init(trackFinder: TrackFinderType,
                 historyWriter: HistoryWriterType)
@@ -62,7 +90,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
         self.historyWriter = historyWriter
         
         super.init()
-
+        
         player.automaticallyWaitsToMinimizeStalling = true
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(playerDidFinishPlaying),
@@ -146,7 +174,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
                 trackQueue.append(sha1Hash)
             } else {
                 player.insert(AVPlayerItem(asset: asset), after: nil)
-                if !isPaused { player.play() }
+                if !isPaused { startPlayer() }
             }
             trackMap[asset] = sha1Hash
         }
@@ -165,10 +193,36 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
         player.advanceToNextItem()
     }
 
+    fileprivate func seek(to time: CMTime) {
+        self.logPlayerStatus()
+        if self.player.timeControlStatus == .playing {
+            self.player.seek(to: time) { success in
+                self.seekTime = nil
+            }
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.seek(to: time)
+            }
+        }
+    }
+    
+    fileprivate func startPlayer() {
+        Log.i()
+        DispatchQueue.main.async {
+            self.logPlayerStatus()
+            self.player.play()
+            if let seekTime = self.seekTime {
+                Log.i("trying to seek to \(seekTime)")
+
+                self.seek(to: seekTime)
+            }
+        }
+    }
+    
     public func pause() {
         if isPaused {
             isPaused = false
-            self.player.play()
+            self.startPlayer()
         } else {
             Log.d("calling pause isPaused \(isPaused)")
             isPaused = true

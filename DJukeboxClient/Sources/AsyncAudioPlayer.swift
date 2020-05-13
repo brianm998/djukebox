@@ -17,6 +17,10 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
 
     public var isPaused: Bool { return player.isPaused }
 
+    public var playingTrackPosition: TimeInterval {
+        return player.playingTrackPosition ?? 0
+    }
+
     public func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         if let track = fetcher.trackMap[hash] {
             player.play(sha1Hash: hash)
@@ -77,6 +81,9 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
 
     public func update(with runtimeState: RuntimeState) {
         player.isPaused = runtimeState.isPaused
+        Log.i("runtimeState.playingTrackPosition \(runtimeState.playingTrackPosition)")
+        player.playingTrackPosition = runtimeState.playingTrackPosition
+        
         if let playingHash = runtimeState.playingTrack {
             player.play(sha1Hash: playingHash)
         }

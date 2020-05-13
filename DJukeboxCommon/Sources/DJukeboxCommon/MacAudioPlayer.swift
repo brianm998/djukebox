@@ -41,8 +41,13 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
 
     // The playback point, in seconds, within the timeline of the sound associated with the audio player.
     public var playingTrackPosition: TimeInterval? {
-        if let player = player { return player.currentTime }
-        return nil
+        get {
+            if let player = player { return player.currentTime }
+            return nil
+        }
+        set(newValue) {
+            Log.w("unimplmented")
+        }
     }
 
     public var isPaused = false

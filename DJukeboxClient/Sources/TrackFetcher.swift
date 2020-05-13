@@ -35,7 +35,7 @@ public class TrackFetcher: ObservableObject {
                             isOffline: self.useLocalContentOnly,
                             playingQueue: self.queueType,
                             playingTrack: currentTrack?.SHA1,
-                            playingTrackPosition: 0, // XXX
+                            playingTrackPosition: self.audioPlayer.player?.playingTrackPosition ?? 0,
                             pendingTracks: self.pendingTracks.map { $0.SHA1 })
     }
 
@@ -52,7 +52,6 @@ public class TrackFetcher: ObservableObject {
     }
     
     func initialize(with runtimeState: RuntimeState) {
-        // XXX doesn't handle the RuntimeState.playingTrackPosition yet
         if runtimeState.playingQueue == .local {
             if trackMap.count == 0 {
                 // delay this step until we've got a trackMap

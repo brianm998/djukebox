@@ -2,6 +2,9 @@ import Foundation
 import DJukeboxCommon
 
 public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
+
+    public var playingTrackPosition: TimeInterval = 0 // XXX
+    
     public func update(with runtimeState: RuntimeState) {
         Log.w("unimplementd, should not be called")
     }
