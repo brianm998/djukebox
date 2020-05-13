@@ -13,6 +13,7 @@ public protocol AsyncAudioPlayerType {
                           toIndex: Int,
                           closure: @escaping (PlayingQueue?, Error?) -> Void)
     func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void)
+    func update(with runtimeState: RuntimeState)
     func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)
     func playRandomTrack(forBand band: String, closure: @escaping (AudioTrack?, Error?) -> Void)
     func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)

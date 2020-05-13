@@ -10,8 +10,6 @@ import DJukeboxCommon
 // background properly, and playing each track fully without skipping back
 public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
 
-    public var isPlaying = false
-
     public var trackQueue: [String] = []
 
     public var playingTrack: AudioTrackType? {
@@ -40,7 +38,16 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
         return nil
     }
 
-    public var isPaused = false
+    public var isPaused = false {
+        didSet(oldValue) {
+            Log.i(isPaused)
+            if isPaused {
+                player.pause()
+            } else {
+                player.play()
+            }
+        }
+    }
 
     let trackFinder: TrackFinderType
 
@@ -139,7 +146,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
                 trackQueue.append(sha1Hash)
             } else {
                 player.insert(AVPlayerItem(asset: asset), after: nil)
-                player.play()
+                if !isPaused { player.play() }
             }
             trackMap[asset] = sha1Hash
         }

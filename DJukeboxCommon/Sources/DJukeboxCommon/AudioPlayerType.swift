@@ -1,9 +1,8 @@
 import Foundation
 
 public protocol AudioPlayerType {
-    var isPlaying: Bool { get }
-    //var isPaused: Bool { get }
-    var trackQueue: [String] { get }
+    var isPaused: Bool { get set }
+    var trackQueue: [String] { get } // rename to pendingTracks
     var playingTrack: AudioTrackType? { get }
 
     // The total duration, in seconds, of the sound associated with the audio player.

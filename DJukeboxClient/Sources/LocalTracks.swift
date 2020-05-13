@@ -9,17 +9,10 @@ public protocol LocalTrackType: TrackFinderType {
 }
 
 // allow keeping some tracks locally for offline access 
-public class LocalTracks: LocalTrackType {
-
-    private var libDir: URL? {
-        if let libraryPathURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first {
-            return libraryPathURL
-        }
-        return nil
-    }
+public class LocalTracks: LocalCache, LocalTrackType {
 
     private var cacheDir: URL? {
-        return self.urlForLibrary(appending: ["Caches", "AudioTracks"])
+        return LocalCache.urlForLibrary(appending: ["Caches", "AudioTracks"])
     }
 
     private var tracksJsonURL: URL? {
@@ -34,6 +27,7 @@ public class LocalTracks: LocalTrackType {
     
     public init(trackFinder: TrackFinderType) {
         self.trackFinder = trackFinder
+        super.init()
         if let tracks = self.loadLocalTrackList() {
             self.downloadedTracks = tracks
             self.sanitizeDownloadedTracks()
@@ -41,7 +35,6 @@ public class LocalTracks: LocalTrackType {
     }
 
     public func clearLocalStore() {
-        Log.d()
         do {
             if let cacheDir = self.cacheDir {
                 let list = try FileManager.default.contentsOfDirectory(at: cacheDir,
@@ -58,39 +51,13 @@ public class LocalTracks: LocalTrackType {
         }
     }
     
-    //Creating a folder 
-    private func urlForLibrary(appending: [String]) -> URL? {
-
-        if let libDir = self.libDir {
-
-            var path: URL = libDir
-
-            for subdir in appending {
-                path = path.appendingPathComponent(subdir)
-            }
-            
-            if !FileManager.default.fileExists(atPath: path.path) {
-                do {
-                    try FileManager.default.createDirectory(at: path,
-                                                            withIntermediateDirectories: true,
-                                                            attributes: nil)
-                    
-                } catch let err {
-                    Log.e(err.localizedDescription)
-                }
-            }
-
-            return path
-        }
-        return nil
-    }
 
     fileprivate func download(url: URL,
                               toFilename filename: String,
                               andExtention extention: String,
                               closure: @escaping (Bool) -> Void)
     {
-        if let libraryPathURL = self.libDir,
+        if let libraryPathURL = LocalCache.libDir,
            let destURL = self.cacheDirURL(forFilename: filename, withExtention: extention)
         {
             if FileManager.default.fileExists(atPath: destURL.path) {

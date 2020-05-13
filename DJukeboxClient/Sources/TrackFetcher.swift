@@ -6,7 +6,7 @@ import DJukeboxCommon
 // This allows any String, including literals, to be thrown as an Error
 extension String: Error {}
 
-public enum QueueType {
+public enum PlayingQueueType: String, Decodable, Encodable {
     case local
     case remote
 }
@@ -29,12 +29,58 @@ public class TrackFetcher: ObservableObject {
             refreshTracks()
         }
     }
+
+    var runtimeState: RuntimeState {
+        return RuntimeState(isPaused: self.audioPlayer.player?.isPaused ?? false,
+                            isOffline: self.useLocalContentOnly,
+                            playingQueue: self.queueType,
+                            playingTrack: currentTrack?.SHA1,
+                            playingTrackPosition: 0, // XXX
+                            pendingTracks: self.pendingTracks.map { $0.SHA1 })
+    }
+
+    fileprivate var initialRuntimeState: RuntimeState?
+
+    // this is called after we get the track list from the server to put the client in the same place as before
+    fileprivate func maybeDoInitialSetup() {
+        Log.i(self.initialRuntimeState)
+        if let initialRuntimeState = self.initialRuntimeState {
+            Log.i(initialRuntimeState)
+            audioPlayer.player?.update(with: initialRuntimeState)
+            self.initialRuntimeState = nil
+        }
+    }
+    
+    func initialize(with runtimeState: RuntimeState) {
+        // XXX doesn't handle the RuntimeState.playingTrackPosition yet
+        if runtimeState.playingQueue == .local {
+            if trackMap.count == 0 {
+                // delay this step until we've got a trackMap
+                Log.i("trackMap count \(trackMap.count)")
+                self.initialRuntimeState = runtimeState
+                Log.i(self.initialRuntimeState)
+            } else {
+                if let playingTrack = runtimeState.playingTrack {
+                    self.currentTrack = self.audioTrack(forHash: playingTrack) as? AudioTrack
+                }
+                self.pendingTracks = runtimeState.pendingTracks.map {
+                    self.audioTrack(forHash: $0) as! AudioTrack
+                }
+            }
+        }
+        self.useLocalContentOnly = runtimeState.isOffline
+        do {
+            try self.watch(queue: runtimeState.playingQueue)
+        } catch {
+            Log.e("can't watch queue: \(error)") // XXX handle this better
+        }
+    }
     
     // what is shown on the bands list
     @Published public var bands: [AudioTrack] = [] // XXX use different model objects for bands and albums
 
     public func bands(matching queryString: String) -> [AudioTrack] {
-        Log.i(queryString)
+        Log.d(queryString)
         if queryString.count == 0 {
             return self.bands
         } else {
@@ -83,12 +129,12 @@ public class TrackFetcher: ObservableObject {
 
     @Published public var audioPlayer: ViewObservableAudioPlayer
 
-    @Published public var queueType: QueueType!
+    @Published public var queueType: PlayingQueueType!
     
     var desiredBand: String?
     var desiredAlbum: String?
     
-    var queues: [QueueType: AsyncAudioPlayerType] = [:]
+    var queues: [PlayingQueueType: AsyncAudioPlayerType] = [:]
 
     public init(withServer server: ServerType) {
         self.server = server
@@ -97,11 +143,11 @@ public class TrackFetcher: ObservableObject {
         self.audioPlayer = ViewObservableAudioPlayer()
     }
 
-    public func add(queueType: QueueType, withPlayer player: AsyncAudioPlayerType) {
+    public func add(queueType: PlayingQueueType, withPlayer player: AsyncAudioPlayerType) {
         queues[queueType] = player
     }
     
-    public func watch(queue: QueueType) throws {
+    public func watch(queue: PlayingQueueType) throws {
         if let player = queues[queue] {
             self.updatePlayingQueue(to: player)
             self.queueType = queue
@@ -153,6 +199,7 @@ public class TrackFetcher: ObservableObject {
             self.allTracks = tracks
             self.bands = Array(bandMap.values).sorted()
             self.trackMap = sha1Map
+            self.maybeDoInitialSetup()
         }
     }
     

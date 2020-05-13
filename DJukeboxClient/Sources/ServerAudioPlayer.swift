@@ -1,6 +1,11 @@
 import Foundation
+import DJukeboxCommon
 
 public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
+    public func update(with runtimeState: RuntimeState) {
+        Log.w("unimplementd, should not be called")
+    }
+    
     
     // XXX should query server on startup, in case it's already paused (need new api for that)
     public var isPaused = false

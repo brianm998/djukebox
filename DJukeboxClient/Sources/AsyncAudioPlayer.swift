@@ -5,7 +5,7 @@ import DJukeboxCommon
 // a lot of this logic mirrors that in routes.swift on the server,
 // so that clients can have their own local playing queue
 public class AsyncAudioPlayer: AsyncAudioPlayerType {
-    let player: AudioPlayerType
+    var player: AudioPlayerType
     let fetcher: TrackFetcher
     let history: HistoryFetcher
 
@@ -15,9 +15,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
         self.history = history
     }
 
-    public var isPaused: Bool {
-        return !player.isPlaying
-    }
+    public var isPaused: Bool { return player.isPaused }
 
     public func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         if let track = fetcher.trackMap[hash] {
@@ -54,7 +52,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
                 Log.i("HOLY FUCK")
             }
         }
-        return PlayingQueue(isPaused: !player.isPlaying,
+        return PlayingQueue(isPaused: player.isPaused,
                             tracks: trackQueue,
                             playingTrackDuration: player.playingTrackDuration,
                             playingTrackPosition: player.playingTrackPosition)
@@ -75,6 +73,16 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     
     public func listPlayingQueue(closure: @escaping (PlayingQueue?, Error?) -> Void) {
         closure(self.playingQueue, nil)
+    }
+
+    public func update(with runtimeState: RuntimeState) {
+        player.isPaused = runtimeState.isPaused
+        if let playingHash = runtimeState.playingTrack {
+            player.play(sha1Hash: playingHash)
+        }
+        for hash in runtimeState.pendingTracks {
+            player.play(sha1Hash: hash)
+        }
     }
     
     public func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {

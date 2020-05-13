@@ -22,7 +22,7 @@ public class Client: ObservableObject {
     }
     
 
-    public init(serverURL: String, password: String, initialQueueType initialQueue: QueueType = .local) {
+    public init(serverURL: String, password: String, initialQueueType initialQueue: PlayingQueueType = .local) {
         // the server connection for tracks and history 
         self.serverConnection = ServerConnection(toUrl: serverURL, withPassword: password)
 
@@ -53,11 +53,9 @@ public class Client: ObservableObject {
         trackFetcher.add(queueType: .remote,
                          withPlayer: ServerAudioPlayer(toUrl: serverURL, withPassword: password))
 
-        do {
-            try trackFetcher.watch(queue: initialQueue)
-        } catch {
-            Log.e("can't watch queue: \(error)") // XXX handle this better
-        }
+        let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
+
+        trackFetcher.initialize(with: runtimeState)
         
         historyFetcher.refresh()
         trackFetcher.refreshTracks()
@@ -70,6 +68,7 @@ public class Client: ObservableObject {
         // Create the SwiftUI view that provides the window contents.
         
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            self.trackFetcher.runtimeState.save()
             self.trackFetcher.refreshQueue()
             self.historyFetcher.refresh()
         }
