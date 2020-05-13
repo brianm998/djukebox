@@ -13,7 +13,7 @@ public struct SearchView: View {
         VStack {
             HStack {
                 Spacer()
-                TextField("search here", text: $searchQuery)
+                TextField("all text search", text: $searchQuery)
                 Spacer()
             }
             List {

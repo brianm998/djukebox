@@ -21,19 +21,6 @@ public func layoutIsLarge() -> Bool {
     #endif
 }
 
-public struct PlayingTimeRemainingView: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-
-    public init(trackFetcher: TrackFetcher) {
-        self.trackFetcher = trackFetcher
-    }
-
-    public var body: some View {
-        VStack {
-            Text(self.format(duration: trackFetcher.totalDuration))
-            Text(self.string(forTime: trackFetcher.completionTime))
-        }
-    }
     func string(forTime date: Date) -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .none
@@ -51,6 +38,35 @@ public struct PlayingTimeRemainingView: View {
             return "\(minutes) minutes"
         } else {
             return "\(seconds) seconds"
+        }
+    }
+
+public struct VerticalPlayingTimeRemainingView: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+
+    public var body: some View {
+        return VStack {
+            Text(format(duration: trackFetcher.totalDuration))
+            Text(string(forTime: trackFetcher.completionTime))
+        }
+    }
+}
+
+public struct HorizontalPlayingTimeRemainingView: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+
+    public var body: some View {
+        return HStack {
+            Text(format(duration: trackFetcher.totalDuration))
+            Text(string(forTime: trackFetcher.completionTime))
         }
     }
 }
@@ -113,7 +129,7 @@ public struct BigButtonView: View {
             }
 
             if trackFetcher.totalDuration > 0 {
-                PlayingTimeRemainingView(trackFetcher: trackFetcher)
+                VerticalPlayingTimeRemainingView(trackFetcher: trackFetcher)
             }
 
             VStack {
@@ -189,7 +205,7 @@ public struct SmallButtonView: View {
                 HStack {
                     Spacer()
                     if trackFetcher.totalDuration > 0 {
-                        PlayingTimeRemainingView(trackFetcher: trackFetcher)
+                        HorizontalPlayingTimeRemainingView(trackFetcher: trackFetcher)
                     }
                 }
         }
@@ -241,7 +257,7 @@ public struct PlayingTracksView: View {
                           .layoutPriority(0.1)
                           .frame(maxWidth: .infinity, maxHeight: 20)
                     } else {
-                        VStack {
+                        VStack(alignment: .leading) {
                             ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
                                 if amount < 60 {
                                     return "\(Int(amount)) seconds left"
@@ -254,13 +270,10 @@ public struct PlayingTracksView: View {
                             }
                               .layoutPriority(0.1)
                               .frame(maxWidth: .infinity, maxHeight: 40)
-
                             TrackDetail(track: trackFetcher.currentTrack!,
                                         trackFetcher: self.trackFetcher,
                                         showDuration: false,
                                         playOnTap: false)
-                              .layoutPriority(1.0)
-                            
                         }
                     }
                 }

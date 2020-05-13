@@ -28,11 +28,11 @@ struct TrackDetail: View {
                     Text(track.Duration!)
                 }
             } else {
-                VStack {
+                VStack(alignment: .leading) {
                     Button(action: {
                                self.trackFetcher.showAlbums(forBand: self.track.Artist)
                            }) {
-                        Text(track.Artist).underline().foregroundColor(Color.blue)
+                        Text(track.Artist).foregroundColor(Color.blue)
                     }.buttonStyle(PlainButtonStyle())
                     if self.hasAlbum(track) {
                         Button(action: {
@@ -41,10 +41,10 @@ struct TrackDetail: View {
                             Text(track.Album!).underline().foregroundColor(Color.blue)
                         }.buttonStyle(PlainButtonStyle())
                     }
-                }
-                Text(track.Title)
-                if false && showDuration && track.Duration != nil {
-                    Text(track.Duration!)
+                    Text(track.Title)
+                    if false && showDuration && track.Duration != nil {
+                        Text(track.Duration!)
+                    }
                 }
             }
         }

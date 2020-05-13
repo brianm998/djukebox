@@ -15,7 +15,7 @@ struct BandList: View {
             Text("Bands")
             HStack {
                 Spacer()
-                TextField("search here", text: $searchQuery)
+                TextField("band search", text: $searchQuery)
             }
             List(trackFetcher.bands(matching: self.searchQuery)) { band in
                 Text(band.Band)
