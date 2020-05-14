@@ -46,6 +46,7 @@ public class TrackFetcher: ObservableObject {
         Log.i(self.initialRuntimeState)
         if let initialRuntimeState = self.initialRuntimeState {
             Log.i(initialRuntimeState)
+
             audioPlayer.player?.update(with: initialRuntimeState)
             self.initialRuntimeState = nil
         }
@@ -79,7 +80,6 @@ public class TrackFetcher: ObservableObject {
     @Published public var bands: [AudioTrack] = [] // XXX use different model objects for bands and albums
 
     public func bands(matching queryString: String) -> [AudioTrack] {
-        Log.d(queryString)
         if queryString.count == 0 {
             return self.bands
         } else {

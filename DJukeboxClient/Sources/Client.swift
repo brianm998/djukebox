@@ -57,14 +57,14 @@ public class Client: ObservableObject {
 
         trackFetcher.initialize(with: runtimeState)
         
-        historyFetcher.refresh()
-        trackFetcher.refreshTracks()
-        trackFetcher.refreshQueue()
-
         // this allows clients to keep some tracks locally (i.e. offline)
         let localTracks = LocalTracks(trackFinder: self.trackFetcher)
         trackFetcher.localTracks = localTracks
         
+        historyFetcher.refresh()
+        trackFetcher.refreshTracks()
+        trackFetcher.refreshQueue()
+
         // Create the SwiftUI view that provides the window contents.
         
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in

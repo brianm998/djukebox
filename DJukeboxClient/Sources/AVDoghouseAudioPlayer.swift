@@ -97,6 +97,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
                                                name: .AVPlayerItemDidPlayToEndTime,
                                                object: nil)
 
+        /*
         // XXX testing
         let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
 
@@ -113,6 +114,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
                 Log.d("player rate \(self.player.rate) seconds \(seconds) playing")
             }
         }
+*/
     }
 
     deinit {
