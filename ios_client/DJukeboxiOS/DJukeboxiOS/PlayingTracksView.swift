@@ -178,59 +178,10 @@ public struct PlayingTracksView: View {
             } else {
                 SmallButtonView(trackFetcher: trackFetcher)
             }
-            HStack {
-                Spacer()
-                if trackFetcher.currentTrack == nil {
-                    Text("Nothing Playing").foregroundColor(Color.gray)
-                } else {
-                    if layoutIsLarge() {
-                        TrackDetail(track: trackFetcher.currentTrack!,
-                                    trackFetcher: self.trackFetcher,
-                                    showDuration: false,
-                                    playOnTap: false)
-                          .layoutPriority(1.0)
-                        
-                        ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
-                            if amount < 60 {
-                                return "\(Int(amount)) seconds left"
-                            } else {
-                                let duration = Int(amount)
-                                let seconds = String(format: "%02d", duration % 60)
-                                let minutes = duration / 60
-                                return "\(minutes):\(seconds) left"
-                            }
-                        }
-                          .layoutPriority(0.1)
-                          .frame(maxWidth: .infinity, maxHeight: 20)
-                    } else {
-                        VStack(alignment: .leading) {
-                            ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
-                                if amount < 60 {
-                                    return "\(Int(amount)) seconds left"
-                                } else {
-                                    let duration = Int(amount)
-                                    let seconds = String(format: "%02d", duration % 60)
-                                    let minutes = duration / 60
-                                    return "\(minutes):\(seconds) left"
-                                }
-                            }
-                              .layoutPriority(0.1)
-                              .frame(maxWidth: .infinity, maxHeight: 40)
-                            TrackDetail(track: trackFetcher.currentTrack!,
-                                        trackFetcher: self.trackFetcher,
-                                        showDuration: false,
-                                        playOnTap: false)
-                        }
-                    }
-                }
-                Spacer()
-            }
-              .disabled(trackFetcher.currentTrack == nil)
-
+            PlayingTrackView(trackFetcher: trackFetcher)
             PlayingQueueView(trackFetcher: trackFetcher)
         }
     }
-
 }
 
 

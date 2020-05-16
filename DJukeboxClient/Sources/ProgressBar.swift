@@ -20,25 +20,28 @@ public struct ProgressBar: View {
     
     public var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Rectangle().frame(width: geometry.size.width,
-                                  height: geometry.size.height)
-                    .opacity(0.3)
-                    .foregroundColor(Color.gray)
+            ZStack(alignment: .trailing) {
+                ZStack(alignment: .leading) {
+                    Rectangle().frame(width: geometry.size.width,
+                                      height: geometry.size.height)
+                      .opacity(0.3)
+                      .foregroundColor(Color.gray)
 
-                Rectangle().frame(width: min(CGFloat(self.state.level/self.state.max)*geometry.size.width,
-                                             geometry.size.width),
-                                  height: geometry.size.height)
-                  .foregroundColor(Color.green)
-                  .animation(.linear)
+                    Rectangle().frame(width: min(CGFloat(self.state.level/self.state.max)*geometry.size.width,
+                                                 geometry.size.width),
+                                      height: geometry.size.height)
+                      .foregroundColor(Color.green)
+                      .animation(.linear)
 
+                }
                 if self.labelClosure != nil && self.state.level > 0 {
                     Text(self.labelClosure!(self.state.max-self.state.level))
-                      .offset(x: 8)
+                      .offset(x: -8)
                       .foregroundColor(Color.gray)
                       .opacity(0.7)
                 }
-            }.cornerRadius(8)
+            }
+//            .cornerRadius(6)
         }
     }
 }
