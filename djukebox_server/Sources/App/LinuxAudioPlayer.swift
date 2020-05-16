@@ -5,7 +5,7 @@ public class LinuxAudioPlayer: AudioPlayerType {
 
     let dispatchQueue = DispatchQueue(label: "djukebox-audio-player")
 
-    public var isPlaying = false
+    public var isPaused = true
 
     public var trackQueue: [String] = []
     
@@ -39,7 +39,7 @@ public class LinuxAudioPlayer: AudioPlayerType {
     
     fileprivate func playingDone() {
         self.playingTrack = nil
-        self.isPlaying = false
+        self.isPaused = true
         Log.d("calling serviceQueue from playingDone()")
         self.serviceQueue()
     }
@@ -106,11 +106,11 @@ public class LinuxAudioPlayer: AudioPlayerType {
 
     fileprivate func serviceQueue() {
         guard trackQueue.count > 0 else { return }
-        guard !isPlaying else { return }
+        guard isPaused else { return }
         let nextTrackHash = trackQueue.removeFirst()
         self.playingTrack = trackFinder.audioTrack(forHash: nextTrackHash)
         
-        isPlaying = true
+        isPaused = false
         dispatchQueue.async {
             do {
                 if let (audioTrack, url) = self.trackFinder.track(forHash: nextTrackHash) {

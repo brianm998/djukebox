@@ -400,7 +400,7 @@ func playerRoutes(_ app: Application) throws {
                 tracks.append(track)
             }
         }
-        return PlayingQueue(isPaused: !audioPlayer.isPlaying, // XXX centralize paused state
+        return PlayingQueue(isPaused: audioPlayer.isPaused, // XXX centralize paused state
                             tracks: tracks,
                             playingTrackDuration: audioPlayer.playingTrackDuration,
                             playingTrackPosition: audioPlayer.playingTrackPosition)
