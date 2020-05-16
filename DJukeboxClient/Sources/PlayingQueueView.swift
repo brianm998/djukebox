@@ -1,10 +1,14 @@
 import SwiftUI
 import DJukeboxCommon
 
-struct PlayingQueueView: View {
+public struct PlayingQueueView: View {
     @ObservedObject var trackFetcher: TrackFetcher
+
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
     
-    var body: some View {
+    public var body: some View {
         List {
             ForEach(trackFetcher.pendingTracks, id: \.self) { track in
                 TrackDetail(track: track,

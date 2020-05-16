@@ -24,7 +24,7 @@ public class TrackFetcher: ObservableObject {
     var localTracks: LocalTrackType?
     
     // turn on to not use streaming for tracks (offline mode)
-    var useLocalContentOnly = false {
+    public var useLocalContentOnly = false {
         didSet(oldValue) {
             refreshTracks()
         }
@@ -101,28 +101,28 @@ public class TrackFetcher: ObservableObject {
     @Published public var albums: [AudioTrack] = []
 
     // what is shown on the tracks list
-    @Published var tracks: [AudioTrack] = []
+    @Published public var tracks: [AudioTrack] = []
 
     // the text at the top of the albums list
-    @Published var albumTitle: String
+    @Published public var albumTitle: String
 
     // the text at the top of the tracks list
-    @Published var trackTitle: String
+    @Published public var trackTitle: String
 
     // currentTrack is the first item in the playing queue, if any
-    @Published var currentTrack: AudioTrack?
+    @Published public var currentTrack: AudioTrack?
 
     // pendingTracks contains of the rest of the playing queue from the server
-    @Published var pendingTracks: [AudioTrack] = []
+    @Published public var pendingTracks: [AudioTrack] = []
 
     // this is the direct PlayingQueue json object we get from the server
-    @Published var playingQueue: PlayingQueue?
+    @Published public var playingQueue: PlayingQueue?
 
-    @Published var progressBarLevel: ProgressBar.State?
+    @Published public var progressBarLevel: ProgressBar.State?
     
-    @Published var totalDuration: TimeInterval = 0
+    @Published public var totalDuration: TimeInterval = 0
 
-    @Published var completionTime: Date = Date()
+    @Published public var completionTime: Date = Date()
     
     let server: ServerType
 

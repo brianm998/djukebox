@@ -1,10 +1,14 @@
 import SwiftUI
 import DJukeboxCommon
 
-struct PlayButton: View {
+public struct PlayButton: View {
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
-    var body: some View {
+    public init(audioPlayer: ViewObservableAudioPlayer) {
+        self.audioPlayer = audioPlayer
+    }
+    
+    public var body: some View {
         Button(action: {
             self.audioPlayer.player?.resumePlaying() { audioTrack, error in
                 if let error = error {
@@ -23,10 +27,14 @@ struct PlayButton: View {
     }
 }
 
-struct PauseButton: View {
+public struct PauseButton: View {
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
-    var body: some View {
+    public init(audioPlayer: ViewObservableAudioPlayer) {
+        self.audioPlayer = audioPlayer
+    }
+    
+    public var body: some View {
         Button(action: {
             self.audioPlayer.player?.pausePlaying() { audioTrack, error in
                 if let error = error {
@@ -45,10 +53,14 @@ struct PauseButton: View {
     }
 }
 
-struct SkipCurrentTrackButton: View {
+public struct SkipCurrentTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
+
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
     
-    var body: some View {
+    public var body: some View {
         Button(action: {
                 self.trackFetcher.audioPlayer.player?.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "",
                                                          atIndex: -1) { audioTrack, error in
@@ -69,10 +81,14 @@ struct SkipCurrentTrackButton: View {
     }
 }
 
-struct PlayRandomTrackButton: View {
+public struct PlayRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     
-    var body: some View {
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+    
+    public var body: some View {
         Button(action: {
             self.trackFetcher.playRandomTrack()
         }) {
@@ -81,10 +97,14 @@ struct PlayRandomTrackButton: View {
     }
 }
 
-struct PlayNewRandomTrackButton: View {
+public struct PlayNewRandomTrackButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     
-    var body: some View {
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+    
+    public var body: some View {
         Button(action: {
             self.trackFetcher.playNewRandomTrack()
         }) {
@@ -93,10 +113,14 @@ struct PlayNewRandomTrackButton: View {
     }
 }
 
-struct ClearQueueButton: View {
+public struct ClearQueueButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     
-    var body: some View {
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+    
+    public var body: some View {
         Button(action: { self.trackFetcher.clearPlayingQueue() }) {
             Text("Clear Queue")
               .foregroundColor(Color.red)
@@ -104,19 +128,28 @@ struct ClearQueueButton: View {
     }
 }
 
-struct RefreshTracksFromServerButton: View {
+public struct RefreshTracksFromServerButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     
-    var body: some View {
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+    
+    public var body: some View {
         Button(action: { self.trackFetcher.refreshTracks() }) {
             Text("Refresh")
         }
     }
 }
-struct RefreshQueueButton: View {
+
+public struct RefreshQueueButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     
-    var body: some View {
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+    
+    public var body: some View {
         Button(action: { self.trackFetcher.refreshQueue() }) {
             Text("Refresh Q")
         }

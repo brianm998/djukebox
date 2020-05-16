@@ -1,45 +1,6 @@
 import SwiftUI
 import DJukeboxCommon
-
-#if os(macOS)
-fileprivate let kkUTTypePlainText = kUTTypePlainText
-#else
-fileprivate let kkUTTypePlainText = "kUTTypePlainText"
-#endif
-
-public func layoutIsLarge() -> Bool {
-    #if os(iOS)// || os(watchOS) || os(tvOS)
-    if UIDevice.current.userInterfaceIdiom == .pad {
-        return true
-    }else{
-        return false
-    }
-    #elseif os(OSX)
-    return true
-    #else
-    return false
-    #endif
-}
-
-    func string(forTime date: Date) -> String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .none
-        dateFormatter.timeStyle = .medium
-        return dateFormatter.string(from: date)
-    }
-    
-    func format(duration: TimeInterval) -> String {
-        let seconds = Int(duration) % 60
-        let minutes = Int(duration/60) % 60
-        let hours = Int(duration/(60*60))
-        if hours > 0 {
-            return "\(hours) hours"
-        } else if minutes > 0 {
-            return "\(minutes) minutes"
-        } else {
-            return "\(seconds) seconds"
-        }
-    }
+import DJukeboxClient
 
 public struct VerticalPlayingTimeRemainingView: View {
     @ObservedObject var trackFetcher: TrackFetcher
@@ -72,12 +33,6 @@ public struct HorizontalPlayingTimeRemainingView: View {
 }
 
 
-    #if os(iOS)
-    fileprivate let canStoreLocally = true
-    #else
-    fileprivate let canStoreLocally = false
-    #endif
-    
 public struct BigButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -95,58 +50,54 @@ public struct BigButtonView: View {
         return HStack {
             Spacer()
 
-            if canStoreLocally {
-                Button(action: {
-                           self.trackFetcher.clearCache()
-                       }) {
-                    Text("Clear Cache")
-                      .underline().foregroundColor(Color.red)
-                }
-                Button(action: {
-                           self.trackFetcher.cacheQueue()
-                       }) {
-                    Text("Cache Queue")
-                      .underline().foregroundColor(Color.blue)
-                }
-                Text("Offline:")
-                Toggle("", isOn: offlineToggle).labelsHidden()
+            Button(action: {
+                self.trackFetcher.clearCache()
+            }) {
+                Text("Clear Cache")
+                  .underline().foregroundColor(Color.red)
             }
+            Button(action: {
+                self.trackFetcher.cacheQueue()
+            }) {
+                Text("Cache Queue")
+                  .underline().foregroundColor(Color.blue)
+            }
+            Text("Offline:")
+            Toggle("", isOn: offlineToggle).labelsHidden()
 
-                   
-            VStack {
-                HStack {
-                    Text("Play Local:")
-                    Toggle("", isOn: localPlayToggle).labelsHidden()
+            Group {
+                VStack {
+                    HStack {
+                        Text("Play Local:")
+                        Toggle("", isOn: localPlayToggle).labelsHidden()
+                    }
                 }
-            }
-            
-            SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
-            
-            if(self.trackFetcher.audioPlayer.isPaused) {
-                PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
-            } else {
-                PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
-            }
 
-            if trackFetcher.totalDuration > 0 {
-                VerticalPlayingTimeRemainingView(trackFetcher: trackFetcher)
-            }
+                SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
+                
+                if(self.trackFetcher.audioPlayer.isPaused) {
+                    PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
+                } else {
+                    PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
+                }
 
-            VStack {
+                if trackFetcher.totalDuration > 0 {
+                    VerticalPlayingTimeRemainingView(trackFetcher: trackFetcher)
+                }
+
                 PlayRandomTrackButton(trackFetcher: trackFetcher)
+
                 PlayNewRandomTrackButton(trackFetcher: trackFetcher)
-            }
-            ClearQueueButton(trackFetcher: trackFetcher)
-            VStack {
+                ClearQueueButton(trackFetcher: trackFetcher)
                 RefreshTracksFromServerButton(trackFetcher: trackFetcher)
                 RefreshQueueButton(trackFetcher: trackFetcher)
+
+                Spacer()
             }
-            Spacer()
         }
     }
 }
 
-#if os(iOS) 
 public struct SmallButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var showingActionSheet = false
@@ -211,7 +162,6 @@ public struct SmallButtonView: View {
         }
     }
 }
-#endif
     
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
@@ -220,17 +170,13 @@ public struct PlayingTracksView: View {
         self.trackFetcher = client.trackFetcher
     }
     
-    let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
-
     public var body: some View {
         
         VStack(alignment: .leading) {
             if layoutIsLarge() {
                 BigButtonView(trackFetcher: trackFetcher)
             } else {
-                #if os(iOS)
                 SmallButtonView(trackFetcher: trackFetcher)
-                #endif
             }
             HStack {
                 Spacer()
@@ -282,71 +228,10 @@ public struct PlayingTracksView: View {
               .disabled(trackFetcher.currentTrack == nil)
 
             PlayingQueueView(trackFetcher: trackFetcher)
-              .onDrop(of: [kkUTTypePlainText as String], delegate: dropDelegate)
-            
-            /*
-              .onDrop(of: [kkUTTypePlainText as String], isTargeted: nil) { providers in
-                  for provider in providers {
-                      Log.d("fuck \(provider.registeredTypeIdentifiers())")
-                      if provider.hasItemConformingToTypeIdentifier(kkUTTypePlainText as String) {
-                          Log.d("FUCK YES")
-                          provider.loadItem(forTypeIdentifier: kkUTTypePlainText as String) { item, error in
-                              Log.d("got item \(item) error \(error)")
-                          }
-                      } else {
-                          Log.d("FUCK NO")
-                      }
-                      
-                      provider.loadObject(ofClass: String.self) { string,two  in
-                          Log.d("woot! \(string) \(two)")
-                      }
-
-                  }
-                  return false
-              }
-*/
         }
     }
 
 }
 
-struct MyDropDelegate: DropDelegate {
-    func validateDrop(info: DropInfo) -> Bool {
-        return info.hasItemsConforming(to: [kkUTTypePlainText as String])
-    }
-    
-    func dropEntered(info: DropInfo) {
-        Log.d("dropEntered")
-        //NSSound(named: "Morse")?.play()
-    }
-    
-    func performDrop(info: DropInfo) -> Bool {
-        Log.d("performDrop")
-        //NSSound(named: "Submarine")?.play()
-        
-        //let gridPosition = getGridPosition(location: info.location)
-        //self.active = gridPosition
-        
-        if let item = info.itemProviders(for: [kkUTTypePlainText as String]).first {
-            item.loadItem(forTypeIdentifier: kkUTTypePlainText as String, options: nil) { (urlData, error) in
-                //DispatchQueue.main.async {
-                Log.d("UrlData \(urlData)")
-                    if let urlData = urlData as? String {
-                        Log.d("FUCK: \(urlData)")
-                    } else {
-                        Log.d("FAILED1")
-                    }
-            //}
-            }
-
-            
-            return true
-            
-        } else {
-            Log.d("FAILED")
-            return false
-        }
-    }
-}
 
 

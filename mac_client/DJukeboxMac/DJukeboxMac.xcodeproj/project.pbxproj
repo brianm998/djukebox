@@ -13,6 +13,7 @@
 		D38250B8244A6FA3009CB365 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D38250B7244A6FA3009CB365 /* Assets.xcassets */; };
 		D38250BB244A6FA3009CB365 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D38250BA244A6FA3009CB365 /* Preview Assets.xcassets */; };
 		D38250BE244A6FA3009CB365 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D38250BC244A6FA3009CB365 /* Main.storyboard */; };
+		D39AB1D2247084E900D79F11 /* PlayingTracksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39AB1D1247084E900D79F11 /* PlayingTracksView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 		D38250BD244A6FA3009CB365 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		D38250BF244A6FA3009CB365 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D38250C0244A6FA3009CB365 /* DJukeboxMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DJukeboxMac.entitlements; sourceTree = "<group>"; };
+		D39AB1D1247084E900D79F11 /* PlayingTracksView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PlayingTracksView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +77,7 @@
 		D38250B2244A6FA2009CB365 /* DJukeboxMac */ = {
 			isa = PBXGroup;
 			children = (
+				D39AB1D1247084E900D79F11 /* PlayingTracksView.swift */,
 				D38250B3244A6FA2009CB365 /* AppDelegate.swift */,
 				D38250B5244A6FA2009CB365 /* ContentView.swift */,
 				D38250B7244A6FA3009CB365 /* Assets.xcassets */,
@@ -215,6 +218,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D39AB1D2247084E900D79F11 /* PlayingTracksView.swift in Sources */,
 				D38250B6244A6FA2009CB365 /* ContentView.swift in Sources */,
 				D38250B4244A6FA2009CB365 /* AppDelegate.swift in Sources */,
 			);

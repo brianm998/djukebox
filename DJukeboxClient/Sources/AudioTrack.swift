@@ -3,10 +3,10 @@ import DJukeboxCommon
 
 // copied from the server
 public class PlayingQueue: Decodable, Identifiable, ObservableObject {
-    let isPaused: Bool
-    let tracks: [AudioTrack]
-    let playingTrackDuration: TimeInterval?
-    let playingTrackPosition: TimeInterval?
+    public let isPaused: Bool
+    public let tracks: [AudioTrack]
+    public let playingTrackDuration: TimeInterval?
+    public let playingTrackPosition: TimeInterval?
 
     init(isPaused: Bool,
          tracks: [AudioTrack],

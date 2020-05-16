@@ -7,6 +7,6 @@ public class ViewObservableAudioPlayer: ObservableObject {
         self.player = player
     }
     
-    var isPaused: Bool { return player?.isPaused ?? false }
+    public var isPaused: Bool { return player?.isPaused ?? false }
 }
 

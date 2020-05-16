@@ -1,8 +1,8 @@
 import SwiftUI
 
-struct ProgressBar: View {
+public struct ProgressBar: View {
     public class State: ObservableObject {
-        init(level: Double = 0, max: Double = 1) {
+        public init(level: Double = 0, max: Double = 1) {
             self.level = level
             self.max = max
         }
@@ -10,10 +10,15 @@ struct ProgressBar: View {
         @Published var max: Double
     }
 
-    @ObservedObject var state: ProgressBar.State
+    public init(state: ProgressBar.State, labelClosure: ((Double) -> String)?) {
+        self.state = state
+        self.labelClosure = labelClosure
+    }
+    
+    @ObservedObject public var state: ProgressBar.State
     var labelClosure: ((Double) -> String)?
     
-    var body: some View {
+    public var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 Rectangle().frame(width: geometry.size.width,

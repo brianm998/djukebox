@@ -1,14 +1,25 @@
 import SwiftUI
 import DJukeboxCommon
 
-struct TrackDetail: View {
+public struct TrackDetail: View {
     @ObservedObject var track: AudioTrack
     @ObservedObject var trackFetcher: TrackFetcher
- 
+
     var showDuration = true
     var playOnTap = true
+
+    public init(track: AudioTrack,
+                trackFetcher: TrackFetcher,
+                showDuration: Bool = true,
+                playOnTap: Bool = true)
+    {
+        self.track = track
+        self.trackFetcher = trackFetcher
+        self.showDuration = showDuration
+        self.playOnTap = playOnTap
+    }
     
-    var body: some View {
+    public var body: some View {
         HStack(alignment: .center) {
             if layoutIsLarge() {
                 Button(action: {
