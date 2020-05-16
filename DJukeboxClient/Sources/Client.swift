@@ -39,7 +39,7 @@ public class Client: ObservableObject {
         /*
          plays tracks locally via streaming urls on the server.
 
-         The doghouse treats the AVQueuePlayer like a little dog, only giving it one dog a a time
+         The doghouse treats the AVQueuePlayer like a little dog, only giving it one track a a time
          */
         let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher,
                                            historyWriter: ServerHistoryWriter(server: serverConnection))
