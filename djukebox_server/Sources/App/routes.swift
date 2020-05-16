@@ -41,6 +41,34 @@ public struct AudioTrack: Content, AudioTrackType {
         }
         return nil
     }
+
+    private func sanitizeDuration() -> String? {
+        if let duration = self.Duration,
+           let index = duration.firstIndex(of: "(")
+        {
+            return String(duration[..<index])
+        }
+        return nil
+    }
+    
+    public var sanitized: AudioTrack {
+        return AudioTrack(
+          Artist: self.Artist,
+          Band: self.Band,
+          Album: self.Album,
+          Conductor: self.Conductor,
+          Title: self.Title,
+          Filename: self.Filename,
+          SHA1: self.SHA1,
+          Duration: self.sanitizeDuration(),
+          AudioBitrate: self.AudioBitrate,
+          SampleRate: self.SampleRate,
+          TrackNumber: self.TrackNumber,
+          Genre: self.Genre,
+          Year: self.Year,
+          OriginalDate: self.OriginalDate
+        )
+    }
 }
 
 public struct PlayingQueue: Content {

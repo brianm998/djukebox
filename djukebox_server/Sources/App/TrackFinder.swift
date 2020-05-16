@@ -44,8 +44,8 @@ public class TrackFinder: TrackFinderType {
                 } else if url.absoluteString.hasSuffix(".json") {
                     let decoder = JSONDecoder()
                     let data = try Data(contentsOf: url)
-                    let audioTrack = try decoder.decode(AudioTrack.self, from: data)
-
+                    let audioTrack = try decoder.decode(AudioTrack.self, from: data).sanitized
+                    
                     let trackUrl = url.deletingLastPathComponent()
                       .appendingPathComponent(audioTrack.Filename, isDirectory: false)
 
