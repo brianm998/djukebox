@@ -20,7 +20,7 @@ public protocol AsyncAudioPlayerType {
     func playRandomTrack(forBand band: String, closure: @escaping (AudioTrack?, Error?) -> Void)
     func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void)
     func playNewRandomTrack(forBand band: String, closure: @escaping (AudioTrack?, Error?) -> Void)
-    func stopAllTracks(closure: @escaping (Bool, Error?) -> Void)
+    func clearPlayingQueue(closure: @escaping (Bool, Error?) -> Void)
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void)
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void)
 }

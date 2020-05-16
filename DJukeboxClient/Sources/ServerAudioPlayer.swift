@@ -97,7 +97,7 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
         self.requestJson(atPath: "newrand/\(band)", closure: closure)
     }
     
-    public func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {
+    public func clearPlayingQueue(closure: @escaping (Bool, Error?) -> Void) {
         self.request(path: "stop", closure: closure)
     }
 

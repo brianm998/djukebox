@@ -271,13 +271,12 @@ func playerRoutes(_ app: Application) throws {
         throw Abort(.notFound)
     }
 
-    // Stop all playing, clearing the playing queue
+    // clear the playing queue, leaving only the currently playing song in place
     // curl localhost:8080/stop
     app.get("stop") { req -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.headerAuth(request: req) {
             audioPlayer.clearQueue()
-            audioPlayer.skip()
             return Response(status: .ok)
         }
     }

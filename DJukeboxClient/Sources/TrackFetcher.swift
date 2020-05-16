@@ -355,7 +355,7 @@ public class TrackFetcher: ObservableObject {
     }
 
     public func clearPlayingQueue() {
-        self.audioPlayer.player?.stopAllTracks() { audioTrack, error in
+        self.audioPlayer.player?.clearPlayingQueue() { audioTrack, error in
             if let error = error {
                 Log.e("DOH")
             } else {

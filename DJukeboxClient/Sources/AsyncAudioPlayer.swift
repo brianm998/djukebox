@@ -167,9 +167,8 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
         }
     }
     
-    public func stopAllTracks(closure: @escaping (Bool, Error?) -> Void) {
+    public func clearPlayingQueue(closure: @escaping (Bool, Error?) -> Void) {
         player.clearQueue()
-        player.skip()
         closure(true, nil)
     }
     
