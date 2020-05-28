@@ -66,6 +66,12 @@ public struct BigButtonView: View {
                   PlayRandomTrackButton(trackFetcher: trackFetcher)
                   PlayNewRandomTrackButton(trackFetcher: trackFetcher)
                   ShuffleQueueButton(trackFetcher: trackFetcher)
+                  Button(action: {
+                       self.trackFetcher.cacheQueue()
+                   }) {
+                      Text("Cache Q")
+                        .underline().foregroundColor(Color.blue)
+                  }
                   ClearQueueButton(trackFetcher: trackFetcher)
               }
               HStack {
@@ -77,12 +83,6 @@ public struct BigButtonView: View {
                    .underline().foregroundColor(Color.red)
                    }
                    */
-                  Button(action: {
-                       self.trackFetcher.cacheQueue()
-                   }) {
-                      Text("Cache Queue")
-                        .underline().foregroundColor(Color.blue)
-                  }
                   Text("Offline:")
                   Toggle("", isOn: offlineToggle).labelsHidden()
 

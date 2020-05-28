@@ -146,7 +146,7 @@ public struct ClearQueueButton: View {
     
     public var body: some View {
         Button(action: { self.trackFetcher.clearPlayingQueue() }) {
-            Text("Clear Queue")
+            Text("Clear Q")
               .foregroundColor(Color.red)
         }
     }
