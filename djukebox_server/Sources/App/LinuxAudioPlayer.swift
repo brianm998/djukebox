@@ -138,4 +138,8 @@ public class LinuxAudioPlayer: AudioPlayerType {
                      arguments: ["\"\(filename)\""],
                      process: newProcess)
     }
+
+    public func shuffleQueue() {
+        trackQueue.shuffle()
+    }
 }

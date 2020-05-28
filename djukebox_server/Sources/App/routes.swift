@@ -394,6 +394,16 @@ func playerRoutes(_ app: Application) throws {
         }
     }
 
+    // Resume playing
+    // curl localhost:8080/shuffle
+    app.get("shuffle") { req -> Response in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            audioPlayer.shuffleQueue()
+            return Response(status: .ok)
+        }
+    }
+
     // Json list of the current queue of playing songs
     // curl localhost:8080/resume
     app.get("queue") { req -> PlayingQueue in

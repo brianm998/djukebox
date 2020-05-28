@@ -117,8 +117,8 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
     }
 
     public func shuffleQueue() {
-        // will be easy to hook up to routes.swift in the server
-        // the player there already supports shuffleQueue()
-        Log.e("not implemented yet")
+        self.request(path: "shuffle") { success, error in
+            Log.i("shuffled")
+        }
     }
 }
