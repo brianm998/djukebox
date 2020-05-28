@@ -16,7 +16,7 @@ public struct NaviTrackList: View {
         self.tracks = tracks
         self.title = title
     }
-
+    
     public var body: some View {
         List(self.tracks) { track in
             Text(track.Title)
@@ -94,7 +94,7 @@ struct Toast<Presenting, Content>: View where Presenting: View, Content: View {
     } //body
 } //Toast
 
-extension View {
+public extension View {
     func toast<Content>(isPresented: Binding<Bool>, content: @escaping () -> Content) -> some View where Content: View {
         Toast(
             isPresented: isPresented,

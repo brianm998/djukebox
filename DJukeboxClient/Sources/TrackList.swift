@@ -1,10 +1,14 @@
 import SwiftUI
 import DJukeboxCommon
+//import DJukeboxClient
 
 struct TrackList: View {
     var client: Client
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var dragging = false
+    
+    @State private var showingActionSheet = false
+//    @State private var showAllTracksToast: Bool = false
     
     public init(_ client: Client) {
         self.client = client
@@ -17,6 +21,10 @@ struct TrackList: View {
             HStack() {
                 Text(trackFetcher.trackTitle)
                 if self.trackFetcher.tracks.count > 0 {
+                    Button(action: {self.showingActionSheet = true }) {
+                        Image(systemName: "plus").imageScale(.large)
+                    }
+/*                    
                     Button(action: {
                             self.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks) { success, error in
                             self.trackFetcher.refreshQueue()
@@ -24,7 +32,7 @@ struct TrackList: View {
                     }) {
                         Text("Play All")
                     }
-
+*/
                     //.alignmentGuide(.trailing, computeValue: { d in d[.trailing] } )
                 }
             }
@@ -43,7 +51,7 @@ struct TrackList: View {
                       return provider
                   }
             }
-        }
+    }
           .gesture(
             DragGesture(minimumDistance: 100)
               .onChanged { value in
@@ -60,6 +68,29 @@ struct TrackList: View {
                   self.dragging = false
               }
           )
+          .actionSheet(isPresented: $showingActionSheet) {
+              ActionSheet(title: Text(""),
+                          buttons: [
+                            .default(Text("Play All")) {
+                                self.client.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks.sorted()) { success, error in
+                                    self.client.trackFetcher.refreshQueue()
+                                    withAnimation { /*self.showAllTracksToast = true*/ }
+                                }
+                            },
+                            .default(Text("Cache All")) {
+                                self.client.trackFetcher.cache(tracks: self.trackFetcher.tracks)
+                            },
+                            .cancel()
+                          ])
+          }
+        /*
+          .toast(isPresented: $showAllTracksToast) {
+              Text("All tracks playing")
+          }
+          */
+
+
+        
     }
 
     #if os(macOS)

@@ -49,13 +49,14 @@ public struct BigButtonView: View {
 
         return HStack {
             Spacer()
-
+            /*
             Button(action: {
                 self.trackFetcher.clearCache()
             }) {
                 Text("Clear Cache")
                   .underline().foregroundColor(Color.red)
             }
+            */
             Button(action: {
                 self.trackFetcher.cacheQueue()
             }) {

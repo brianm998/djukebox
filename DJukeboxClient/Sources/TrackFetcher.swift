@@ -426,10 +426,31 @@ extension TrackFetcher: TrackFinderType {
     }
 
     public func cache(tracks: [AudioTrack]) {
+        self.recursivelyCache(tracks: tracks)
+        /*
         for track in tracks {
             localTracks?.keepLocal(sha1Hash: track.SHA1) { success in
                 Log.d("success \(success)")
             }
+        }
+*/
+    }
+
+    fileprivate func recursivelyCache(tracks: [AudioTrack]) {
+        guard tracks.count > 0 else {
+            Log.w("cache done")
+            return
+        }
+
+        var rest = tracks
+        
+        let nextTrack = rest.removeFirst()
+
+        Log.d("caching track \(nextTrack.SHA1)")
+        
+        localTracks?.keepLocal(sha1Hash: nextTrack.SHA1) { success in
+            //Log.d("cache download success: \(success)")
+            self.recursivelyCache(tracks: rest)
         }
     }
     

@@ -57,32 +57,34 @@ public class LocalTracks: LocalCache, LocalTrackType {
                               andExtention extention: String,
                               closure: @escaping (Bool) -> Void)
     {
-        if let libraryPathURL = LocalCache.libDir,
-           let destURL = self.cacheDirURL(forFilename: filename, withExtention: extention)
-        {
-            if FileManager.default.fileExists(atPath: destURL.path) {
-                Log.i("\(destURL.path) already exists")
-                closure(true)
-            } else {
-                let download = URLSession.shared.downloadTask(with: url) { localURL, urlResponse, error in
-                    if let localURL = localURL {
-                        Log.i("moving from \(localURL) to \(destURL)")
-                        do {
-                            try FileManager.default.moveItem(atPath: localURL.path, toPath: destURL.path)
-                            closure(true)
-                        } catch {
-                            Log.e("error: \(error)")
+        DispatchQueue.main.async {
+            if let libraryPathURL = LocalCache.libDir,
+               let destURL = self.cacheDirURL(forFilename: filename, withExtention: extention)
+            {
+                if FileManager.default.fileExists(atPath: destURL.path) {
+                    Log.i("\(destURL.path) already exists")
+                    closure(true)
+                } else {
+                    let download = URLSession.shared.downloadTask(with: url) { localURL, urlResponse, error in
+                        if let localURL = localURL {
+                            Log.i("moving from \(localURL) to \(destURL)")
+                            do {
+                                try FileManager.default.moveItem(atPath: localURL.path, toPath: destURL.path)
+                                closure(true)
+                            } catch {
+                                Log.e("error: \(error)")
+                                closure(false)
+                            }
+                        } else {
                             closure(false)
                         }
-                    } else {
-                        closure(false)
                     }
-                }
 
-                download.resume()
+                    download.resume()
+                }
+            } else {
+                closure(false)
             }
-        } else {
-            closure(false)
         }
     }
 
@@ -146,12 +148,14 @@ public class LocalTracks: LocalCache, LocalTrackType {
             if let track = track as? AudioTrack,
                let tracksJsonURL = self.tracksJsonURL
             {
-                Log.d("downloaded track \(track)")
+                //Log.d("downloaded track \(track)")
                 self.downloadedTracks.append(track)
 
                 self.writeLocalTrackList()
+                closure(true)
             } else {
                 Log.e("couldn't download \(track)")
+                closure(false)
             }
         }
     }

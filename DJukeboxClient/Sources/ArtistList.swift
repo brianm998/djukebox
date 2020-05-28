@@ -12,7 +12,18 @@ struct BandList: View {
     var body: some View {
         VStack {
             Spacer()
-            Text("Bands")
+            HStack() {
+                Text("Bands")
+                if self.trackFetcher.allTracks.count > 0 {
+                    Button(action: {
+                               DispatchQueue.global().async {
+                                   self.trackFetcher.cache(tracks: self.trackFetcher.allTracks)
+                               }
+                    }) {
+                        Text("Cache All")
+                    }
+                }
+            }
             HStack {
                 Spacer()
                 TextField("band search", text: $searchQuery)
