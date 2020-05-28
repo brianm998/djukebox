@@ -181,4 +181,8 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
         player.resume()
         closure(true, nil)
     }
+
+    public func shuffleQueue() {
+        player.shuffleQueue()
+    }
 }

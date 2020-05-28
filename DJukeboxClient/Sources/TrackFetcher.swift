@@ -201,6 +201,10 @@ public class TrackFetcher: ObservableObject {
             self.maybeDoInitialSetup()
         }
     }
+
+    public func shuffleQueue() {
+        self.audioPlayer.player?.shuffleQueue()
+    }
     
     public func refreshTracks() {
         if useLocalContentOnly {

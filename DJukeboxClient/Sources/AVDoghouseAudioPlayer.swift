@@ -258,4 +258,8 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
         // called every time each song finishes playing.
         // we could trim the trackMap here of already played tracks
     }
+
+    public func shuffleQueue() {
+        trackQueue.shuffle()
+    }
 }

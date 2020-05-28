@@ -33,6 +33,7 @@ public struct HorizontalPlayingTimeRemainingView: View {
 }
 
 
+// used on the iPad
 public struct BigButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -47,55 +48,59 @@ public struct BigButtonView: View {
         let localPlayToggle = Binding<Bool>(get: { self.trackFetcher.queueType == .local },
                                             set: { try? self.trackFetcher.watch(queue: $0 ? .local : .remote) })
 
-        return HStack {
-            Spacer()
-            /*
-            Button(action: {
-                self.trackFetcher.clearCache()
-            }) {
-                Text("Clear Cache")
-                  .underline().foregroundColor(Color.red)
-            }
-            */
-            Button(action: {
-                self.trackFetcher.cacheQueue()
-            }) {
-                Text("Cache Queue")
-                  .underline().foregroundColor(Color.blue)
-            }
-            Text("Offline:")
-            Toggle("", isOn: offlineToggle).labelsHidden()
+        return
+          VStack(alignment: .leading) {
+              HStack {
+                  SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
+                  
+                  if(self.trackFetcher.audioPlayer.isPaused) {
+                      PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
+                  } else {
+                      PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
+                  }
 
-            Group {
-                VStack {
-                    HStack {
-                        Text("Play Local:")
-                        Toggle("", isOn: localPlayToggle).labelsHidden()
-                    }
-                }
+                  if trackFetcher.totalDuration > 0 {
+                      VerticalPlayingTimeRemainingView(trackFetcher: trackFetcher)
+                  }
 
-                SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
-                
-                if(self.trackFetcher.audioPlayer.isPaused) {
-                    PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
-                } else {
-                    PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
-                }
+                  PlayRandomTrackButton(trackFetcher: trackFetcher)
+                  PlayNewRandomTrackButton(trackFetcher: trackFetcher)
+                  ShuffleQueueButton(trackFetcher: trackFetcher)
+                  ClearQueueButton(trackFetcher: trackFetcher)
+              }
+              HStack {
+                  /*
+                   Button(action: {
+                   self.trackFetcher.clearCache()
+                   }) {
+                   Text("Clear Cache")
+                   .underline().foregroundColor(Color.red)
+                   }
+                   */
+                  Button(action: {
+                       self.trackFetcher.cacheQueue()
+                   }) {
+                      Text("Cache Queue")
+                        .underline().foregroundColor(Color.blue)
+                  }
+                  Text("Offline:")
+                  Toggle("", isOn: offlineToggle).labelsHidden()
 
-                if trackFetcher.totalDuration > 0 {
-                    VerticalPlayingTimeRemainingView(trackFetcher: trackFetcher)
-                }
+                  Group {
+                      VStack {
+                          HStack {
+                              Text("Play Local:")
+                              Toggle("", isOn: localPlayToggle).labelsHidden()
+                          }
+                      }
 
-                PlayRandomTrackButton(trackFetcher: trackFetcher)
+                      RefreshTracksFromServerButton(trackFetcher: trackFetcher)
+                      RefreshQueueButton(trackFetcher: trackFetcher)
 
-                PlayNewRandomTrackButton(trackFetcher: trackFetcher)
-                ClearQueueButton(trackFetcher: trackFetcher)
-                RefreshTracksFromServerButton(trackFetcher: trackFetcher)
-                RefreshQueueButton(trackFetcher: trackFetcher)
-
-                Spacer()
-            }
-        }
+                      Spacer()
+                  }
+              }
+          }
     }
 }
 

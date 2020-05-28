@@ -2,6 +2,7 @@ import Foundation
 import DJukeboxCommon
 
 public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
+    
 
     public var playingTrackPosition: TimeInterval = 0 // XXX
     
@@ -113,5 +114,11 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
             if success { self.isPaused = false }
             closure(success, error)
         }
+    }
+
+    public func shuffleQueue() {
+        // will be easy to hook up to routes.swift in the server
+        // the player there already supports shuffleQueue()
+        Log.e("not implemented yet")
     }
 }

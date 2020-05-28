@@ -18,5 +18,6 @@ public protocol AudioPlayerType {
     func resume()
     func clearQueue()
     func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool
+    func shuffleQueue()
 }
 

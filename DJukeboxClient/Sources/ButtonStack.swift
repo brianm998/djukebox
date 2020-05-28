@@ -1,6 +1,8 @@
 import SwiftUI
 import DJukeboxCommon
 
+fileprivate let ios_button_size: CGFloat = 60
+
 public struct PlayButton: View {
     @ObservedObject var audioPlayer: ViewObservableAudioPlayer
     
@@ -20,6 +22,8 @@ public struct PlayButton: View {
         }) {
             #if os(iOS)
             Image(systemName: "play.fill")
+              .resizable()
+              .frame(width: ios_button_size, height: ios_button_size)
             #else
             Text("\u{25B6}").font(.largeTitle)
             #endif
@@ -46,6 +50,8 @@ public struct PauseButton: View {
         }) {
             #if os(iOS)
             Image(systemName: "pause.fill")
+              .resizable()
+              .frame(width: ios_button_size, height: ios_button_size)
             #else
             Text("\u{23F8}").font(.largeTitle)
             #endif
@@ -74,6 +80,8 @@ public struct SkipCurrentTrackButton: View {
         }) {
             #if os(iOS)
             Image(systemName: "stop.fill")
+              .resizable()
+              .frame(width: ios_button_size, height: ios_button_size)
             #else
             Text("\u{23F9}").font(.largeTitle) // stop
             #endif
@@ -109,6 +117,22 @@ public struct PlayNewRandomTrackButton: View {
             self.trackFetcher.playNewRandomTrack()
         }) {
             Text("New Random")
+        }
+    }
+}
+
+public struct ShuffleQueueButton: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+    
+    public var body: some View {
+        Button(action: {
+            self.trackFetcher.shuffleQueue()
+        }) {
+            Text("Shuffle Q")
         }
     }
 }

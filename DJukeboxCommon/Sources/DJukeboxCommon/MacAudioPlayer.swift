@@ -22,7 +22,6 @@ final class VaporTimer {
 }
 
 public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
-
     let dispatchQueue = DispatchQueue(label: "djukebox-audio-player")
 
     public var isPlaying = false
@@ -199,5 +198,9 @@ public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
         } catch {
             Log.e("error \(error)")
         }
+    }
+
+    public func shuffleQueue() {
+        trackQueue.shuffle()
     }
 }

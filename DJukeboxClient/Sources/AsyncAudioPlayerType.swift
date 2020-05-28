@@ -23,5 +23,6 @@ public protocol AsyncAudioPlayerType {
     func clearPlayingQueue(closure: @escaping (Bool, Error?) -> Void)
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void)
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void)
+    func shuffleQueue()
 }
 
