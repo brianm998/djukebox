@@ -119,6 +119,12 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
     public func shuffleQueue() {
         self.request(path: "shuffle") { success, error in
             Log.i("shuffled")
+            // XXX refresh queue?
         }
     }
 }
+
+
+                                                    
+
+                                                    

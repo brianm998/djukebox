@@ -74,6 +74,8 @@ public struct BigButtonView: View {
                 PlayRandomTrackButton(trackFetcher: trackFetcher)
                 PlayNewRandomTrackButton(trackFetcher: trackFetcher)
             }
+
+            ShuffleQueueButton(trackFetcher: trackFetcher)
             ClearQueueButton(trackFetcher: trackFetcher)
             VStack {
                 RefreshTracksFromServerButton(trackFetcher: trackFetcher)
