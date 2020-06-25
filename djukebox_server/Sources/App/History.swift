@@ -69,15 +69,15 @@ public class History: HistoryType {
 
     public func recordPlay(of hash: String, at time: Double) {
         if plays[hash] == nil {
-            Log.d("fuck1")
+            //Log.d("fuck1")
             plays[hash] = [time]
         } else if var list = plays[hash] {
-            Log.d("fuck2")
+            //Log.d("fuck2")
             list.append(time)
         } else {
             Log.d("DOH")
         }
-        Log.d("record play plays \(plays)")
+        //Log.d("record play plays \(plays)")
     }
     
     public func recordPlay(of hash: String, at time: Date) {
@@ -92,7 +92,7 @@ public class History: HistoryType {
                     let string = try String(contentsOf: url)
                     let lines = string.split { $0.isNewline }
                     for line in lines {
-                        Log.d("line \(line)")
+                        //Log.d("line \(line)")
                         let data = line.split { $0 == "," }
                         if data.count == 3,
                            let time = Double(data[1])
@@ -106,7 +106,7 @@ public class History: HistoryType {
                             } else {
                                 Log.d("bad played_fully \(played_fully)")
                             }
-                            Log.d("YES: line \(line)")
+                            //Log.d("YES: line \(line)")
                         } else {
                             Log.d("FUCK: line \(line)")
                         }
