@@ -58,7 +58,7 @@ sub writeJson {
   $json_filename =~ s/_/ /g;
   $json_filename = $1 if($json_filename =~ m~/([^/]*)$~);
 
-  if ($json_filename =~ m~^([^./=]+)=([^=]+)=([^=]+)=([^=]+)[.]~) {
+  if ($json_filename =~ m~^([^/=]+)=([^=]+)=([^=]+)=([^=]+)[.]~) {
     $outputs->{Artist} = $1;
     $outputs->{Band} = $1;
     $outputs->{Album} = $2;
@@ -71,6 +71,9 @@ sub writeJson {
   } else {
     warn "no regex for $json_filename\n";
   }
+
+  $outputs->{Band} = $outputs->{Artist} unless defined $outputs->{Band};
+  
   for my $key (keys %$outputs) {
     outputString($output, $key, $outputs->{$key});
   }
