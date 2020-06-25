@@ -42,26 +42,31 @@ public class TrackFinder: TrackFinderType {
                 if url.hasDirectoryPath {
                     find(at: url)
                 } else if url.absoluteString.hasSuffix(".json") {
+                    //Log.d("path \(url.absoluteString)")
                     let decoder = JSONDecoder()
-                    let data = try Data(contentsOf: url)
-                    let audioTrack = try decoder.decode(AudioTrack.self, from: data).sanitized
-                    
-                    let trackUrl = url.deletingLastPathComponent()
-                      .appendingPathComponent(audioTrack.Filename, isDirectory: false)
+                    do {
+                        let data = try Data(contentsOf: url)
+                        let audioTrack = try decoder.decode(AudioTrack.self, from: data).sanitized
+                        
+                        let trackUrl = url.deletingLastPathComponent()
+                          .appendingPathComponent(audioTrack.Filename, isDirectory: false)
 
-                    if try trackUrl.checkResourceIsReachable() {
-                        if var (_, existingTracks) = tracks[audioTrack.SHA1] {
-                            existingTracks.append(trackUrl)
+                        if try trackUrl.checkResourceIsReachable() {
+                            if var (_, existingTracks) = tracks[audioTrack.SHA1] {
+                                existingTracks.append(trackUrl)
+                            } else {
+                                tracks[audioTrack.SHA1] = (audioTrack, [trackUrl])
+                            }
                         } else {
-                            tracks[audioTrack.SHA1] = (audioTrack, [trackUrl])
+                            Log.d("FAILED ON \(trackUrl)")
                         }
-                    } else {
-                        Log.d("FAILED ON \(trackUrl)")
+                    } catch {
+                        Log.e("DOH \(url) \(error)")
                     }
                 }
             }
         } catch {
-            Log.d("DOH \(url) \(error)")
+            Log.e("DOH \(url) \(error)")
         }
     }    
 }
