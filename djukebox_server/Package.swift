@@ -1,14 +1,14 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.3
 import PackageDescription
 
 let package = Package(
     name: "djukebox_server",
     platforms: [
-       .macOS(.v10_15)
+       .macOS(.v11)
     ],
     dependencies: [
         // 💧 A server-side Swift web framework.
-        .package(url: "https://github.com/vapor/vapor.git", from: "4.0.0-rc"),
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.8.0"),
         .package(path: "../DJukeboxCommon")
     ],
     targets: [
