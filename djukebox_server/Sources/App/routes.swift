@@ -233,34 +233,32 @@ func playerRoutes(_ app: Application) throws {
     app.get("newrand") { req -> AudioTrack in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
         return try authControl.headerAuth(request: req) {
-            var sha1Hash: String?
-            var max = 100
-            while sha1Hash == nil,
-                  max > 0
-            {
-                max -= 1
-                let random = Int.random(in: 0..<trackFinder.tracks.count)
-                let hash = Array(trackFinder.tracks.keys)[random]
+            var possibleTracks: [String] = []
+            for hash in trackFinder.tracks.keys {
                 if !history.hasPlay(for: hash),
                    !history.hasSkip(for: hash),
                    !isInQueue(hash)
                 {
-                    sha1Hash = hash
+                    possibleTracks.append(hash)
                 }
             }
-            if let sha1Hash = sha1Hash {
-                if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) as? AudioTrack {
-                    audioPlayer.play(sha1Hash: sha1Hash)
-                    return audioTrack
-                } else {
-                    throw Abort(.notFound)
-                }
+            if(possibleTracks.count <= 0) {
+                Log.w("you've listened to all of your tracks already")
+                throw Abort(.notFound)
+            }
+
+            Log.d("have \(possibleTracks.count) possible new tracks")
+            
+            let hash = possibleTracks[Int.random(in: 0..<possibleTracks.count)]
+            if let audioTrack = trackFinder.audioTrack(forHash: hash) as? AudioTrack {
+                audioPlayer.play(sha1Hash: hash)
+                return audioTrack
             } else {
                 throw Abort(.notFound)
-            }                
+            }
         }
     }
-
+    
     // Play a randomly selected track by a given artist
     // curl localhost:8080/newrand/Queen
     app.get("newrand", ":artist") { req -> AudioTrack in
