@@ -383,7 +383,7 @@ public class TrackFetcher: ObservableObject {
     public func playNewRandomTrack() {
         self.audioPlayer.player?.playNewRandomTrack() { audioTrack, error in
             if let error = error {
-                Log.e("DOH")
+                Log.e("DOH error: \(error)")
             } else if let audioTrack = audioTrack {
                 Log.d("new random enqueued: \(audioTrack.Title)")
             }
