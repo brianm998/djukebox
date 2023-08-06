@@ -1,7 +1,7 @@
 import SwiftUI
 import DJukeboxCommon
 
-public class Client: ObservableObject {
+public class Client {
     public var trackFetcher: TrackFetcher
     public var historyFetcher: HistoryFetcher
     public let serverConnection: ServerType

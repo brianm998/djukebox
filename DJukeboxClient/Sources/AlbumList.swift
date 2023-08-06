@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AlbumList: View {
-    @ObservedObject var client: Client
+    let client: Client
     @ObservedObject var trackFetcher: TrackFetcher
 
     public init(_ client: Client) {
