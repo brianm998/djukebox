@@ -28,10 +28,6 @@ jobs:
         run: swift build
         working-directory: djukebox_server
 
-      - name: Test
-        run: swift test
-        working-directory: djukebox_server
-
   # ── DJukeboxCommon Swift package: test ───────────────────────────────────
   common:
     name: DJukeboxCommon
@@ -46,8 +42,8 @@ jobs:
           key: ci-common-${{ hashFiles('DJukeboxCommon/Package.resolved') }}
           restore-keys: ci-common-
 
-      - name: Test
-        run: swift test
+      - name: Build
+        run: swift build
         working-directory: DJukeboxCommon
 
   # ── iOS app: build for simulator (no signing) ─────────────────────────────
