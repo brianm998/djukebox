@@ -1,0 +1,109 @@
+name: CI
+
+# Fast build checks on every push and pull request.
+# Does not produce release artifacts — use the Release workflow for that.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ── Vapor server: build + test ────────────────────────────────────────────
+  server:
+    name: Server
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: djukebox_server/.build
+          key: ci-server-${{ hashFiles('djukebox_server/Package.resolved') }}
+          restore-keys: ci-server-
+
+      - name: Build
+        run: swift build
+        working-directory: djukebox_server
+
+      - name: Test
+        run: swift test
+        working-directory: djukebox_server
+
+  # ── DJukeboxCommon Swift package: test ───────────────────────────────────
+  common:
+    name: DJukeboxCommon
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: DJukeboxCommon/.build
+          key: ci-common-${{ hashFiles('DJukeboxCommon/Package.resolved') }}
+          restore-keys: ci-common-
+
+      - name: Test
+        run: swift test
+        working-directory: DJukeboxCommon
+
+  # ── iOS app: build for simulator (no signing) ─────────────────────────────
+  ios:
+    name: iOS App
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: ios_client/DJukeboxiOS/Pods
+          key: ci-ios-pods-${{ hashFiles('ios_client/DJukeboxiOS/Podfile.lock') }}
+          restore-keys: ci-ios-pods-
+
+      - name: Install pods
+        run: pod install
+        working-directory: ios_client/DJukeboxiOS
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -workspace DJukeboxiOS.xcworkspace \
+            -scheme DJukeboxiOS \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+        working-directory: ios_client/DJukeboxiOS
+
+  # ── macOS app: build check (no signing) ──────────────────────────────────
+  macos-app:
+    name: macOS App
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: mac_client/DJukeboxMac/Pods
+          key: ci-macos-pods-${{ hashFiles('mac_client/DJukeboxMac/Podfile.lock') }}
+          restore-keys: ci-macos-pods-
+
+      - name: Install pods
+        run: pod install
+        working-directory: mac_client/DJukeboxMac
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -workspace DJukeboxMac.xcworkspace \
+            -scheme DJukebox \
+            -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+        working-directory: mac_client/DJukeboxMac
