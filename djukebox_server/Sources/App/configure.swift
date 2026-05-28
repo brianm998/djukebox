@@ -26,7 +26,8 @@ let defaultConfig = Config(Password:"foobar",
                            TrackPaths: ["/mnt/tree/mp3"]) // XXX this isn't used (remove it)
 //0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425
 
-let historyDir = "/Volumes/Temp/mp3/playing_history"
+//let historyDir = "/Volumes/Temp/mp3/playing_history"
+let historyDir = "/qp/mp3/playing_history"
 
 public struct Config: Content {
     let Password: String
@@ -98,7 +99,8 @@ public func configure(_ app: Application) throws {
     
     // still need to grab list of paths from the config
     //trackFinder.find(atFilePath: "/Volumes/Temp/mp3/Apocalyptica")
-    trackFinder.find(atFilePath: "/Volumes/Temp/mp3/")
+    //trackFinder.find(atFilePath: "/Volumes/Temp/mp3/")
+    trackFinder.find(atFilePath: "/qp/mp3/")
 
     history.find(atFilePath: historyDir)
 

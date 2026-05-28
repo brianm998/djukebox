@@ -60,3 +60,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
+func resignFirstResponders() {
+
+}

@@ -93,10 +93,12 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     }
     
     public func playRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
-        let random = Int.random(in: 0..<fetcher.allTracks.count)
-        let track = fetcher.allTracks[random]
-        player.play(sha1Hash: track.SHA1)
-        closure(track, nil)
+        if fetcher.allTracks.count > 0 {
+            let random = Int.random(in: 0..<fetcher.allTracks.count)
+            let track = fetcher.allTracks[random]
+            player.play(sha1Hash: track.SHA1)
+            closure(track, nil)
+        }
     }
     
     public func playRandomTrack(forBand band: String, closure: @escaping (AudioTrack?, Error?) -> Void) {

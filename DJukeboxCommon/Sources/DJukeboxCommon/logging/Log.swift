@@ -680,6 +680,10 @@ extension Log {
 
 // after here are the internal implemenation details
 
+#if !os(macOS)
+fileprivate let backgroundTask = BackgroundTask.start(named: "log")
+#endif        
+
 fileprivate extension Log {
     
     static func logInternal(_ message: String? = nil,
@@ -700,13 +704,13 @@ fileprivate extension Log {
     {
         // start background task
 #if !os(macOS)
-        let newBackgroundTask = BackgroundTask.start(named: "log")
-
+/*
         if let backgroundTask = backgroundTask {
             backgroundTask.end()
         }
         
         backgroundTask = newBackgroundTask
+*/
 #endif        
         logQueue.async {
 
@@ -759,7 +763,7 @@ fileprivate extension Log {
 
 fileprivate let logQueue = DispatchQueue(label: "logging")
 #if !os(macOS)
-fileprivate var backgroundTask: BackgroundTask?
+//fileprivate var backgroundTask: BackgroundTask?
 #endif
 
 // after here is all testing code

@@ -80,6 +80,8 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
             Log.i("waitingToPlayAtSpecifiedRate")
         case .playing:
             Log.i("playing")
+        default:
+            Log.i("unknown default")
         }
     }
     

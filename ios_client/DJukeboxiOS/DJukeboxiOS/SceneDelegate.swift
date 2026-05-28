@@ -11,7 +11,9 @@ import SwiftUI
 import DJukeboxClient
 import DJukeboxCommon
 
-let serverURL = "http://192.168.1.164:8080"
+//let serverURL = "http://192.168.4.22:8080"
+let serverURL = "http://192.168.5.254:8080"
+//let serverURL = "http://192.168.1.164:8080"
 //let serverURL = "http://127.0.0.1:8080"
 let password = "foobar"
 

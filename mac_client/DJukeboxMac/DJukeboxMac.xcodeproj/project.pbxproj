@@ -366,7 +366,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"DJukeboxMac/Preview Content\"";
-				DEVELOPMENT_TEAM = MWN7U2PDAG;
+				DEVELOPMENT_TEAM = G3L75S65V9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = DJukeboxMac/Info.plist;
@@ -375,7 +375,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.DJukebox-Client";
+				PRODUCT_BUNDLE_IDENTIFIER = "ked-to-it";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 			};
@@ -390,7 +390,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"DJukeboxMac/Preview Content\"";
-				DEVELOPMENT_TEAM = MWN7U2PDAG;
+				DEVELOPMENT_TEAM = G3L75S65V9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = DJukeboxMac/Info.plist;
@@ -399,7 +399,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.DJukebox-Client";
+				PRODUCT_BUNDLE_IDENTIFIER = "ked-to-it";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 			};

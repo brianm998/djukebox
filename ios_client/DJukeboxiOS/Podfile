@@ -12,6 +12,7 @@ install! 'cocoapods', :disable_input_output_paths => true
 target 'DJukeboxiOS' do
   use_frameworks!
 
+#  pod 'KeychainSwift', '~> 8.0'
   pod 'DJukeboxCommon', :path => "../../DjukeboxCommon"
   pod 'DJukeboxClient', :path => "../../DjukeboxClient"
   

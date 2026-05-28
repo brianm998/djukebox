@@ -100,10 +100,10 @@ func trackServingRoutes(_ app: Application) throws {
 
     // stream a track by hash, with auth on the path
     // curl localhost:8080/stream/0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
-    app.get("stream", ":auth", ":sha1") { req -> Response in
+    app.get("stream", ":auth", ":sha1") { req async throws -> Response in
         let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
-        return try authControl.trackFromPath(from: req) { _, filepath in
-            return req.fileio.streamFile(at: filepath)
+        return try await authControl.trackFromPath(from: req) { _, filepath in
+            return try await req.fileio.asyncStreamFile(at: filepath)
         }
     }
 

@@ -1,32 +1,74 @@
 bugs:
- - deleting currently playing song while playing when paused causes immediate play of next song
- - can't exit app anymore (close button should close the app, 'command Q' works)
- 
+ - deleting currently paused song while playing when paused causes immediate play of next song
+ - can't exit app on macos anymore (close button should close the app, 'command Q' works)
+ - queue reordering not working on iOS (swiftui list bug? works on iPad)
+ - history not being written from mobile (local) clients with the AVQueuePlayer AudioPlayer class
+   - history may be written properly, but is not always showing up due to the polling mechanism
+     (need to increase how long in the past we ask for history for each time we ask)
+ - need to implement CarPlay for proper car audio
+ - on macos, a separate window for tracks keeps it's own playing queue, sometimes different from otherwise
+
+
 new features:
 
-test the server on linux (compiles, make sure it actually works too..)
+test the server on linux (
+
+compiles, make sure it actually works too..)
  - make sure the linux compilation still works, and test the audio there
-enable replays from history (dragging of rows?)
-figure out external accessability, right now only localhost works :( 
-better logging (copy from iOS)
+figure out external access, known wifi ip address work, but can we scan the wifi network for discovery?
 get custom swipe gestures working on lists, swiftui buttons disappear on lists :(
 synchronize the similar parts of the audio player into a superclass
 add volume control
 handle empty audio buffer better (wait to start playing until full, show in ui)
-move mp3 files to /tmp
+make the ios ui better
+add ability to manage multiple remote playing queues (just local and remote now)
+add wifi scanning feature to find remote queues and such
+add a playing queue item that pauses playing until the user unpauses it later (and maybe a configured time too?)
+make the paused state of the server part of the playing queue response so other clients get it too
+ - make the paused state a proper server variable, not just a transparent property of the AVPlayer
+ - can stop when nothing is playing.  This delays payback until unpaused
+   - add feature to unpause at sometime in the future
+history should include which queue the track was played on
+add mp3 filesize to stored json data
+expose composer / artist data / release date / year info somewhere in the ui
+add more toasts
+add a downloading tracks progress indicator .. right now I just watch the server log :(
+make seeking backwards and foward in a track possible through the progress bar
+add ability to search by artist or band (tab on macos?)
+use system menu system on macos
+split up the PlayingTracksView into iOS and macos versions
+add feature to move from one playing queue to another (
+ - just got home, move existing tracks from iOS to home sterio
+ - detect presence of home server by default? (could use geo location)
+add menu bar app for macosx
+add function to randomly sort the order of the playing queue
+add play random from search results (and play new random too)
+on macos, use the spacebar for play/pause
 
-db access to record
- - number of plays
- - access creds?? (maybe not in DB)
- - playlists
- - audio level per track
- - full set of tracks (faster server startup times)
- - playing history
+ability for iOS to cache files locally for replay when not connected:
+ - ui to show download progress and success / failure would be cool
+
+use CarPlay for car audio:
+  https://developer.apple.com/documentation/mediaplayer/mpplayablecontentmanager/integrating_carplay_with_your_music_app
+  - should allow the user to select a playing queue on their device before driving, and then show that
+    queue to the user on screen.  user may need to start the audio playing via the car.
 
 
+split out the server into separate sections:
+ - one for listing tracks and serving tracks
+ - one for tracking all history for everyone
+ - one for handling running a playing queue
+on startup the server could support any combination of these
+
+server should support an api to announce:
+ - its name
+ - its version
+ - features supported [tracks, history, playing queue]
 
 
+music to get:
 
-
-
-
+the hu
+more apocolyptica
+later metallica
+stuff for Marcia ?

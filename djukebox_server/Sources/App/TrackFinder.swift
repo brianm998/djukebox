@@ -36,13 +36,14 @@ public class TrackFinder: TrackFinderType {
     }
 
     fileprivate func find(at url: URL) {
+        Log.d("find at: \(url.absoluteString)")
         do {
             let urls = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
             for url in urls {
                 if url.hasDirectoryPath {
                     find(at: url)
                 } else if url.absoluteString.hasSuffix(".json") {
-                    //Log.d("path \(url.absoluteString)")
+                    Log.d("path \(url.absoluteString)")
                     let decoder = JSONDecoder()
                     do {
                         let data = try Data(contentsOf: url)
@@ -68,6 +69,7 @@ public class TrackFinder: TrackFinderType {
         } catch {
             Log.e("DOH \(url) \(error)")
         }
+        Log.d("done finding at: \(url.absoluteString)")
     }    
 }
 
