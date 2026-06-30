@@ -122,6 +122,13 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
             // XXX refresh queue?
         }
     }
+
+    public func playUntil(date: Date, closure: @escaping (PlayingQueue?, Error?) -> Void) {
+        let timestamp = Int(date.timeIntervalSince1970)
+        self.requestJson(atPath: "playuntil/\(timestamp)") { (playingQueue: PlayingQueue?, error: Error?) in
+            closure(playingQueue, error)
+        }
+    }
 }
 
 

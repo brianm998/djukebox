@@ -24,5 +24,6 @@ public protocol AsyncAudioPlayerType {
     func pausePlaying(closure: @escaping (Bool, Error?) -> Void)
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void)
     func shuffleQueue()
+    func playUntil(date: Date, closure: @escaping (PlayingQueue?, Error?) -> Void)
 }
 

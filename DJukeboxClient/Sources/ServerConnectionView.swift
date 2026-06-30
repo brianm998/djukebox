@@ -107,11 +107,7 @@ struct ServerStatusView: View {
 
     @ViewBuilder
     private var busyIndicator: some View {
-        if #available(iOS 14.0, macOS 11.0, *) {
-            ProgressView()
-        } else {
-            Text("…").foregroundColor(.secondary)
-        }
+        ProgressView()
     }
 
     private func connectManually() {

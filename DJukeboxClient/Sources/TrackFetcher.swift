@@ -393,6 +393,12 @@ public class TrackFetcher: ObservableObject {
             self.refreshQueue()
         }
     }
+
+    public func playUntil(date: Date) {
+        self.audioPlayer.player?.playUntil(date: date) { playingQueue, error in
+            self.refreshQueue()
+        }
+    }
 }
 
 // tell the client which url to use for which track hash

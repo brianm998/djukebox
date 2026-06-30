@@ -91,7 +91,7 @@ public struct BigButtonView: View {
           VStack(alignment: .leading) {
               HStack {
                   SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
-                  
+
                   if(self.trackFetcher.audioPlayer.isPaused) {
                       PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
                   } else {
@@ -105,6 +105,8 @@ public struct BigButtonView: View {
                   PlayRandomTrackButton(trackFetcher: trackFetcher)
                   PlayNewRandomTrackButton(trackFetcher: trackFetcher)
                   ShuffleQueueButton(trackFetcher: trackFetcher)
+                  PlayUntilButton(trackFetcher: trackFetcher)
+                  PlayForButton(trackFetcher: trackFetcher)
                   Button(action: {
                        self.trackFetcher.cacheQueue()
                    }) {
@@ -149,6 +151,11 @@ public struct SmallButtonView: View {
     let onScan: () -> Void
     let onGoOffline: () -> Void
     @State private var showingActionSheet = false
+    @State private var showingPlayUntilPicker = false
+    @State private var showingPlayForPicker = false
+    @State private var playUntilTime = Date()
+    @State private var playForHours = 1
+    @State private var playForMinutes = 0
 
     public init(trackFetcher: TrackFetcher,
                 onScan: @escaping () -> Void,
@@ -159,7 +166,7 @@ public struct SmallButtonView: View {
         self.onGoOffline = onGoOffline
     }
 
-    public var body: some View {
+  public var body: some View {
         let localPlayToggle = Binding<Bool>(get: { self.trackFetcher.queueType == .local },
                                             set: { try? self.trackFetcher.watch(queue: $0 ? .local : .remote) })
         return VStack {
@@ -170,10 +177,18 @@ public struct SmallButtonView: View {
                       .onTapGesture { self.showingActionSheet = true }
                       .actionSheet(isPresented: $showingActionSheet) {
                           ActionSheet(title: Text(""),
-                                      //message: Text(""),
                                       buttons: [
                                         .default(Text("Play New Random Track")) { self.trackFetcher.playNewRandomTrack() },
                                         .default(Text("Play Random Track")) { self.trackFetcher.playRandomTrack() },
+                                        .default(Text("Play Until…")) {
+                                            self.playUntilTime = Date().addingTimeInterval(3600)
+                                            self.showingPlayUntilPicker = true
+                                        },
+                                        .default(Text("Play For…")) {
+                                            self.playForHours = 1
+                                            self.playForMinutes = 0
+                                            self.showingPlayForPicker = true
+                                        },
                                         .default(Text("Refresh Queue")) { self.trackFetcher.refreshQueue() },
                                         .default(Text("Refresh Tracks")) { self.trackFetcher.refreshTracks() },
                                         .default(Text("Cache Current Queue")) { self.trackFetcher.cacheQueue() },
@@ -183,6 +198,24 @@ public struct SmallButtonView: View {
                                       ])
                       }
                     OfflineScanButton(trackFetcher: trackFetcher, onScan: onScan, onGoOffline: onGoOffline)
+                }
+                .sheet(isPresented: $showingPlayUntilPicker) {
+                    VStack(spacing: 24) {
+                        Text("Play Until").font(.headline)
+                        DatePicker("", selection: $playUntilTime, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                            .labelsHidden()
+                            .datePickerStyle(.wheel)
+                        HStack {
+                            Button("Cancel") { showingPlayUntilPicker = false }
+                            Spacer()
+                            Button("Confirm") {
+                                trackFetcher.playUntil(date: playUntilTime)
+                                showingPlayUntilPicker = false
+                            }
+                            .bold()
+                        }
+                    }
+                    .padding()
                 }
 
                 HStack {
@@ -212,9 +245,37 @@ public struct SmallButtonView: View {
                     }
                 }
         }
+        .sheet(isPresented: $showingPlayForPicker) {
+            VStack(spacing: 24) {
+                Text("Play For").font(.headline)
+                HStack(spacing: 0) {
+                    Picker("Hours", selection: $playForHours) {
+                        ForEach(0...23, id: \.self) { h in Text("\(h)h").tag(h) }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(width: 100)
+                    Picker("Minutes", selection: $playForMinutes) {
+                        ForEach(0...59, id: \.self) { m in Text("\(m)m").tag(m) }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(width: 100)
+                }
+                HStack {
+                    Button("Cancel") { showingPlayForPicker = false }
+                    Spacer()
+                    Button("Confirm") {
+                        let duration = TimeInterval(playForHours * 3600 + playForMinutes * 60)
+                        trackFetcher.playUntil(date: Date().addingTimeInterval(duration))
+                        showingPlayForPicker = false
+                    }
+                    .bold()
+                }
+            }
+            .padding()
+        }
     }
 }
-    
+
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     let onScan: () -> Void

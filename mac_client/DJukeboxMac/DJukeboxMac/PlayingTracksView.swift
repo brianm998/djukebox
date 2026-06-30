@@ -125,6 +125,11 @@ public struct BigButtonView: View {
                 ClearQueueButton(trackFetcher: trackFetcher)
 
                 VStack {
+                    PlayUntilButton(trackFetcher: trackFetcher)
+                    PlayForButton(trackFetcher: trackFetcher)
+                }
+
+                VStack {
                     // download the current playing queue for offline playback
                     Button(action: { self.trackFetcher.cacheQueue() }) {
                         Text("Cache Q").underline().foregroundColor(Color.blue)

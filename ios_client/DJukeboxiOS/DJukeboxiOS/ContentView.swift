@@ -82,14 +82,8 @@ struct ScanPresentation: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(iOS 14.0, *) {
-            content.fullScreenCover(isPresented: $isPresented) {
-                ServerScanView(browser: browser, isPresented: $isPresented)
-            }
-        } else {
-            content.sheet(isPresented: $isPresented) {
-                ServerScanView(browser: browser, isPresented: $isPresented)
-            }
+        content.fullScreenCover(isPresented: $isPresented) {
+            ServerScanView(browser: browser, isPresented: $isPresented)
         }
     }
 }
@@ -144,11 +138,7 @@ struct ServerScanView: View {
 
     @ViewBuilder
     private var busyIndicator: some View {
-        if #available(iOS 14.0, *) {
-            ProgressView()
-        } else {
-            Text("…").foregroundColor(.secondary)
-        }
+        ProgressView()
     }
 }
 

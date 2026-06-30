@@ -15,9 +15,7 @@ final class VaporTimer {
                        repeating: .milliseconds(interval),
                        leeway: .seconds(0))
         
-        if #available(OSX 10.14.3,  *) {
-            timer.activate()
-        }
+        timer.activate()
     }
 }
 

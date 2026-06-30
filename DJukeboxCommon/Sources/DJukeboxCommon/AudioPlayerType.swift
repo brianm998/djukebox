@@ -13,8 +13,8 @@ public protocol AudioPlayerType {
     
     func play(sha1Hash: String)
     func stopPlaying(sha1Hash: String, atIndex index: Int)
-    func skip() 
-    func pause() 
+    func skip()
+    func pause()
     func resume()
     func clearQueue()
     func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool

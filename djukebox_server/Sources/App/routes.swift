@@ -411,6 +411,56 @@ func playerRoutes(_ app: Application) throws {
         }
     }
 
+    // Fill the queue with random tracks up to (but not exceeding) the given Unix timestamp.
+    // curl localhost:8080/playuntil/1750000000
+    app.get("playuntil", ":timestamp") { req -> PlayingQueue in
+        let authControl = AuthController(config: defaultConfig, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            guard let timestampStr = req.parameters.get("timestamp"),
+                  let targetTimestamp = Double(timestampStr)
+            else { throw Abort(.badRequest) }
+
+            let targetDate = Date(timeIntervalSince1970: targetTimestamp)
+            let now = Date()
+            guard targetDate > now else { return listQueue() }
+
+            let secondsUntilTarget = targetDate.timeIntervalSince(now)
+
+            var queuedDuration: TimeInterval = 0
+            if let playingTrack = audioPlayer.playingTrack {
+                let trackDuration = audioPlayer.playingTrackDuration ?? playingTrack.timeInterval ?? 0
+                let position = audioPlayer.playingTrackPosition ?? 0
+                queuedDuration += max(0, trackDuration - position)
+            }
+            for hash in audioPlayer.trackQueue {
+                if let track = trackFinder.audioTrack(forHash: hash),
+                   let duration = track.timeInterval
+                {
+                    queuedDuration += duration
+                }
+            }
+
+            var timeToFill = secondsUntilTarget - queuedDuration
+            guard timeToFill > 0 else { return listQueue() }
+
+            let candidates = Array(trackFinder.tracks.keys).shuffled()
+            for hash in candidates {
+                guard timeToFill > 0 else { break }
+                if !isInQueue(hash),
+                   let track = trackFinder.audioTrack(forHash: hash),
+                   let duration = track.timeInterval,
+                   duration > 0,
+                   duration <= timeToFill
+                {
+                    audioPlayer.play(sha1Hash: hash)
+                    timeToFill -= duration
+                }
+            }
+
+            return listQueue()
+        }
+    }
+
     func isInQueue(_ hash: String) -> Bool {
         if let playingTrack = audioPlayer.playingTrack,
            playingTrack.SHA1 == hash

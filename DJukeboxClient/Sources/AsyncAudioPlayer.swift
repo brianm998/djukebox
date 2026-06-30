@@ -187,4 +187,47 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     public func shuffleQueue() {
         player.shuffleQueue()
     }
+
+    public func playUntil(date: Date, closure: @escaping (PlayingQueue?, Error?) -> Void) {
+        let now = Date()
+        guard date > now else {
+            closure(self.playingQueue, nil)
+            return
+        }
+
+        let secondsUntilTarget = date.timeIntervalSince(now)
+
+        var queuedDuration: TimeInterval = 0
+        if let playingTrack = player.playingTrack {
+            let trackDuration = player.playingTrackDuration ?? playingTrack.timeInterval ?? 0
+            let position = player.playingTrackPosition ?? 0
+            queuedDuration += max(0, trackDuration - position)
+        }
+        for hash in player.trackQueue {
+            if let track = fetcher.trackMap[hash] {
+                queuedDuration += track.timeInterval ?? 0
+            }
+        }
+
+        var timeToFill = secondsUntilTarget - queuedDuration
+        guard timeToFill > 0 else {
+            closure(self.playingQueue, nil)
+            return
+        }
+
+        let candidates = fetcher.allTracks.shuffled()
+        for track in candidates {
+            guard timeToFill > 0 else { break }
+            if let duration = track.timeInterval,
+               duration > 0,
+               duration <= timeToFill,
+               !isInQueue(track.SHA1)
+            {
+                player.play(sha1Hash: track.SHA1)
+                timeToFill -= duration
+            }
+        }
+
+        closure(self.playingQueue, nil)
+    }
 }
