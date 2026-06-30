@@ -29,6 +29,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>DJukebox finds your music server on the local WiFi network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_djukebox._tcp</string>
+	</array>
 	<key>NSMainStoryboardFile</key>
 	<string>Main</string>
 	<key>NSPrincipalClass</key>

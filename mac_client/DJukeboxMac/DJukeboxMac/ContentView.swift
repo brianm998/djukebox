@@ -17,7 +17,12 @@ struct ContentView: View {
         ServerConnectionView(browser) { client in
             VStack {
                 ArtistAlbumTrackList(client)
-                PlayingTracksView(client)
+                // onScan rescans the network (ServerConnectionView shows the search
+                // screen meanwhile); onGoOffline stashes the play-local choice so a
+                // later reconnect can restore it.
+                PlayingTracksView(client,
+                                  onScan: { self.browser.start() },
+                                  onGoOffline: self.browser.rememberCurrentPlayLocal)
                 SearchView(client)
                 HistoryView(client)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)

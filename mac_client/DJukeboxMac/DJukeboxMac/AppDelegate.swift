@@ -38,7 +38,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
           ]
 #endif
 
-        let browser = ServerBrowser(password: password, initialQueueType: .remote)
+        // Like the iOS client: default to playing tracks locally on this machine,
+        // and quietly drop into local-only mode (cached tracks) when no server is
+        // found rather than showing a failure screen. The server may now live on a
+        // different machine on the same WiFi network.
+        let browser = ServerBrowser(password: password,
+                                    initialQueueType: .local,
+                                    autoFallbackToLocal: true)
         browser.start()
         let contentView = ContentView(browser)
 

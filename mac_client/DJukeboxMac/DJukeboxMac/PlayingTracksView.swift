@@ -4,6 +4,42 @@ import DJukeboxClient
 
 fileprivate let kkUTTypePlainText = kUTTypePlainText
 
+// Mirrors the iOS control: in offline mode (no server) it offers to "Scan" for
+// one; while connected it shows "Local", which drops back to offline (cached
+// tracks only). Going offline always forces local playback.
+public struct OfflineScanButton: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    let onScan: () -> Void
+    let onGoOffline: () -> Void
+
+    public init(trackFetcher: TrackFetcher,
+                onScan: @escaping () -> Void,
+                onGoOffline: @escaping () -> Void)
+    {
+        self.trackFetcher = trackFetcher
+        self.onScan = onScan
+        self.onGoOffline = onGoOffline
+    }
+
+    public var body: some View {
+        if trackFetcher.useLocalContentOnly {
+            Button(action: onScan) {
+                Text("Scan").underline().foregroundColor(Color.blue)
+            }
+        } else {
+            Button(action: {
+                // remember the play-local choice first so a later scan can restore it
+                self.onGoOffline()
+                // offline mode always plays local, so force the queue too
+                try? self.trackFetcher.watch(queue: .local)
+                self.trackFetcher.useLocalContentOnly = true
+            }) {
+                Text("Local").underline().foregroundColor(Color.blue)
+            }
+        }
+    }
+}
+
 public struct VerticalPlayingTimeRemainingView: View {
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -36,30 +72,38 @@ public struct HorizontalPlayingTimeRemainingView: View {
 
 public struct BigButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    let onScan: () -> Void
+    let onGoOffline: () -> Void
 
-    public init(trackFetcher: TrackFetcher) {
+    public init(trackFetcher: TrackFetcher,
+                onScan: @escaping () -> Void,
+                onGoOffline: @escaping () -> Void)
+    {
         self.trackFetcher = trackFetcher
+        self.onScan = onScan
+        self.onGoOffline = onGoOffline
     }
 
     public var body: some View {
-        let offlineToggle = Binding<Bool>(get: { self.trackFetcher.useLocalContentOnly },
-                                          set: { self.trackFetcher.useLocalContentOnly = $0 })
-
         let localPlayToggle = Binding<Bool>(get: { self.trackFetcher.queueType == .local },
                                             set: { try? self.trackFetcher.watch(queue: $0 ? .local : .remote) })
 
         return HStack {
             Spacer()
 
+            // mode: play-local toggle (online only, since offline forces local) + offline/scan
             VStack {
-                HStack {
-                    Text("Play Local:")
-                    Toggle("", isOn: localPlayToggle).labelsHidden()
+                if !trackFetcher.useLocalContentOnly {
+                    HStack {
+                        Text("Play Local:")
+                        Toggle("", isOn: localPlayToggle).labelsHidden()
+                    }
                 }
+                OfflineScanButton(trackFetcher: trackFetcher, onScan: onScan, onGoOffline: onGoOffline)
             }
-            
+
             SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
-            
+
             if(self.trackFetcher.audioPlayer.isPaused) {
                 PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
             } else {
@@ -75,11 +119,26 @@ public struct BigButtonView: View {
                 PlayNewRandomTrackButton(trackFetcher: trackFetcher)
             }
 
-            ShuffleQueueButton(trackFetcher: trackFetcher)
-            ClearQueueButton(trackFetcher: trackFetcher)
-            VStack {
-                RefreshTracksFromServerButton(trackFetcher: trackFetcher)
-                RefreshQueueButton(trackFetcher: trackFetcher)
+            // queue + cache controls (grouped to stay within the ViewBuilder limit)
+            Group {
+                ShuffleQueueButton(trackFetcher: trackFetcher)
+                ClearQueueButton(trackFetcher: trackFetcher)
+
+                VStack {
+                    // download the current playing queue for offline playback
+                    Button(action: { self.trackFetcher.cacheQueue() }) {
+                        Text("Cache Q").underline().foregroundColor(Color.blue)
+                    }
+                    // wipe the local track cache
+                    Button(action: { self.trackFetcher.clearCache() }) {
+                        Text("Clear Cache").underline().foregroundColor(Color.red)
+                    }
+                }
+
+                VStack {
+                    RefreshTracksFromServerButton(trackFetcher: trackFetcher)
+                    RefreshQueueButton(trackFetcher: trackFetcher)
+                }
             }
             Spacer()
         }
@@ -106,16 +165,23 @@ public struct BigButtonView: View {
     
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    let onScan: () -> Void
+    let onGoOffline: () -> Void
 
-    public init(_ client: Client) {
+    public init(_ client: Client,
+                onScan: @escaping () -> Void = {},
+                onGoOffline: @escaping () -> Void = {})
+    {
         self.trackFetcher = client.trackFetcher
+        self.onScan = onScan
+        self.onGoOffline = onGoOffline
     }
-    
+
     let dropDelegate = MyDropDelegate(/*imageUrls: $imageUrls, active: $active*/)
 
     public var body: some View {
         VStack(alignment: .leading) {
-            BigButtonView(trackFetcher: trackFetcher)
+            BigButtonView(trackFetcher: trackFetcher, onScan: onScan, onGoOffline: onGoOffline)
             PlayingTrackView(trackFetcher: trackFetcher)
             PlayingQueueView(trackFetcher: trackFetcher)
               .onDrop(of: [kkUTTypePlainText as String], delegate: dropDelegate)

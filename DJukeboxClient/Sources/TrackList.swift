@@ -31,6 +31,12 @@ struct TrackList: View {
                     }) {
                         Text("Play All")
                     }
+                    // download every track shown here for offline playback
+                    Button(action: {
+                        self.trackFetcher.cache(tracks: self.trackFetcher.tracks)
+                    }) {
+                        Text("Cache All")
+                    }
                 }
             }
             List(trackFetcher.tracks) { track in
