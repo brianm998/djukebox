@@ -11,10 +11,8 @@ import SwiftUI
 import DJukeboxClient
 import DJukeboxCommon
 
-//let serverURL = "http://192.168.4.22:8080"
-let serverURL = "http://192.168.5.254:8080"
-//let serverURL = "http://192.168.1.164:8080"
-//let serverURL = "http://127.0.0.1:8080"
+// The server is now discovered on the local network via mDNS / Bonjour
+// (see ServerBrowser), so there's no hardcoded server address here anymore.
 let password = "foobar"
 
 enum QueueType {
@@ -32,7 +30,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
 
         // Create the SwiftUI view that provides the window contents.
-        let contentView = ContentView(Client(serverURL: serverURL, password: password))
+        let browser = ServerBrowser(password: password)
+        browser.start()
+        let contentView = ContentView(browser)
 
         // Use a UIHostingController as window root view controller.
         if let windowScene = scene as? UIWindowScene {

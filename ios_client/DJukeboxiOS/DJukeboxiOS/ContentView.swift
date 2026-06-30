@@ -10,11 +10,17 @@ import SwiftUI
 import DJukeboxClient
 
 struct ContentView: View {
-    var client: Client
+    @ObservedObject var browser: ServerBrowser
 
-    init(_ client: Client) { self.client = client }
+    init(_ browser: ServerBrowser) { self.browser = browser }
 
     var body: some View {
+        ServerConnectionView(browser) { client in
+            tabs(client)
+        }
+    }
+
+    private func tabs(_ client: Client) -> some View {
         TabView {
             if layoutIsLarge() {
                 ArtistAlbumTrackList(client) // looks ok on iPad, even mini
@@ -55,11 +61,9 @@ struct ContentView: View {
 }
 
 
-fileprivate let previewClient = Client(serverURL: serverURL, password: password)
-
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(previewClient)
+        ContentView(ServerBrowser(password: password))
     }
 }
 

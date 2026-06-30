@@ -11,10 +11,8 @@ import CryptoKit
 import DJukeboxCommon
 import DJukeboxClient
 
-//let serverURL = "http://192.168.1.164:8080"
-let serverURL = "http://192.168.5.254:8080"
-//let serverURL = "http://192.168.4.22:8080"
-//let serverURL = "http://127.0.0.1:8080"
+// The server is now discovered on the local network via mDNS / Bonjour
+// (see ServerBrowser), so there's no hardcoded server address here anymore.
 let password = "foobar"
 
 var theWindow: NSWindow!
@@ -40,10 +38,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
           ]
 #endif
 
-        let client = Client(serverURL: serverURL,
-                            password: password,
-                            initialQueueType: .remote)
-        let contentView = ContentView(client)
+        let browser = ServerBrowser(password: password, initialQueueType: .remote)
+        browser.start()
+        let contentView = ContentView(browser)
 
         // Create the window and set the content view. 
         window = NSWindow(
@@ -62,7 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 return keypress
             }
             if keypress.characters == " ",
-               let player = client.trackFetcher.audioPlayer.player
+               let player = browser.currentClient?.trackFetcher.audioPlayer.player
             {
                 if player.isPaused {
                     player.resumePlaying() { success, error in

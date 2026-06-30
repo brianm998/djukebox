@@ -9,6 +9,9 @@ let historyWriter = HistoryWriter(dirname: historyDir)
 
 let history = History()
 
+// advertises this server on the local network via mDNS / Bonjour
+var serviceAdvertiser: ServiceAdvertiser?
+
 #if os(Linux)
 let audioPlayer: AudioPlayerType = LinuxAudioPlayer(trackFinder: trackFinder,
                                                     historyWriter: historyWriter)
@@ -105,7 +108,15 @@ public func configure(_ app: Application) throws {
     history.find(atFilePath: historyDir)
 
     Log.d("test finder has found \(trackFinder.tracks.count) tracks")
-    
+
+    // advertise this server on the local network so clients can find it via mDNS
+    // instead of a hardcoded IP address.
+    let advertiser = ServiceAdvertiser(name: "DJukebox",
+                                       type: "_djukebox._tcp.",
+                                       port: app.http.server.configuration.port)
+    advertiser.start()
+    serviceAdvertiser = advertiser
+
     // register routes
     try routes(app)
 }

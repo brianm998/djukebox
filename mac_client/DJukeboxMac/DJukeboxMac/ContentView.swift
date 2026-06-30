@@ -9,24 +9,24 @@ import SwiftUI
 import DJukeboxClient
 
 struct ContentView: View {
-    private var client: Client
+    @ObservedObject private var browser: ServerBrowser
 
-    init(_ client: Client) { self.client = client }
+    init(_ browser: ServerBrowser) { self.browser = browser }
 
     var body: some View {
-        VStack {
-            ArtistAlbumTrackList(client)
-            PlayingTracksView(client)
-            SearchView(client)
-            HistoryView(client)
-        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        ServerConnectionView(browser) { client in
+            VStack {
+                ArtistAlbumTrackList(client)
+                PlayingTracksView(client)
+                SearchView(client)
+                HistoryView(client)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 }
 
-fileprivate let previewClient = Client(serverURL: serverURL, password: password)
-
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(previewClient)
+        ContentView(ServerBrowser(password: password, initialQueueType: .remote))
     }
 }
