@@ -1,6 +1,7 @@
 import Foundation
 
 #if !os(macOS)
+import UIKit
 public extension UIViewController {
     static let alertDispatchQueue = DispatchQueue(label: "alerts")
 

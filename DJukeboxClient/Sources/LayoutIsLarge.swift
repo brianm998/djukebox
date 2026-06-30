@@ -1,4 +1,7 @@
 import Foundation
+#if os(iOS)
+import UIKit
+#endif
 
 // do we have a big, or a small screen?
 public func layoutIsLarge() -> Bool {
