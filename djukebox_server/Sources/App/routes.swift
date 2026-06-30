@@ -128,7 +128,7 @@ func trackServingRoutes(_ app: Application) throws {
             }
             if let path = path {
                 Log.d("finding at path \(path)")
-                trackFinder.find(atFilePath: path)
+                jukeboxDatabase.ingest(directory: path, into: trackFinder)
                 return Response(status: .ok)
             } else {
                 throw Abort(.badRequest)

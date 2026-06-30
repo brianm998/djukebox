@@ -4,118 +4,116 @@ import DJukeboxCommon
 public protocol HistoryType {
     var plays: [String: [Double]] { get }
     var skips: [String: [Double]] { get }
-    
+
     func recordPlay(of hash: String, at time: Date)
-    func recordSkip(of hash: String, at time: Date) 
+    func recordSkip(of hash: String, at time: Date)
     func recordPlay(of hash: String, at time: Double)
-    func recordSkip(of hash: String, at time: Double) 
+    func recordSkip(of hash: String, at time: Double)
     func find(atFilePath path: String)
 }
 
+// In-RAM fast read path over the play history. The database (JukeboxDatabase)
+// is the persistent store of record; this mirror is loaded from it at startup
+// (`load(plays:skips:)`) and kept in sync write-through. All access is guarded
+// by a lock because the dictionaries are read by request handlers on event-loop
+// threads while the audio player writes from its own thread.
 public class History: HistoryType {
 
-    public var plays: [String: [Double]] = [:]
-    public var skips: [String: [Double]] = [:]
+    private var _plays: [String: [Double]] = [:]
+    private var _skips: [String: [Double]] = [:]
+    private let lock = NSLock()
 
-    var all: PlayingHistory { return PlayingHistory(plays: self.plays, skips: self.skips) }
+    private func withLock<T>(_ body: () -> T) -> T {
+        lock.lock(); defer { lock.unlock() }
+        return body()
+    }
+
+    public var plays: [String: [Double]] { withLock { _plays } }
+    public var skips: [String: [Double]] { withLock { _skips } }
+
+    var all: PlayingHistory { withLock { PlayingHistory(plays: _plays, skips: _skips) } }
+
+    /// Replace the entire in-RAM history (used to load from the database at startup).
+    public func load(plays: [String: [Double]], skips: [String: [Double]]) {
+        withLock {
+            _plays = plays
+            _skips = skips
+        }
+    }
 
     public func since(time: Date) -> PlayingHistory {
-        var plays: [String: [Double]] = [:]
-        var skips: [String: [Double]] = [:]
-        for (hash, times) in self.plays {
-            var newTimes: [Double] = []
-            for hashTime in times {
-                let date = Date(timeIntervalSince1970: hashTime)
-                if time < date { newTimes.append(hashTime) }
+        withLock {
+            var plays: [String: [Double]] = [:]
+            var skips: [String: [Double]] = [:]
+            for (hash, times) in _plays {
+                let newTimes = times.filter { time < Date(timeIntervalSince1970: $0) }
+                if newTimes.count > 0 { plays[hash] = newTimes }
             }
-            if newTimes.count > 0 { plays[hash] = newTimes }
-        }
-        for (hash, times) in self.skips {
-            var newTimes: [Double] = []
-            for hashTime in times {
-                let date = Date(timeIntervalSince1970: hashTime)
-                if time < date { newTimes.append(hashTime) }
+            for (hash, times) in _skips {
+                let newTimes = times.filter { time < Date(timeIntervalSince1970: $0) }
+                if newTimes.count > 0 { skips[hash] = newTimes }
             }
-            if newTimes.count > 0 { skips[hash] = newTimes }
+            return PlayingHistory(plays: plays, skips: skips)
         }
-        return PlayingHistory(plays: plays, skips: skips)
-    }
-    
-    public func find(atFilePath path: String) {
-        find(at: URL(fileURLWithPath: path))
     }
 
-    public func hasPlay(for hash: String) -> Bool {
-        return plays[hash] != nil
-    }
-    
-    public func hasSkip(for hash: String) -> Bool {
-        return skips[hash] != nil
-    }
-    
+    public func hasPlay(for hash: String) -> Bool { withLock { _plays[hash] != nil } }
+    public func hasSkip(for hash: String) -> Bool { withLock { _skips[hash] != nil } }
+
     public func recordSkip(of hash: String, at time: Double) {
-        if skips[hash] == nil {
-            skips[hash] = [time]
-        } else if var list = skips[hash] {
-            list.append(time)
-        } else {
-            Log.d("DOH")
-        }
+        withLock { _skips[hash, default: []].append(time) }
     }
-    
+
     public func recordSkip(of hash: String, at time: Date) {
         self.recordSkip(of: hash, at: time.timeIntervalSince1970)
     }
 
     public func recordPlay(of hash: String, at time: Double) {
-        if plays[hash] == nil {
-            //Log.d("fuck1")
-            plays[hash] = [time]
-        } else if var list = plays[hash] {
-            //Log.d("fuck2")
-            list.append(time)
-        } else {
-            Log.d("DOH")
-        }
-        //Log.d("record play plays \(plays)")
+        withLock { _plays[hash, default: []].append(time) }
     }
-    
+
     public func recordPlay(of hash: String, at time: Date) {
         self.recordPlay(of: hash, at: time.timeIntervalSince1970)
     }
 
-    fileprivate func find(at url: URL) {
-        do {
-            let urls = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
-            for url in urls {
-                if url.absoluteString.hasSuffix(".txt") {
-                    let string = try String(contentsOf: url)
-                    let lines = string.split { $0.isNewline }
-                    for line in lines {
-                        //Log.d("line \(line)")
-                        let data = line.split { $0 == "," }
-                        if data.count == 3,
-                           let time = Double(data[1])
-                        {
-                            let hash = String(data[0])
-                            let played_fully = data[2]
-                            if played_fully == "1" {
-                                self.recordPlay(of: hash, at: time)
-                            } else if played_fully == "0" {
-                                self.recordSkip(of: hash, at: time)
-                            } else {
-                                Log.d("bad played_fully \(played_fully)")
-                            }
-                            //Log.d("YES: line \(line)")
-                        } else {
-                            Log.d("FUCK: line \(line)")
-                        }
-                    }
+    public func find(atFilePath path: String) {
+        for event in History.legacyEvents(inDirectory: path) {
+            if event.fullyPlayed {
+                self.recordPlay(of: event.sha1, at: event.time)
+            } else {
+                self.recordSkip(of: event.sha1, at: event.time)
+            }
+        }
+    }
+
+    /// Parses the legacy on-disk history format — one `sha1,unixTime,flag` per
+    /// line across `history_*.txt` files (flag `1` = play, `0` = skip) — into a
+    /// flat list of events. Used for the one-time import into the database.
+    /// Returns an empty list (rather than throwing) when the directory is absent.
+    public static func legacyEvents(inDirectory path: String)
+      -> [(sha1: String, time: Double, fullyPlayed: Bool)]
+    {
+        var events: [(sha1: String, time: Double, fullyPlayed: Bool)] = []
+        let dir = URL(fileURLWithPath: path)
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: nil) else {
+            return events
+        }
+        for url in urls {
+            guard url.pathExtension == "txt" else { continue }
+            guard let string = try? String(contentsOf: url) else { continue }
+            for line in string.split(whereSeparator: { $0.isNewline }) {
+                let data = line.split(separator: ",")
+                guard data.count == 3, let time = Double(data[1]) else { continue }
+                let sha1 = String(data[0])
+                let flag = String(data[2])
+                if flag == "1" {
+                    events.append((sha1: sha1, time: time, fullyPlayed: true))
+                } else if flag == "0" {
+                    events.append((sha1: sha1, time: time, fullyPlayed: false))
                 }
             }
-        } catch {
-            Log.e("DOH \(url) \(error)")
         }
-    }    
+        return events
+    }
 }
-

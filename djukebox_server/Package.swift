@@ -12,9 +12,13 @@ let package = Package(
         .package(path: "../DJukeboxCommon")
     ],
     targets: [
+        // system sqlite3 (ships in the macOS/iOS SDKs; libsqlite3-dev on Linux).
+        // No external package / network fetch; nothing touches Package.resolved.
+        .systemLibrary(name: "CSQLite"),
         .target(name: "App", dependencies: [
             .product(name: "Vapor", package: "vapor"),
-            .product(name: "DJukeboxCommon", package: "DJukeboxCommon")
+            .product(name: "DJukeboxCommon", package: "DJukeboxCommon"),
+            "CSQLite"
         ]),
         .target(name: "Run", dependencies: ["App"]),
         .testTarget(name: "AppTests", dependencies: [

@@ -198,5 +198,28 @@ public class AudioTrack: Decodable,
     public let Genre: String?
     public let Year: String?
     public let OriginalDate: String?
+
+    // Memberwise initializer so tracks can be reconstructed from the local
+    // SQLite store (a class only gets a synthesized init(from:) for Decodable).
+    public init(Artist: String, Band: String, Album: String?, Conductor: String?,
+                Title: String, Filename: String, SHA1: String, Duration: String?,
+                AudioBitrate: String?, SampleRate: String?, TrackNumber: String?,
+                Genre: String?, Year: String?, OriginalDate: String?)
+    {
+        self.Artist = Artist
+        self.Band = Band
+        self.Album = Album
+        self.Conductor = Conductor
+        self.Title = Title
+        self.Filename = Filename
+        self.SHA1 = SHA1
+        self.Duration = Duration
+        self.AudioBitrate = AudioBitrate
+        self.SampleRate = SampleRate
+        self.TrackNumber = TrackNumber
+        self.Genre = Genre
+        self.Year = Year
+        self.OriginalDate = OriginalDate
+    }
 }
 

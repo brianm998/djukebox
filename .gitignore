@@ -8,6 +8,6 @@ Pods/
 **/.#*
 DerivedData/
 .DS_Store
-db.sqlite
+db.sqlite*
 .swiftpm
 

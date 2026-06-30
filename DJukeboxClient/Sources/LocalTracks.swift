@@ -8,15 +8,24 @@ public protocol LocalTrackType: TrackFinderType {
     var downloadedTrackMap: [String: AudioTrack] { get }
 }
 
-// allow keeping some tracks locally for offline access 
+// allow keeping some tracks locally for offline access.
+// The downloaded audio files live in Caches/AudioTracks/<sha1>.mp3 and the full
+// track metadata for each is persisted in a local SQLite database
+// (local_tracks.sqlite3) alongside them. The metadata is exactly what the server
+// transferred for the file; no play history is stored locally.
 public class LocalTracks: LocalCache, LocalTrackType {
 
     private var cacheDir: URL? {
         return LocalCache.urlForLibrary(appending: ["Caches", "AudioTracks"])
     }
 
+    // legacy metadata manifest, migrated into the database once on first launch
     private var tracksJsonURL: URL? {
         return self.cacheDir?.appendingPathComponent("tracks").appendingPathExtension("json")
+    }
+
+    private var databaseURL: URL? {
+        return self.cacheDir?.appendingPathComponent("local_tracks").appendingPathExtension("sqlite3")
     }
 
     private func cacheDirURL(forFilename filename: String, withExtention extention: String) -> URL? {
@@ -24,14 +33,17 @@ public class LocalTracks: LocalCache, LocalTrackType {
     }
 
     let trackFinder: TrackFinderType
-    
+    private var db: LocalDatabase?
+
     public init(trackFinder: TrackFinderType) {
         self.trackFinder = trackFinder
         super.init()
-        if let tracks = self.loadLocalTrackList() {
-            self.downloadedTracks = tracks
-            self.sanitizeDownloadedTracks()
+        if let databaseURL = self.databaseURL {
+            self.db = LocalDatabase(path: databaseURL.path)
         }
+        self.downloadedTracks = self.db?.allTracks() ?? []
+        self.sanitizeDownloadedTracks()
+        self.migrateLegacyTracksJsonIfNeeded()
     }
 
     public func clearLocalStore() {
@@ -39,18 +51,19 @@ public class LocalTracks: LocalCache, LocalTrackType {
             if let cacheDir = self.cacheDir {
                 let list = try FileManager.default.contentsOfDirectory(at: cacheDir,
                                                                        includingPropertiesForKeys: nil)
-
-                for url in list {
+                // remove the cached audio only; leave the database file (its
+                // contents are emptied below) so the open connection stays valid.
+                for url in list where url.pathExtension == "mp3" {
                     try FileManager.default.removeItem(at: url)
                 }
             }
+            self.db?.clear()
             self.downloadedTracks = []
             self.downloadedTrackMap = [:]
         } catch {
             Log.e("error \(error)")
         }
     }
-    
 
     fileprivate func download(url: URL,
                               toFilename filename: String,
@@ -58,7 +71,7 @@ public class LocalTracks: LocalCache, LocalTrackType {
                               closure: @escaping (Bool) -> Void)
     {
         DispatchQueue.main.async {
-            if let libraryPathURL = LocalCache.libDir,
+            if let _ = LocalCache.libDir,
                let destURL = self.cacheDirURL(forFilename: filename, withExtention: extention)
             {
                 if FileManager.default.fileExists(atPath: destURL.path) {
@@ -99,13 +112,13 @@ public class LocalTracks: LocalCache, LocalTrackType {
             }
         } else {
             closure(nil)
-            Log.w("FUCK")
+            Log.w("no track for hash \(sha1Hash)")
         }
     }
 
     public var downloadedTracks: [AudioTrack] = []
     public var downloadedTrackMap: [String: AudioTrack] = [:]
-    
+
     func sanitizeDownloadedTracks() {
         var map: [AudioTrack: Bool] = [:]
         for track in self.downloadedTracks {
@@ -117,49 +130,45 @@ public class LocalTracks: LocalCache, LocalTrackType {
             self.downloadedTrackMap[track.SHA1] = track
         }
     }
-    
-    func writeLocalTrackList() {
-        let encoder = JSONEncoder()
-        sanitizeDownloadedTracks()
-        if let tracksJsonURL = tracksJsonURL {
-            do {
-                let jsonData = try encoder.encode(self.downloadedTracks)
-                try jsonData.write(to: tracksJsonURL)
-            } catch {
-                Log.e("error: \(error)")
-            }
-        }
+
+    // One-time import of the old tracks.json manifest into the database. Runs
+    // only when the database has no tracks yet; the manifest file is left in
+    // place (non-destructive).
+    private func migrateLegacyTracksJsonIfNeeded() {
+        guard self.downloadedTracks.isEmpty else { return }
+        guard let legacy = self.loadLegacyTrackList(), !legacy.isEmpty else { return }
+        Log.i("migrating \(legacy.count) tracks from tracks.json into the local database")
+        for track in legacy { self.db?.upsert(track) }
+        self.downloadedTracks = legacy
+        self.sanitizeDownloadedTracks()
     }
 
-    func loadLocalTrackList() -> [AudioTrack]? {
+    private func loadLegacyTrackList() -> [AudioTrack]? {
         if let tracksJsonURL = self.tracksJsonURL {
             do {
                 return try JSONDecoder().decode([AudioTrack].self,
                                                 from: try Data(contentsOf: tracksJsonURL))
             } catch {
-                Log.i("error: \(error)")
+                Log.i("no legacy tracks.json to migrate: \(error)")
             }
         }
         return nil
     }
-    
+
     public func keepLocal(sha1Hash: String, closure: @escaping (Bool) -> Void) {
         self.download(sha1Hash: sha1Hash) { track in
-            if let track = track as? AudioTrack,
-               let tracksJsonURL = self.tracksJsonURL
-            {
-                //Log.d("downloaded track \(track)")
+            if let track = track as? AudioTrack {
                 self.downloadedTracks.append(track)
-
-                self.writeLocalTrackList()
+                self.sanitizeDownloadedTracks()
+                self.db?.upsert(track)
                 closure(true)
             } else {
-                Log.e("couldn't download \(track)")
+                Log.e("couldn't download \(String(describing: track))")
                 closure(false)
             }
         }
     }
-    
+
     public func audioTrack(forHash sha1Hash: String) -> AudioTrackType? {
         if let track = self.downloadedTrackMap[sha1Hash] {
             return track
@@ -176,4 +185,3 @@ public class LocalTracks: LocalCache, LocalTrackType {
         return nil
     }
 }
-

@@ -5,9 +5,15 @@ import DJukeboxCommon
 
 let trackFinder/*: TrackFinderType*/ = TrackFinder()
 
-let historyWriter = HistoryWriter(dirname: historyDir)
-
 let history = History()
+
+// The persistent store of record for the track catalog and play history. Opened
+// eagerly here (file-scope `let`s initialise lazily on first access, and the
+// data dependency below guarantees the database is ready before any writer
+// touches it). `try!` = fail fast at launch if the database can't be opened.
+let jukeboxDatabase = try! JukeboxDatabase(path: databasePath)
+
+let historyWriter = HistoryWriter(database: jukeboxDatabase, history: history)
 
 // advertises this server on the local network via mDNS / Bonjour
 var serviceAdvertiser: ServiceAdvertiser?
@@ -29,85 +35,77 @@ let defaultConfig = Config(Password:"foobar",
                            TrackPaths: ["/mnt/tree/mp3"]) // XXX this isn't used (remove it)
 //0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425
 
-//let historyDir = "/Volumes/Temp/mp3/playing_history"
-let historyDir = "/qp/mp3/playing_history"
+// where the music (and its *.json sidecars) live
+let musicDir = ProcessInfo.processInfo.environment["DJUKEBOX_MUSIC_DIR"] ?? "/qp/mp3/"
+
+// legacy play-history text files, imported into the database once on first run
+let historyDir = ProcessInfo.processInfo.environment["DJUKEBOX_HISTORY_DIR"] ?? "/qp/mp3/playing_history"
+
+// the sqlite database file. Defaults to db.sqlite in the working directory
+// (already in .gitignore); override with DJUKEBOX_DB_PATH.
+let databasePath = ProcessInfo.processInfo.environment["DJUKEBOX_DB_PATH"] ?? "db.sqlite"
 
 public struct Config: Content {
     let Password: String
     let TrackPaths: [String]
 }
 
-enum FileWriteError: Error {
-    case directoryDoesntExist
-    case convertToDataIssue
-}
-
-class FileWriter {
-
-    var filename: String
-
-    init(_ filename: String) {
-        self.filename = filename
-    }
-    
-    func write(_ text: String) throws {
-        let encoding = String.Encoding.utf8
-
-        guard let data = text.data(using: encoding) else {
-            throw FileWriteError.convertToDataIssue
-        }
-
-        let fileURL = URL(fileURLWithPath: "\(filename)")
-
-        if let fileHandle = FileHandle(forWritingAtPath: fileURL.path) {
-            fileHandle.seekToEndOfFile()
-            fileHandle.write(data)
-        } else {
-            try text.write(to: fileURL, atomically: false, encoding: encoding)
-        }
-    }
-}
+// Writes play/skip events through to the database (the store of record) first,
+// then updates the in-RAM history mirror. A failed database write propagates so
+// callers (POST /history, the audio player) can report it; the in-RAM mirror is
+// only touched on success and is rebuilt from the database on the next restart.
 public class HistoryWriter: HistoryWriterType {
-    let dirname: String
-    let dateFormatter = DateFormatter()
-    
-    init(dirname: String) {
-        self.dirname = dirname
-        dateFormatter.dateFormat = "MM_dd_yyyy"
+    let database: JukeboxDatabase
+    let history: History
+
+    init(database: JukeboxDatabase, history: History) {
+        self.database = database
+        self.history = history
     }
 
     public func writePlay(of sha1: String, at date: Date) throws {
-        let filename = "history_\(dateFormatter.string(from: Date())).txt"
-        let writer = FileWriter("\(dirname)/\(filename)")
-        try writer.write("\(sha1),\(date.timeIntervalSince1970),1\n")
+        try database.recordPlay(of: sha1, at: date.timeIntervalSince1970)
         history.recordPlay(of: sha1, at: date)
     }
 
     public func writeSkip(of sha1: String, at date: Date) throws {
-        let filename = "history_\(dateFormatter.string(from: Date())).txt"
-        let writer = FileWriter("\(dirname)/\(filename)")
-        try writer.write("\(sha1),\(date.timeIntervalSince1970),0\n")
+        try database.recordSkip(of: sha1, at: date.timeIntervalSince1970)
         history.recordSkip(of: sha1, at: date)
     }
 }
 
 // configures your application
 public func configure(_ app: Application) throws {
-    Log.handlers = 
+    Log.handlers =
       [
         .console: ConsoleLogHandler(at: .debug),
       ]
 
     Log.i("server starting")
-    
-    // still need to grab list of paths from the config
-    //trackFinder.find(atFilePath: "/Volumes/Temp/mp3/Apocalyptica")
-    //trackFinder.find(atFilePath: "/Volumes/Temp/mp3/")
-    trackFinder.find(atFilePath: "/qp/mp3/")
 
-    history.find(atFilePath: historyDir)
+    // reconcile the on-disk catalog against the database (incremental: only
+    // re-parses *.json sidecars that are new or whose modification time changed)
+    // and rebuild the in-RAM catalog from what is currently available on disk.
+    jukeboxDatabase.reconcile(musicDir: musicDir, into: trackFinder)
+    Log.d("catalog: \(trackFinder.tracks.count) available tracks (db tracks=\(jukeboxDatabase.count(ofTable: "tracks")))")
 
-    Log.d("test finder has found \(trackFinder.tracks.count) tracks")
+    // one-time import of the legacy .txt history into the database
+    if !jukeboxDatabase.isLegacyHistoryImported() {
+        do {
+            try jukeboxDatabase.importLegacyHistory(History.legacyEvents(inDirectory: historyDir))
+        } catch {
+            Log.e("legacy history import failed: \(error)")
+        }
+    }
+
+    // load the persisted play history into the in-RAM mirror
+    do {
+        let loaded = try jukeboxDatabase.loadHistory()
+        history.load(plays: loaded.plays, skips: loaded.skips)
+        Log.d("history: \(jukeboxDatabase.count(ofTable: "play_history")) events across \(history.plays.count) tracks")
+    } catch {
+        Log.e("could not load history from database: \(error)")
+    }
 
     // advertise this server on the local network so clients can find it via mDNS
     // instead of a hardcoded IP address.

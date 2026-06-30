@@ -53,8 +53,13 @@ public class TrackFinder: TrackFinderType {
                           .appendingPathComponent(audioTrack.Filename, isDirectory: false)
 
                         if try trackUrl.checkResourceIsReachable() {
-                            if var (_, existingTracks) = tracks[audioTrack.SHA1] {
-                                existingTracks.append(trackUrl)
+                            // NOTE: previously `if var (_, existingTracks) =
+                            // tracks[...] { existingTracks.append(...) }`, which
+                            // mutated a discarded copy, so a sha1 seen at more
+                            // than one path kept only the first path. Append in
+                            // place to the stored array.
+                            if tracks[audioTrack.SHA1] != nil {
+                                tracks[audioTrack.SHA1]!.1.append(trackUrl)
                             } else {
                                 tracks[audioTrack.SHA1] = (audioTrack, [trackUrl])
                             }
