@@ -27,26 +27,38 @@ public class ServerBrowser: ObservableObject {
     // the live client once connected, handy for non-SwiftUI callers (e.g. key handlers)
     public private(set) var currentClient: Client?
 
+    // whether the UI should offer an "offline mode" escape hatch (iOS opts in via
+    // autoFallbackToLocal; the mac client, which has no offline mode, does not)
+    public var allowsOfflineMode: Bool { autoFallbackToLocal }
+
     private let serviceType: String
     private let password: String
     private let initialQueueType: PlayingQueueType
     private let authHeaderValue: String
     private let searchTimeout: TimeInterval
+    // when true, giving up on discovery drops into offline mode (local cache only)
+    // instead of showing the failure screen. The iOS client opts in; the mac client doesn't.
+    private let autoFallbackToLocal: Bool
 
     private var browser: NWBrowser?
     private var probe: NWConnection?
     private var hasResolved = false
     // bumped on every start()/retry() so stale async callbacks can be ignored
     private var generation = 0
+    // the play-local choice from before we went offline, so a later scan can
+    // restore it; nil means "no previous setting" (scan then defaults to remote)
+    private var rememberedQueueType: PlayingQueueType?
 
     public init(serviceType: String = "_djukebox._tcp",
                 password: String,
                 initialQueueType: PlayingQueueType = .local,
+                autoFallbackToLocal: Bool = false,
                 searchTimeout: TimeInterval = 12.0)
     {
         self.serviceType = serviceType
         self.password = password
         self.initialQueueType = initialQueueType
+        self.autoFallbackToLocal = autoFallbackToLocal
         self.searchTimeout = searchTimeout
         // same hashing the ServerConnection uses, so we can verify connectivity up front
         self.authHeaderValue = SHA512.hash(data: Data(password.utf8)).map {
@@ -93,6 +105,39 @@ public class ServerBrowser: ObservableObject {
 
     // Search again from scratch.
     public func retry() { start() }
+
+    // Capture the current play-local choice before the client goes offline, so a
+    // later scan/reconnect can put it back. No-op if we're already offline.
+    public func rememberCurrentPlayLocal() {
+        if let client = currentClient,
+           !client.trackFetcher.useLocalContentOnly,
+           let queueType = client.trackFetcher.queueType
+        {
+            rememberedQueueType = queueType
+        }
+    }
+
+    // Stop searching and run from locally-cached tracks only (offline mode).
+    // Used both as the automatic fallback when no server is found and when the
+    // user explicitly chooses to go offline.
+    public func goOffline() {
+        cancelAll()
+        generation += 1
+        makeLocalClient(gen: generation)
+    }
+
+    // Build a client with no server, backed only by the local track cache.
+    private func makeLocalClient(gen: Int) {
+        guard gen == self.generation else { return }
+        // An empty server URL means the (unused) server calls just fail quietly;
+        // everything the client shows comes from the on-device cache instead.
+        let client = Client(serverURL: "", password: self.password, initialQueueType: .local)
+        try? client.trackFetcher.watch(queue: .local)  // offline always plays local
+        client.trackFetcher.useLocalContentOnly = true
+        self.currentClient = client
+        self.state = .connected(client)
+        Log.i("offline mode: no server found, playing locally cached tracks only")
+    }
 
     // Bypass discovery and connect to a host the user typed in.
     public func connectManually(toHost host: String, port: Int) {
@@ -145,19 +190,32 @@ public class ServerBrowser: ObservableObject {
     private func urlString(host: NWEndpoint.Host, port: NWEndpoint.Port) -> String {
         switch host {
         case .ipv4(let address):
-            return "http://\(address):\(port.rawValue)"
+            // a resolved address can carry an interface scope (e.g. "127.0.0.1%lo0"),
+            // which is meaningless for IPv4 in a URL — drop it.
+            return "http://\(stripZone("\(address)")):\(port.rawValue)"
         case .ipv6(let address):
-            // IPv6 literals must be bracketed; a link-local zone id (%en0) must be %25-encoded
+            // IPv6 literals must be bracketed. A link-local zone id (%en0) is required
+            // for routing and must be %25-encoded; for other addresses it's noise.
             var raw = "\(address)"
-            if let pct = raw.firstIndex(of: "%") {
-                raw.replaceSubrange(pct...pct, with: "%25")
+            if raw.lowercased().hasPrefix("fe80") {
+                if let pct = raw.firstIndex(of: "%") {
+                    raw.replaceSubrange(pct...pct, with: "%25")
+                }
+            } else {
+                raw = stripZone(raw)
             }
             return "http://[\(raw)]:\(port.rawValue)"
         case .name(let name, _):
-            return "http://\(name):\(port.rawValue)"
+            return "http://\(stripZone(name)):\(port.rawValue)"
         @unknown default:
             return "http://\(host):\(port.rawValue)"
         }
+    }
+
+    // Remove an interface scope identifier ("192.168.1.5%en0" -> "192.168.1.5").
+    private func stripZone(_ host: String) -> String {
+        guard let pct = host.firstIndex(of: "%") else { return host }
+        return String(host[..<pct])
     }
 
     // Confirm the server actually answers (and the password is accepted) before committing.
@@ -190,10 +248,22 @@ public class ServerBrowser: ObservableObject {
 
     private func connect(toURL urlString: String, gen: Int) {
         guard gen == self.generation else { return }
+        // were we offline (i.e. is this a scan/reconnect) before this connection?
+        let reconnectingFromOffline = currentClient?.trackFetcher.useLocalContentOnly ?? false
         cancelAll()
         let client = Client(serverURL: urlString,
                             password: self.password,
                             initialQueueType: self.initialQueueType)
+        // we reached a server, so use it: don't restore a stale offline preference
+        if client.trackFetcher.useLocalContentOnly {
+            client.trackFetcher.useLocalContentOnly = false
+        }
+        // coming back from offline via a scan: restore the play-local choice from
+        // before we went offline, or default to not playing local if there was none
+        if reconnectingFromOffline {
+            try? client.trackFetcher.watch(queue: rememberedQueueType ?? .remote)
+        }
+        rememberedQueueType = nil
         self.currentClient = client
         self.state = .connected(client)
         Log.i("connected to DJukebox server at \(urlString)")
@@ -203,6 +273,11 @@ public class ServerBrowser: ObservableObject {
         DispatchQueue.main.async {
             guard gen == self.generation else { return }
             self.cancelAll()
+            if self.autoFallbackToLocal {
+                Log.i("server discovery failed (\(reason)); falling back to local")
+                self.makeLocalClient(gen: gen)
+                return
+            }
             self.state = .failed(reason)
             Log.w("server discovery failed: \(reason)")
         }

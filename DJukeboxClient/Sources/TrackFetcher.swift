@@ -26,6 +26,9 @@ public class TrackFetcher: ObservableObject {
     // turn on to not use streaming for tracks (offline mode)
     public var useLocalContentOnly = false {
         didSet(oldValue) {
+            // not @Published (can't combine a wrapper with didSet), so nudge
+            // observers directly — the offline/local UI keys off this flag
+            objectWillChange.send()
             refreshTracks()
         }
     }

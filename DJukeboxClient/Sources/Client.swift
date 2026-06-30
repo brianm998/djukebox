@@ -6,6 +6,13 @@ public class Client {
     public var historyFetcher: HistoryFetcher
     public let serverConnection: ServerType
 
+    // the 1s state-save / refresh loop; held so it can be torn down with the client
+    private var refreshTimer: Timer?
+
+    deinit {
+        refreshTimer?.invalidate()
+    }
+
     public func copy() -> Client {
         return Client(trackFetcher: self.trackFetcher,
                       historyFetcher: self.historyFetcher,
@@ -67,7 +74,10 @@ public class Client {
 
         // Create the SwiftUI view that provides the window contents.
         
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+        // weak self so the timer doesn't keep this client alive forever; deinit
+        // invalidates it, so replacing the client (e.g. on a scan/reconnect) stops it
+        self.refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
             self.trackFetcher.runtimeState.save()
             self.trackFetcher.refreshQueue()
             self.historyFetcher.refresh()

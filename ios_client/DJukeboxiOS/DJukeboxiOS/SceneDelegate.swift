@@ -30,7 +30,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
 
         // Create the SwiftUI view that provides the window contents.
-        let browser = ServerBrowser(password: password)
+        // On iOS, if no server turns up we quietly drop into local-only mode
+        // rather than showing a failure screen.
+        let browser = ServerBrowser(password: password, autoFallbackToLocal: true)
         browser.start()
         let contentView = ContentView(browser)
 

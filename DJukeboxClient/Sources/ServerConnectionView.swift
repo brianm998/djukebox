@@ -73,6 +73,13 @@ struct ServerStatusView: View {
 
             if isBusy {
                 busyIndicator
+
+                // let the user stop waiting and go offline when they know
+                // there's no server around (iOS only)
+                if browser.allowsOfflineMode {
+                    Button("Offline Mode") { browser.goOffline() }
+                        .padding(.top)
+                }
             } else {
                 Button("Search Again") { browser.retry() }
 
