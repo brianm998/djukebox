@@ -49,9 +49,11 @@ public class TrackFetcher: ObservableObject {
         Log.i(self.initialRuntimeState)
         if let initialRuntimeState = self.initialRuntimeState {
             Log.i(initialRuntimeState)
-
-            audioPlayer.player?.update(with: initialRuntimeState)
             self.initialRuntimeState = nil
+
+            // only restore saved state into the local player; the server manages its own queue
+            guard queueType == .local else { return }
+            audioPlayer.player?.update(with: initialRuntimeState)
         }
     }
     
