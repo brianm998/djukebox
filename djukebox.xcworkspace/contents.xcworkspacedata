@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:DJukeboxClient">
+   </FileRef>
+   <FileRef
+      location = "group:DJukeboxCommon">
+   </FileRef>
+   <FileRef
+      location = "group:mac_client/DJukeboxMac/DJukeboxMac.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:ios_client/DJukeboxiOS/DJukeboxiOS.xcodeproj">
+   </FileRef>
+</Workspace>

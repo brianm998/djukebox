@@ -2,6 +2,9 @@ Packages
 .build
 xcuserdata
 *.xcworkspace
+# but do track the intentional top-level multi-project workspace
+# (its user-specific state is still ignored by the xcuserdata rule above)
+!djukebox.xcworkspace
 Pods/
 **/*~
 **/#*
