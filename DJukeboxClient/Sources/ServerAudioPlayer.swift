@@ -132,6 +132,11 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType, @uncheck
             closure(playingQueue, error)
         }
     }
+
+    // remote queue: audition the gain on the server's currently-playing track
+    public func setLivePlaybackGain(decibels: Double) {
+        self.request(path: "volume/live/\(decibels)") { _, _ in }
+    }
 }
 
 

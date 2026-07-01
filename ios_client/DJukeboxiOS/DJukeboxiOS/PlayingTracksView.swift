@@ -105,8 +105,12 @@ public struct BigButtonView: View {
                   PlayRandomTrackButton(trackFetcher: trackFetcher)
                   PlayNewRandomTrackButton(trackFetcher: trackFetcher)
                   ShuffleQueueButton(trackFetcher: trackFetcher)
-                  PlayUntilButton(trackFetcher: trackFetcher)
-                  PlayForButton(trackFetcher: trackFetcher)
+                  // grouped to stay within SwiftUI's 10-view ViewBuilder limit
+                  Group {
+                      PlayUntilButton(trackFetcher: trackFetcher)
+                      PlayForButton(trackFetcher: trackFetcher)
+                      TrackVolumeButton(trackFetcher: trackFetcher)
+                  }
                   Button(action: {
                        self.trackFetcher.cacheQueue()
                    }) {
@@ -153,6 +157,7 @@ public struct SmallButtonView: View {
     @State private var showingActionSheet = false
     @State private var showingPlayUntilPicker = false
     @State private var showingPlayForPicker = false
+    @State private var showingVolumePicker = false
     @State private var playUntilTime = Date()
     @State private var playForHours = 1
     @State private var playForMinutes = 0
@@ -189,6 +194,7 @@ public struct SmallButtonView: View {
                                             self.playForMinutes = 0
                                             self.showingPlayForPicker = true
                                         },
+                                        .default(Text("Set Volume…")) { self.showingVolumePicker = true },
                                         .default(Text("Refresh Queue")) { self.trackFetcher.refreshQueue() },
                                         .default(Text("Refresh Tracks")) { self.trackFetcher.refreshTracks() },
                                         .default(Text("Cache Current Queue")) { self.trackFetcher.cacheQueue() },
@@ -272,6 +278,9 @@ public struct SmallButtonView: View {
                 }
             }
             .padding()
+        }
+        .sheet(isPresented: $showingVolumePicker) {
+            TrackVolumeSheet(trackFetcher: trackFetcher, isPresented: $showingVolumePicker)
         }
     }
 }

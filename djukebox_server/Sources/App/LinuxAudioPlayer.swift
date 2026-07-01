@@ -14,8 +14,12 @@ public final class LinuxAudioPlayer: AudioPlayerType, @unchecked Sendable {
     
     let trackFinder: TrackFinderType
     let historyWriter: HistoryWriter // not written to in linux yet
-    
-    public var playingTrack: AudioTrackType? 
+
+    // Supplies the per-track gain (dB) to apply; injected so playback can boost
+    // quiet tracks. nil => everything plays at its recorded level.
+    let volumeSource: VolumeAdjustmentSource?
+
+    public var playingTrack: AudioTrackType?
 
     // XXX implement this for linux
     // The total duration, in seconds, of the sound associated with the audio player.
@@ -27,9 +31,12 @@ public final class LinuxAudioPlayer: AudioPlayerType, @unchecked Sendable {
 
     fileprivate var process: Process?
     
-    init(trackFinder: TrackFinderType, historyWriter: HistoryWriter) {
+    init(trackFinder: TrackFinderType,
+         historyWriter: HistoryWriter,
+         volumeSource: VolumeAdjustmentSource? = nil) {
         self.trackFinder = trackFinder
         self.historyWriter = historyWriter
+        self.volumeSource = volumeSource
     }
 
     public func clearQueue() {
@@ -117,8 +124,9 @@ public final class LinuxAudioPlayer: AudioPlayerType, @unchecked Sendable {
         dispatchQueue.async {
             do {
                 if let (audioTrack, url) = self.trackFinder.track(forHash: nextTrackHash) {
-                    Log.d("playing \(audioTrack.Title)")
-                    try self.play(filename: url.path)
+                    let gainDB = self.volumeSource?.gainDecibels(forHash: nextTrackHash) ?? 0
+                    Log.d("playing \(audioTrack.Title) (gain \(gainDB) dB)")
+                    try self.play(filename: url.path, gainDecibels: gainDB)
                 } else {
                     Log.d("no track exists for hash \(nextTrackHash)")
                     // XXX throw missing value for hash
@@ -131,14 +139,19 @@ public final class LinuxAudioPlayer: AudioPlayerType, @unchecked Sendable {
         }
     }
 
-    fileprivate func play(filename: String) throws {
-        // linux: aplay, osx: afplay
-        var player: String = "afplay" 
-        player = "aplay"
+    fileprivate func play(filename: String, gainDecibels: Double = 0) throws {
         let newProcess = Process()
         self.process = newProcess
-        try shellOut(to: player,
-                     arguments: ["\"\(filename)\""],
+        // ffplay decodes mp3 (which aplay cannot) and its ffmpeg "volume" filter
+        // accepts a decibel gain directly, so it doubles as our boost mechanism.
+        // Requires ffmpeg's ffplay on the server's PATH.
+        var arguments = ["-nodisp", "-autoexit", "-loglevel", "quiet"]
+        if gainDecibels != 0 {
+            arguments += ["-af", "volume=\(gainDecibels)dB"]
+        }
+        arguments.append("\"\(filename)\"")
+        try shellOut(to: "ffplay",
+                     arguments: arguments,
                      process: newProcess)
     }
 

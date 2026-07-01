@@ -83,6 +83,19 @@ public struct PlayingHistory: Content {
     let skips: [String: [Double]]
 }
 
+// A persisted playback gain (in decibels) scoped to a single track, a whole
+// album, or a whole artist. Used both as the POST body when a client sets/clears
+// an adjustment and as the elements of the GET /volume listing. Only the fields
+// relevant to `scope` need be set: track -> sha1, album -> band + album,
+// artist -> band.
+public struct VolumeAdjustment: Content {
+    public let scope: String        // "track" | "album" | "artist"
+    public let sha1: String?
+    public let band: String?
+    public let album: String?
+    public let decibels: Double
+}
+
 func trackServingRoutes(_ app: Application) throws {
 
     // Json list of all known tracks
@@ -492,11 +505,86 @@ func playerRoutes(_ app: Application) throws {
     }
 }
 
+// server-side clamp so a client can't request an extreme (clipping / silencing)
+// gain. Boost is the point of the feature; a little cut is allowed too.
+private let volumeDecibelLimit = 24.0
+
+func volumeRoutes(_ app: Application) throws {
+
+    // list every stored volume adjustment
+    // curl localhost:8080/volume
+    app.get("volume") { req -> [VolumeAdjustment] in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            jukeboxDatabase.allVolumeAdjustments().map {
+                VolumeAdjustment(scope: $0.scope, sha1: $0.sha1,
+                                 band: $0.band, album: $0.album, decibels: $0.decibels)
+            }
+        }
+    }
+
+    // the effective (saved) gain for a SPECIFIC track, so a client can pre-fill
+    // its volume control. Resolves precedence track > album > artist; 0 dB if none.
+    // Keyed by the track's own sha1 (not "what's playing") so it is correct even
+    // when the client plays locally or the sheet is about a queued/other track.
+    // curl localhost:8080/volume/for/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
+    app.get("volume", "for", ":sha1") { req -> VolumeAdjustment in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            guard let sha1 = req.parameters.get("sha1") else { throw Abort(.badRequest) }
+            let db = jukeboxDatabase.effectiveGainDecibels(forHash: sha1)
+            return VolumeAdjustment(scope: "track", sha1: sha1, band: nil, album: nil, decibels: db)
+        }
+    }
+
+    // live audition: set the currently-playing track's gain right now, WITHOUT
+    // persisting. Used while the user drags the volume slider so they can hear it.
+    // curl localhost:8080/volume/live/6.5
+    app.get("volume", "live", ":decibels") { req -> Response in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            guard let raw = req.parameters.get("decibels"), let db = Double(raw) else {
+                throw Abort(.badRequest)
+            }
+            audioPlayer.setLivePlaybackGain(decibels: max(-volumeDecibelLimit, min(volumeDecibelLimit, db)))
+            return Response(status: .ok)
+        }
+    }
+
+    // set (upsert) one adjustment
+    // curl -H 'content-type: application/json' -d '{"scope":"track","sha1":"…","decibels":6}' localhost:8080/volume
+    app.post("volume") { req -> Response in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            let adj = try req.content.decode(VolumeAdjustment.self)
+            let clamped = max(-volumeDecibelLimit, min(volumeDecibelLimit, adj.decibels))
+            try jukeboxDatabase.setVolumeAdjustment(scope: adj.scope, sha1: adj.sha1,
+                                                    band: adj.band, album: adj.album,
+                                                    decibels: clamped,
+                                                    at: Date().timeIntervalSince1970)
+            return Response(status: .ok)
+        }
+    }
+
+    // clear one adjustment (reset to 0 dB). Same body shape; decibels ignored.
+    // curl -H 'content-type: application/json' -d '{"scope":"track","sha1":"…","decibels":0}' localhost:8080/volume/clear
+    app.post("volume", "clear") { req -> Response in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            let adj = try req.content.decode(VolumeAdjustment.self)
+            try jukeboxDatabase.clearVolumeAdjustment(scope: adj.scope, sha1: adj.sha1,
+                                                      band: adj.band, album: adj.album)
+            return Response(status: .ok)
+        }
+    }
+}
+
 func routes(_ app: Application) throws {
-    
+
     try trackServingRoutes(app)
     try historyRoutes(app)
     try playerRoutes(app)
+    try volumeRoutes(app)
     try pairingRoutes(app)
 }
 

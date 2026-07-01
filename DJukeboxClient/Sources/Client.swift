@@ -48,8 +48,13 @@ public class Client {
 
          The doghouse treats the AVQueuePlayer like a little dog, only giving it one track a a time
          */
+        // captured locally (not `self`) so the injected lookup doesn't retain the Client
+        let server = serverConnection
         let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher,
-                                           historyWriter: ServerHistoryWriter(server: serverConnection))
+                                           historyWriter: ServerHistoryWriter(server: serverConnection),
+                                           savedGainForHash: { hash, done in
+                                               server.savedGain(forHash: hash) { db, _ in done(db ?? 0) }
+                                           })
         trackFetcher.add(queueType: .local,
                          withPlayer: AsyncAudioPlayer(player: player,
                                                       fetcher: trackFetcher,

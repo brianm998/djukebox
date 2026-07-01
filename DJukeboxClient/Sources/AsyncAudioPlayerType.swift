@@ -25,5 +25,14 @@ public protocol AsyncAudioPlayerType {
     func resumePlaying(closure: @escaping (Bool, Error?) -> Void)
     func shuffleQueue()
     func playUntil(date: Date, closure: @escaping (PlayingQueue?, Error?) -> Void)
+
+    // Immediately set the currently-playing track's playback gain (dB) for live
+    // auditioning of a volume adjustment. Routes to the server (remote queue) or
+    // the local playback tap (local queue). No-op default for players that can't.
+    func setLivePlaybackGain(decibels: Double)
+}
+
+public extension AsyncAudioPlayerType {
+    func setLivePlaybackGain(decibels: Double) { }
 }
 

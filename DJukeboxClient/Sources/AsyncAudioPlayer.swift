@@ -200,6 +200,11 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType, @unchecked Sendable {
         player.shuffleQueue()
     }
 
+    // local queue: audition the gain on the underlying local player's tap
+    public func setLivePlaybackGain(decibels: Double) {
+        player.setLivePlaybackGain(decibels: decibels)
+    }
+
     public func playUntil(date: Date, closure: @escaping (PlayingQueue?, Error?) -> Void) {
         let now = Date()
         guard date > now else {

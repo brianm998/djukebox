@@ -8,6 +8,14 @@ public protocol ServerType {
     func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void)
     func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void)
     func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void)
+
+    // persist / read the per-track/album/artist playback gains the server applies
+    func setVolumeAdjustment(_ adjustment: VolumeAdjustment, closure: @escaping (Bool, Error?) -> Void)
+    func clearVolumeAdjustment(_ adjustment: VolumeAdjustment, closure: @escaping (Bool, Error?) -> Void)
+    func listVolumeAdjustments(closure: @escaping ([VolumeAdjustment]?, Error?) -> Void)
+    // the saved gain (dB) for a track, for pre-filling the volume control
+    func savedGain(forHash hash: String, closure: @escaping (Double?, Error?) -> Void)
+
     var authHeaderValue: String { get }
     var url: String { get }
 }
@@ -16,6 +24,25 @@ public struct ServerHistoryEntry: Codable {
     public let hash: String
     public let time: Int
     public let fullyPlayed: Bool
+}
+
+// Mirrors the server's VolumeAdjustment wire type. Only the fields relevant to
+// `scope` are set: track -> sha1, album -> band + album, artist -> band.
+public struct VolumeAdjustment: Codable {
+    public let scope: String
+    public let sha1: String?
+    public let band: String?
+    public let album: String?
+    public let decibels: Double
+
+    public init(scope: String, sha1: String? = nil, band: String? = nil,
+                album: String? = nil, decibels: Double) {
+        self.scope = scope
+        self.sha1 = sha1
+        self.band = band
+        self.album = album
+        self.decibels = decibels
+    }
 }
 
 // @unchecked Sendable: stored state is immutable (serverUrl / authHeaderValue are
@@ -140,6 +167,36 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
 
     public func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void) {
         self.requestJson(atPath: "history/\(since)", closure: closure)
+    }
+
+    public func setVolumeAdjustment(_ adjustment: VolumeAdjustment,
+                                    closure: @escaping (Bool, Error?) -> Void) {
+        do {
+            let body = try JSONEncoder().encode(adjustment)
+            self.post(body: body, toPath: "volume", closure: closure)
+        } catch {
+            closure(false, error)
+        }
+    }
+
+    public func clearVolumeAdjustment(_ adjustment: VolumeAdjustment,
+                                      closure: @escaping (Bool, Error?) -> Void) {
+        do {
+            let body = try JSONEncoder().encode(adjustment)
+            self.post(body: body, toPath: "volume/clear", closure: closure)
+        } catch {
+            closure(false, error)
+        }
+    }
+
+    public func listVolumeAdjustments(closure: @escaping ([VolumeAdjustment]?, Error?) -> Void) {
+        self.requestJson(atPath: "volume", closure: closure)
+    }
+
+    public func savedGain(forHash hash: String, closure: @escaping (Double?, Error?) -> Void) {
+        self.requestJson(atPath: "volume/for/\(hash)") { (adj: VolumeAdjustment?, error: Error?) in
+            closure(adj?.decibels, error)
+        }
     }
 }
 

@@ -73,7 +73,33 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     let trackFinder: TrackFinderType
 
     let historyWriter: HistoryWriterType
-    
+
+    // One PlaybackGain per AVPlayerItem (each drives its own MTAudioProcessingTap),
+    // so a track's boost can never bleed into the next during the queue handoff.
+    // Guarded by a lock because it is touched from the main thread (play / live
+    // preview) and the end-of-item notification thread. Local streaming playback
+    // is boosted above unity here (AVPlayer.volume can't).
+    private var itemGains: [AVPlayerItem: PlaybackGain] = [:]
+    private let itemGainsLock = NSLock()
+
+    private func setGain(_ gain: PlaybackGain, for item: AVPlayerItem) {
+        itemGainsLock.lock(); itemGains[item] = gain; itemGainsLock.unlock()
+    }
+    private func gain(for item: AVPlayerItem) -> PlaybackGain? {
+        itemGainsLock.lock(); defer { itemGainsLock.unlock() }; return itemGains[item]
+    }
+    private func forgetGain(for item: AVPlayerItem) {
+        itemGainsLock.lock(); itemGains[item] = nil; itemGainsLock.unlock()
+    }
+    private func forgetAllGains() {
+        itemGainsLock.lock(); itemGains.removeAll(); itemGainsLock.unlock()
+    }
+
+    // Looks up a track's saved gain (dB) from the server; injected so this player
+    // stays decoupled from the networking layer. Invoked on the main thread from
+    // play(). nil => everything at unity.
+    let savedGainForHash: ((String, @escaping (Double) -> Void) -> Void)?
+
     let player = AVQueuePlayer(items: [])
 
     fileprivate func logPlayerStatus() {
@@ -90,11 +116,13 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     }
     
     public init(trackFinder: TrackFinderType,
-                historyWriter: HistoryWriterType)
+                historyWriter: HistoryWriterType,
+                savedGainForHash: ((String, @escaping (Double) -> Void) -> Void)? = nil)
     {
         self.trackFinder = trackFinder
         self.historyWriter = historyWriter
-        
+        self.savedGainForHash = savedGainForHash
+
         super.init()
         
         player.automaticallyWaitsToMinimizeStalling = true
@@ -130,6 +158,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     public func clearQueue() {
         player.removeAllItems()
         trackQueue = []
+        forgetAllGains()
     }
 
     public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {
@@ -184,11 +213,40 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
             {
                 trackQueue.append(sha1Hash)
             } else {
-                let item = AVPlayerItem(asset: AVAsset(url: url))
+                let asset = AVURLAsset(url: url)
+                let item = AVPlayerItem(asset: asset)
                 player.insert(item, after: nil)
                 trackMap[item] = sha1Hash
+                let gain = PlaybackGain()   // fresh => unity until the saved value arrives
+                setGain(gain, for: item)
+                attachGain(to: item, asset: asset, gain: gain)
+                applySavedGain(gain, forHash: sha1Hash)
                 if !isPaused { startPlayer() }
             }
+        }
+    }
+
+    // Attach a gain tap to this item's audio. Tracks load asynchronously (the URL
+    // is a remote stream), so the mix is set once the audio track is available.
+    private func attachGain(to item: AVPlayerItem, asset: AVURLAsset, gain: PlaybackGain) {
+        // AVPlayerItem / AVAudioMix are non-Sendable but we only ever touch them
+        // on the main thread; box them to cross the load callback safely.
+        let itemBox = UncheckedSendableBox(item)
+        asset.loadTracks(withMediaType: .audio) { tracks, _ in
+            guard let track = tracks?.first else { return }
+            let mixBox = UncheckedSendableBox(gain.makeAudioMix(for: track))
+            DispatchQueue.main.async {
+                itemBox.value.audioMix = mixBox.value
+            }
+        }
+    }
+
+    // A fresh PlaybackGain is already unity, so there's nothing to reset — just
+    // apply this track's saved gain to ITS OWN gain object when the server
+    // responds (a few ms on the LAN). Setting it is thread-safe (locked).
+    private func applySavedGain(_ gain: PlaybackGain, forHash sha1Hash: String) {
+        savedGainForHash?(sha1Hash) { db in
+            gain.setDecibels(db)
         }
     }
 
@@ -265,11 +323,22 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         }
 
         serviceQueue()
+        // drop the finished item's gain (its tap is torn down with the item)
+        if let finished = note.object as? AVPlayerItem {
+            forgetGain(for: finished)
+        }
         // called every time each song finishes playing.
         // we could trim the trackMap here of already played tracks
     }
 
     public func shuffleQueue() {
         trackQueue.shuffle()
+    }
+
+    // Live "audition": change the CURRENT track's gain right now (its tap picks it
+    // up on the next audio buffer). Overrides the AudioPlayerType no-op default.
+    public func setLivePlaybackGain(decibels: Double) {
+        guard let item = player.currentItem, let gain = gain(for: item) else { return }
+        gain.setDecibels(decibels)
     }
 }

@@ -15,6 +15,11 @@ let jukeboxDatabase = try! JukeboxDatabase(path: databasePath)
 
 let historyWriter = HistoryWriter(database: jukeboxDatabase, history: history)
 
+// Supplies the audio player with the effective per-track gain (dB), resolved
+// from the database with precedence track > album > artist. Same shape as
+// HistoryWriter: a thin, database-backed conformer to a DJukeboxCommon protocol.
+let volumeAdjustments = VolumeAdjustmentProvider(database: jukeboxDatabase)
+
 // advertises this server on the local network via mDNS / Bonjour.
 // nonisolated(unsafe): assigned once from configure() at startup and only
 // retained thereafter (nothing reads it back concurrently).
@@ -29,10 +34,12 @@ let pairingService = PairingService(database: jukeboxDatabase,
 
 #if os(Linux)
 let audioPlayer: any AudioPlayerType & Sendable = LinuxAudioPlayer(trackFinder: trackFinder,
-                                                                   historyWriter: historyWriter)
+                                                                   historyWriter: historyWriter,
+                                                                   volumeSource: volumeAdjustments)
 #else
 let audioPlayer: any AudioPlayerType & Sendable = MacAudioPlayer(trackFinder: trackFinder,
-                                                                 historyWriter: historyWriter)
+                                                                 historyWriter: historyWriter,
+                                                                 volumeSource: volumeAdjustments)
 #endif
 
 // where the music (and its *.json sidecars) live
@@ -68,6 +75,21 @@ public final class HistoryWriter: HistoryWriterType, @unchecked Sendable {
     public func writeSkip(of sha1: String, at date: Date) throws {
         try database.recordSkip(of: sha1, at: date.timeIntervalSince1970)
         history.recordSkip(of: sha1, at: date)
+    }
+}
+
+// Database-backed source of the per-track playback gain the audio player applies.
+// @unchecked Sendable: an immutable reference to JukeboxDatabase, which is itself
+// internally synchronized by its serial queue.
+public final class VolumeAdjustmentProvider: VolumeAdjustmentSource, @unchecked Sendable {
+    let database: JukeboxDatabase
+
+    init(database: JukeboxDatabase) {
+        self.database = database
+    }
+
+    public func gainDecibels(forHash sha1: String) -> Double {
+        database.effectiveGainDecibels(forHash: sha1)
     }
 }
 

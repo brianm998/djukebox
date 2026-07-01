@@ -408,6 +408,53 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
             self.refreshQueue()
         }
     }
+
+    // Persist a playback-gain adjustment (in dB) for a track, scoping it to just
+    // that track, its whole album, or its whole artist. The server stores it and
+    // applies it the next time a matching track plays. "artist"/"album" key off
+    // the Band field (and Album), matching how the catalog is browsed.
+    public func setVolume(decibels: Double, scope: VolumeScope, for track: AudioTrack) {
+        let adjustment: VolumeAdjustment
+        switch scope {
+        case .track:
+            adjustment = VolumeAdjustment(scope: "track", sha1: track.SHA1, decibels: decibels)
+        case .album:
+            guard let album = track.Album else {
+                Log.e("cannot set album volume: \(track.Title) has no album")
+                return
+            }
+            adjustment = VolumeAdjustment(scope: "album", band: track.Band,
+                                          album: album, decibels: decibels)
+        case .artist:
+            adjustment = VolumeAdjustment(scope: "artist", band: track.Band, decibels: decibels)
+        }
+        server.setVolumeAdjustment(adjustment) { success, error in
+            if let error = error {
+                Log.e("could not set \(scope) volume: \(error)")
+            } else {
+                Log.d("set \(scope) volume to \(decibels) dB for \(track.Title)")
+            }
+        }
+    }
+
+    // Live-audition a gain on whatever is playing right now (not persisted) so the
+    // user hears the change while dragging the slider. Routes through the active
+    // player, so it works for both the server (remote) and local playback queues.
+    public func previewVolume(decibels: Double) {
+        audioPlayer.player?.setLivePlaybackGain(decibels: decibels)
+    }
+
+    // The currently-playing track's saved gain (dB), published for the volume
+    // control to pre-fill from. refreshCurrentTrackGain() fetches it from the
+    // server and updates this on the main thread (views observe it); we avoid
+    // threading a caller closure across the async boundary (Swift 6 data-race).
+    @Published public var currentTrackGainDB: Double = 0
+
+    public func refreshSavedGain(forHash hash: String) {
+        server.savedGain(forHash: hash) { db, _ in
+            DispatchQueue.main.async { self.currentTrackGainDB = db ?? 0 }
+        }
+    }
 }
 
 // tell the client which url to use for which track hash

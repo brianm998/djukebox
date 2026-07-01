@@ -84,6 +84,19 @@ public final class JukeboxDatabase: @unchecked Sendable {
 
         CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
+        -- per-track / per-album / per-artist playback gain, in decibels
+        -- (0 = unchanged, positive = boost). `key` is the server-assembled
+        -- canonical identity for the scope (see volumeKey); the descriptive
+        -- sha1/band/album columns are kept so the set can be listed back to
+        -- clients. Applied by the audio player when a track starts, with
+        -- precedence track > album > artist (see effectiveGainDecibels).
+        CREATE TABLE IF NOT EXISTS volume_adjustment (
+          scope TEXT NOT NULL CHECK (scope IN ('track','album','artist')),
+          key   TEXT NOT NULL,
+          sha1  TEXT, band TEXT, album TEXT,
+          decibels REAL NOT NULL, updated_at REAL NOT NULL,
+          PRIMARY KEY (scope, key));
+
         -- one row per device that has completed pairing. We store only the SHA256
         -- hash of the device's bearer token, never the token itself, so a leaked
         -- database can't be replayed against the server.
@@ -502,6 +515,135 @@ public final class JukeboxDatabase: @unchecked Sendable {
             defer { sqlite3_finalize(stmt) }
             return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int64(stmt, 0)) : 0
         }) ?? 0
+    }
+
+    // MARK: - volume adjustments
+
+    // Separates band from album in an album-scope key. A control character that
+    // cannot occur in a tag value, so it can never collide with real metadata.
+    private static let volumeKeySeparator = "\u{1f}"
+
+    /// The canonical storage key for a scope. Throws if the fields required by
+    /// the scope are missing (so a malformed request can't create a junk row).
+    private func volumeKey(scope: String, sha1: String?, band: String?, album: String?) throws -> String {
+        switch scope {
+        case "track":
+            guard let sha1 = sha1, !sha1.isEmpty else {
+                throw JukeboxDatabaseError.step("track volume adjustment requires a sha1")
+            }
+            return sha1
+        case "album":
+            guard let band = band, !band.isEmpty, let album = album, !album.isEmpty else {
+                throw JukeboxDatabaseError.step("album volume adjustment requires band and album")
+            }
+            return band + Self.volumeKeySeparator + album
+        case "artist":
+            guard let band = band, !band.isEmpty else {
+                throw JukeboxDatabaseError.step("artist volume adjustment requires a band")
+            }
+            return band
+        default:
+            throw JukeboxDatabaseError.step("unknown volume scope \(scope)")
+        }
+    }
+
+    /// Upserts a volume adjustment for a scope. `decibels` is stored as given;
+    /// callers (the API) are expected to clamp to a sane range first.
+    public func setVolumeAdjustment(scope: String, sha1: String?, band: String?,
+                                    album: String?, decibels: Double, at time: Double) throws {
+        let key = try volumeKey(scope: scope, sha1: sha1, band: band, album: album)
+        try queue.sync {
+            let stmt = try prepareOnQueue("""
+              INSERT INTO volume_adjustment (scope, key, sha1, band, album, decibels, updated_at)
+              VALUES (?,?,?,?,?,?,?)
+              ON CONFLICT(scope,key) DO UPDATE SET
+                sha1=excluded.sha1, band=excluded.band, album=excluded.album,
+                decibels=excluded.decibels, updated_at=excluded.updated_at;
+              """)
+            defer { sqlite3_finalize(stmt) }
+            bind(stmt, 1, scope)
+            bind(stmt, 2, key)
+            bind(stmt, 3, sha1)
+            bind(stmt, 4, band)
+            bind(stmt, 5, album)
+            sqlite3_bind_double(stmt, 6, decibels)
+            sqlite3_bind_double(stmt, 7, time)
+            guard sqlite3_step(stmt) == SQLITE_DONE else {
+                throw JukeboxDatabaseError.step(String(cString: sqlite3_errmsg(db)))
+            }
+        }
+    }
+
+    /// Removes a stored adjustment (equivalent to resetting it to 0 dB).
+    public func clearVolumeAdjustment(scope: String, sha1: String?,
+                                      band: String?, album: String?) throws {
+        let key = try volumeKey(scope: scope, sha1: sha1, band: band, album: album)
+        try queue.sync {
+            try execOnQueue("DELETE FROM volume_adjustment WHERE scope=? AND key=?;",
+                            text: [scope, key])
+        }
+    }
+
+    /// The effective gain, in decibels, that should be applied when this track
+    /// plays: the most specific adjustment wins (track > album > artist). Returns
+    /// 0 (unity) when nothing matches or on any error, so playback never breaks.
+    public func effectiveGainDecibels(forHash sha1: String) -> Double {
+        (try? queue.sync {
+            // resolve the track's band/album so we can build the album/artist keys
+            var band: String?
+            var album: String?
+            let meta = try prepareOnQueue("SELECT band, album FROM tracks WHERE sha1=?1;")
+            defer { sqlite3_finalize(meta) }
+            bind(meta, 1, sha1)
+            if sqlite3_step(meta) == SQLITE_ROW {
+                band = columnText(meta, 0)
+                album = columnText(meta, 1)
+            }
+
+            let albumKey: String? = (band != nil && album != nil)
+              ? band! + Self.volumeKeySeparator + album! : nil
+            let artistKey = band
+
+            // one query for all three candidate rows; a nil key binds NULL and
+            // `key = NULL` never matches, so absent scopes are simply skipped
+            let stmt = try prepareOnQueue("""
+              SELECT scope, decibels FROM volume_adjustment
+               WHERE (scope='track'  AND key=?1)
+                  OR (scope='album'  AND key=?2)
+                  OR (scope='artist' AND key=?3);
+              """)
+            defer { sqlite3_finalize(stmt) }
+            bind(stmt, 1, sha1)
+            bind(stmt, 2, albumKey)
+            bind(stmt, 3, artistKey)
+
+            var byScope: [String: Double] = [:]
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                if let scope = columnText(stmt, 0) {
+                    byScope[scope] = sqlite3_column_double(stmt, 1)
+                }
+            }
+            return byScope["track"] ?? byScope["album"] ?? byScope["artist"] ?? 0.0
+        }) ?? 0.0
+    }
+
+    /// Every stored adjustment, for listing back to clients.
+    public func allVolumeAdjustments()
+      -> [(scope: String, sha1: String?, band: String?, album: String?, decibels: Double)] {
+        (try? queue.sync {
+            var ret: [(scope: String, sha1: String?, band: String?, album: String?, decibels: Double)] = []
+            let stmt = try prepareOnQueue(
+              "SELECT scope, sha1, band, album, decibels FROM volume_adjustment;")
+            defer { sqlite3_finalize(stmt) }
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                ret.append((scope: columnText(stmt, 0) ?? "",
+                            sha1: columnText(stmt, 1),
+                            band: columnText(stmt, 2),
+                            album: columnText(stmt, 3),
+                            decibels: sqlite3_column_double(stmt, 4)))
+            }
+            return ret
+        }) ?? []
     }
 
     // MARK: - low-level helpers (assume already on the serial queue)

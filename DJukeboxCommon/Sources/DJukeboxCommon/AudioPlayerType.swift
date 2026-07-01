@@ -19,5 +19,16 @@ public protocol AudioPlayerType {
     func clearQueue()
     func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool
     func shuffleQueue()
+
+    // Immediately set the playback gain (in dB) of the currently-playing track so
+    // a volume adjustment can be auditioned live before it is saved. Best-effort:
+    // only the AVAudioEngine-based MacAudioPlayer can change gain mid-track; the
+    // subprocess (Linux) and AVQueuePlayer (client-local) players use the no-op
+    // default below.
+    func setLivePlaybackGain(decibels: Double)
+}
+
+public extension AudioPlayerType {
+    func setLivePlaybackGain(decibels: Double) { }
 }
 

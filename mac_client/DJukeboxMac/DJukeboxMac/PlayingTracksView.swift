@@ -129,6 +129,7 @@ public struct BigButtonView: View {
                 VStack {
                     PlayUntilButton(trackFetcher: trackFetcher)
                     PlayForButton(trackFetcher: trackFetcher)
+                    TrackVolumeButton(trackFetcher: trackFetcher)
                 }
 
                 VStack {
