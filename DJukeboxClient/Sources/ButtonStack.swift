@@ -445,6 +445,47 @@ public func volumeGainLabel(_ decibels: Double) -> String? {
     return String(format: "%+g dB", decibels)
 }
 
+// A short label for the master attenuation: "Full" at (or effectively at) 0 dB,
+// else a whole-dB cut like "-12 dB" (rounded so it never shows "-0 dB").
+public func masterVolumeLabel(_ decibels: Double) -> String {
+    let rounded = decibels.rounded()
+    return rounded >= 0 ? "Full" : String(format: "%.0f dB", rounded)
+}
+
+// The top-level master volume control: one global attenuation that only cuts from
+// full volume (0 dB) down to a floor, applied on top of every per-track/album/
+// artist gain. Dragging auditions live; releasing persists it to the server.
+// Shared by the Mac/iPad button rows and the iPhone controls.
+public struct MasterVolumeControl: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    private let floor: Double = -30   // reduction-only: -30 dB … 0 dB (full, right end)
+
+    public init(trackFetcher: TrackFetcher) {
+        self.trackFetcher = trackFetcher
+    }
+
+    public var body: some View {
+        HStack(spacing: 6) {
+            Text("Master").font(.caption)
+            Image(systemName: "speaker.fill")
+            // full volume sits at the right end (0 dB); dragging left attenuates.
+            // The binding auditions on every step; onEditingChanged persists on release.
+            Slider(value: Binding(get: { trackFetcher.masterGainDB },
+                                  set: { trackFetcher.previewMasterGain(decibels: $0) }),
+                   in: floor...0, step: 0.5,
+                   onEditingChanged: { editing in
+                       if !editing { trackFetcher.commitMasterGain() }
+                   })
+              .frame(minWidth: 120)
+            Image(systemName: "speaker.wave.3.fill")
+            Text(masterVolumeLabel(trackFetcher.masterGainDB))
+              .font(.caption).monospacedDigit()
+              .frame(width: 52, alignment: .leading)
+        }
+        .onAppear { trackFetcher.refreshMasterGain() }
+    }
+}
+
 // Boosts the volume of the currently-playing track (Mac / iPad). Opens the shared
 // TrackVolumeSheet. On iPhone the same sheet is reached from the "Actions" menu.
 public struct TrackVolumeButton: View {

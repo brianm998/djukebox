@@ -89,7 +89,9 @@ public final class VolumeAdjustmentProvider: VolumeAdjustmentSource, @unchecked 
     }
 
     public func gainDecibels(forHash sha1: String) -> Double {
-        database.effectiveGainDecibels(forHash: sha1)
+        // the per-track/album/artist gain, plus the global master attenuation, so
+        // the top-level knob composes with the per-scope adjustments.
+        database.effectiveGainDecibels(forHash: sha1) + database.masterGainDecibels()
     }
 }
 

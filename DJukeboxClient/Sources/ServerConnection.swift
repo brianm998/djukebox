@@ -16,6 +16,10 @@ public protocol ServerType {
     // the saved gain (dB) for a track, for pre-filling the volume control
     func savedGain(forHash hash: String, closure: @escaping (Double?, Error?) -> Void)
 
+    // the global master gain (dB, <= 0), applied on top of every per-track gain
+    func masterGain(closure: @escaping (Double?, Error?) -> Void)
+    func setMasterGain(_ decibels: Double, closure: @escaping (Bool, Error?) -> Void)
+
     var authHeaderValue: String { get }
     var url: String { get }
 }
@@ -43,6 +47,12 @@ public struct VolumeAdjustment: Codable {
         self.album = album
         self.decibels = decibels
     }
+}
+
+// Mirrors the server's MasterVolume wire type: the single global gain (dB, <= 0).
+public struct MasterVolume: Codable {
+    public let decibels: Double
+    public init(decibels: Double) { self.decibels = decibels }
 }
 
 // @unchecked Sendable: stored state is immutable (serverUrl / authHeaderValue are
@@ -196,6 +206,21 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
     public func savedGain(forHash hash: String, closure: @escaping (Double?, Error?) -> Void) {
         self.requestJson(atPath: "volume/for/\(hash)") { (adj: VolumeAdjustment?, error: Error?) in
             closure(adj?.decibels, error)
+        }
+    }
+
+    public func masterGain(closure: @escaping (Double?, Error?) -> Void) {
+        self.requestJson(atPath: "volume/master") { (mv: MasterVolume?, error: Error?) in
+            closure(mv?.decibels, error)
+        }
+    }
+
+    public func setMasterGain(_ decibels: Double, closure: @escaping (Bool, Error?) -> Void) {
+        do {
+            let body = try JSONEncoder().encode(MasterVolume(decibels: decibels))
+            self.post(body: body, toPath: "volume/master", closure: closure)
+        } catch {
+            closure(false, error)
         }
     }
 }

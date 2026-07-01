@@ -48,12 +48,17 @@ public class Client {
 
          The doghouse treats the AVQueuePlayer like a little dog, only giving it one track a a time
          */
-        // captured locally (not `self`) so the injected lookup doesn't retain the Client
+        // captured locally (not `self`) so the injected lookup doesn't retain the
+        // Client; `fetcher` weakly so it isn't retained either. Local playback gets
+        // the per-track saved gain PLUS the global master attenuation, matching what
+        // the server applies to its own playback.
         let server = serverConnection
         let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher,
                                            historyWriter: ServerHistoryWriter(server: serverConnection),
-                                           savedGainForHash: { hash, done in
-                                               server.savedGain(forHash: hash) { db, _ in done(db ?? 0) }
+                                           savedGainForHash: { [weak fetcher] hash, done in
+                                               server.savedGain(forHash: hash) { db, _ in
+                                                   done((db ?? 0) + (fetcher?.masterGainDB ?? 0))
+                                               }
                                            })
         trackFetcher.add(queueType: .local,
                          withPlayer: AsyncAudioPlayer(player: player,
@@ -76,6 +81,7 @@ public class Client {
         historyFetcher.refresh()
         trackFetcher.refreshTracks()
         trackFetcher.refreshQueue()
+        trackFetcher.refreshMasterGain()
 
         // Create the SwiftUI view that provides the window contents.
         

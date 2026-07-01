@@ -475,8 +475,41 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     // Live-audition a gain on whatever is playing right now (not persisted) so the
     // user hears the change while dragging the slider. Routes through the active
     // player, so it works for both the server (remote) and local playback queues.
+    // The master attenuation is folded in so the audition matches what will play.
     public func previewVolume(decibels: Double) {
-        audioPlayer.player?.setLivePlaybackGain(decibels: decibels)
+        audioPlayer.player?.setLivePlaybackGain(decibels: decibels + masterGainDB)
+    }
+
+    // MARK: - master volume
+
+    // The single top-level master gain (dB, <= 0 = a reduction from full volume).
+    // Published so the master control reflects it; it composes with the per-track/
+    // album/artist gain (previewVolume folds it into every audition, the server
+    // folds it into server playback, and Client folds it into local playback).
+    @Published public var masterGainDB: Double = 0
+
+    private let masterReductionLimit = 30.0   // reduction-only: -30 dB … 0 dB (full)
+
+    // Pull the current master level from the server (it is global, so another
+    // client may have changed it). Views call this on appear; Client on startup.
+    public func refreshMasterGain() {
+        server.masterGain { db, _ in
+            DispatchQueue.main.async { self.masterGainDB = db ?? 0 }
+        }
+    }
+
+    // Live-audition a new master level on whatever is playing (not yet persisted),
+    // re-applying the current track's saved gain with the new master folded in.
+    public func previewMasterGain(decibels: Double) {
+        masterGainDB = max(-masterReductionLimit, min(0, decibels))
+        previewVolume(decibels: currentTrackGainDB)
+    }
+
+    // Persist the current master level to the server (call when the knob settles).
+    public func commitMasterGain() {
+        server.setMasterGain(masterGainDB) { _, error in
+            if let error = error { Log.e("could not set master volume: \(error)") }
+        }
     }
 
     // The currently-playing track's saved gain (dB), published for the volume

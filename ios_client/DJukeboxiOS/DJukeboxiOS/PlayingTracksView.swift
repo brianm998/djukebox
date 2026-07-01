@@ -130,6 +130,8 @@ public struct BigButtonView: View {
                    */
                   OfflineScanButton(trackFetcher: trackFetcher, onScan: onScan, onGoOffline: onGoOffline)
 
+                  MasterVolumeControl(trackFetcher: trackFetcher)
+
                   Group {
                       if !trackFetcher.useLocalContentOnly {
                           VStack {
@@ -244,7 +246,8 @@ public struct SmallButtonView: View {
                     }
                 }
 
-                
+                MasterVolumeControl(trackFetcher: trackFetcher)
+
                 HStack {
                     Spacer()
                     if trackFetcher.totalDuration > 0 {

@@ -116,6 +116,8 @@ public struct BigButtonView: View {
                 VerticalPlayingTimeRemainingView(trackFetcher: trackFetcher)
             }
 
+            MasterVolumeControl(trackFetcher: trackFetcher)
+
             VStack {
                 PlayRandomTrackButton(trackFetcher: trackFetcher)
                 PlayNewRandomTrackButton(trackFetcher: trackFetcher)

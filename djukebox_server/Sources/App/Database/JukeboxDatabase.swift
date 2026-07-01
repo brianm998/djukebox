@@ -646,6 +646,30 @@ public final class JukeboxDatabase: @unchecked Sendable {
         }) ?? []
     }
 
+    // MARK: - master volume
+
+    // The single global master gain, kept in the key/value `meta` table. It is a
+    // REDUCTION from full volume (<= 0 dB, 0 = full) and is applied on top of the
+    // per-track/album/artist adjustment (see VolumeAdjustmentProvider), so the two
+    // compose additively.
+    private static let masterGainMetaKey = "master_gain_db"
+
+    /// The global master gain (dB). 0 (full volume) when unset or on any error, so
+    /// playback never breaks.
+    public func masterGainDecibels() -> Double {
+        guard let raw = try? metaValue(forKey: Self.masterGainMetaKey),
+              let db = Double(raw) else { return 0 }
+        return db
+    }
+
+    /// Persist the global master gain (dB). The API clamps to a reduction-only
+    /// range before calling this.
+    public func setMasterGainDecibels(_ decibels: Double) throws {
+        try queue.sync {
+            try setMetaOnQueue(key: Self.masterGainMetaKey, value: String(decibels))
+        }
+    }
+
     // MARK: - low-level helpers (assume already on the serial queue)
 
     private func prepareOnQueue(_ sql: String) throws -> OpaquePointer? {

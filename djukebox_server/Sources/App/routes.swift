@@ -96,6 +96,13 @@ public struct VolumeAdjustment: Content {
     public let decibels: Double
 }
 
+// The single global master gain (dB). A reduction from full volume (<= 0 dB;
+// 0 = full), applied on top of every per-track/album/artist gain. Used as the
+// GET /volume/master response and the POST /volume/master body.
+public struct MasterVolume: Content {
+    public let decibels: Double
+}
+
 func trackServingRoutes(_ app: Application) throws {
 
     // Json list of all known tracks
@@ -509,6 +516,9 @@ func playerRoutes(_ app: Application) throws {
 // gain. Boost is the point of the feature; a little cut is allowed too.
 private let volumeDecibelLimit = 24.0
 
+// the master knob only attenuates: 0 dB = full volume, down to this many dB of cut.
+private let masterReductionLimit = 30.0
+
 func volumeRoutes(_ app: Application) throws {
 
     // list every stored volume adjustment
@@ -538,7 +548,10 @@ func volumeRoutes(_ app: Application) throws {
     }
 
     // live audition: set the currently-playing track's gain right now, WITHOUT
-    // persisting. Used while the user drags the volume slider so they can hear it.
+    // persisting. Used while the user drags the volume (or master) slider so they
+    // can hear it. The client sends the COMBINED per-track + master level, which can
+    // dip well below the ±24 dB per-scope limit, so the low end is only bounded by
+    // the audio pipeline's -96 dB floor; boost is still capped.
     // curl localhost:8080/volume/live/6.5
     app.get("volume", "live", ":decibels") { req -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
@@ -546,7 +559,7 @@ func volumeRoutes(_ app: Application) throws {
             guard let raw = req.parameters.get("decibels"), let db = Double(raw) else {
                 throw Abort(.badRequest)
             }
-            audioPlayer.setLivePlaybackGain(decibels: max(-volumeDecibelLimit, min(volumeDecibelLimit, db)))
+            audioPlayer.setLivePlaybackGain(decibels: max(-96, min(volumeDecibelLimit, db)))
             return Response(status: .ok)
         }
     }
@@ -574,6 +587,29 @@ func volumeRoutes(_ app: Application) throws {
             let adj = try req.content.decode(VolumeAdjustment.self)
             try jukeboxDatabase.clearVolumeAdjustment(scope: adj.scope, sha1: adj.sha1,
                                                       band: adj.band, album: adj.album)
+            return Response(status: .ok)
+        }
+    }
+
+    // the global master gain (dB, <= 0). Applied on top of every per-track gain, so
+    // clients read it to fill the top-level master control. 0 dB = full volume.
+    // curl localhost:8080/volume/master
+    app.get("volume", "master") { req -> MasterVolume in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            MasterVolume(decibels: jukeboxDatabase.masterGainDecibels())
+        }
+    }
+
+    // set the global master gain. Clamped reduction-only: -30 dB … 0 dB (full), so
+    // the master can only cut from full volume, never boost.
+    // curl -H 'content-type: application/json' -d '{"decibels":-6}' localhost:8080/volume/master
+    app.post("volume", "master") { req -> Response in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            let mv = try req.content.decode(MasterVolume.self)
+            let clamped = max(-masterReductionLimit, min(0, mv.decibels))
+            try jukeboxDatabase.setMasterGainDecibels(clamped)
             return Response(status: .ok)
         }
     }

@@ -26,9 +26,12 @@ public final class PlaybackGain: @unchecked Sendable {
 
     public init() {}
 
-    // Same clamp/units as the server: decibels in, linear multiplier stored.
+    // Same units as the server: decibels in, linear multiplier stored. Boost is
+    // capped at the per-track +24 dB, but the value passed here is the COMBINED
+    // per-track + master level, and the master attenuation can pull it well below
+    // -24, so the low end is bounded only by the pipeline's -96 dB floor.
     public func setDecibels(_ db: Double) {
-        let clamped = max(-24.0, min(24.0, db))
+        let clamped = max(-96.0, min(24.0, db))
         let linear = Float(pow(10.0, clamped / 20.0))
         state.withLock { $0.linearGain = linear }
     }
