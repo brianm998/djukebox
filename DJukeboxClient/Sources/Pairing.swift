@@ -375,14 +375,19 @@ public class PairingMonitor: ObservableObject {
         }.resume()
     }
 
-    private func post<T: Decodable>(_ path: String,
+    // closure is @MainActor: it mutates @Published state on the callers' side, and
+    // marking it so lets it cross the nonisolated URLSession completion safely. A
+    // bare (T?) -> Void inherits this class's main-actor isolation *without* being
+    // Sendable, which newer Swift toolchains (Xcode 26.5) reject as a data race
+    // when it's captured by the completion handler and hopped back to the main actor.
+    private func post<T: Decodable & Sendable>(_ path: String,
                                     body: [String: String],
                                     decodeAs: T.Type,
-                                    closure: @escaping (T?) -> Void)
+                                    closure: @escaping @MainActor (T?) -> Void)
     {
         guard let url = URL(string: "\(serverURL)/\(path)"),
               let payload = try? JSONEncoder().encode(body) else {
-            DispatchQueue.main.async { closure(nil) }
+            Task { @MainActor in closure(nil) }
             return
         }
         var request = URLRequest(url: url)
@@ -393,7 +398,7 @@ public class PairingMonitor: ObservableObject {
         request.timeoutInterval = 15
         session.dataTask(with: request) { data, _, _ in
             let decoded = data.flatMap { try? JSONDecoder().decode(T.self, from: $0) }
-            DispatchQueue.main.async { closure(decoded) }
+            Task { @MainActor in closure(decoded) }
         }.resume()
     }
 }
