@@ -144,7 +144,11 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     
     var desiredBand: String?
     var desiredAlbum: String?
-    
+
+    // the band whose album list is currently shown in the mac/iPad middle column,
+    // remembered so it can be re-derived when the catalog changes (e.g. going local)
+    var shownAlbumsBand: String?
+
     var queues: [PlayingQueueType: AsyncAudioPlayerType] = [:]
 
     public init(withServer server: ServerType) {
@@ -210,7 +214,25 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
             self.allTracks = tracks
             self.bands = Array(bandMap.values).sorted()
             self.trackMap = sha1Map
+            self.reapplyBrowseColumns()
             self.maybeDoInitialSetup()
+        }
+    }
+
+    // After the catalog is (re)loaded — e.g. switching to local/offline — the mac /
+    // iPad 3-column browse view would otherwise keep showing the previous catalog's
+    // albums and tracks, since those columns are only refreshed on a tap
+    // (showAlbums / showTracks). Re-derive them for the current selection so all
+    // three columns reflect the new catalog. (The iPhone navigation views derive
+    // their own lists live and don't depend on this.)
+    fileprivate func reapplyBrowseColumns() {
+        if let band = self.shownAlbumsBand {
+            self.albums = self.albums(forBand: band)
+        }
+        if let band = self.desiredBand {
+            self.tracks = self.allTracks.filter {
+                $0.Band == band && $0.Album == self.desiredAlbum
+            }.sorted()
         }
     }
 
@@ -361,6 +383,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         let albums = self.albums(forBand: band)
         DispatchQueue.main.async {
             Log.d("show albums for \(band)")
+            self.shownAlbumsBand = band
             self.albums = albums
             self.albumTitle = "\(band)"
         }

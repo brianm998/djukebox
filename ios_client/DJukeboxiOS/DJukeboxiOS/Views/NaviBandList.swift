@@ -19,7 +19,7 @@ public struct NaviBandList: View {
             
             List(trackFetcher.bands(matching: self.searchQuery)) { (band: AudioTrack) in
                 NavigationLink(destination: NaviAlbumList(self.client,
-                                                          bands: self.trackFetcher.albums(forBand: band.Band),
+                                                          band: band.Band,
                                                           title: band.Band))
                 {
                     Text(band.Band)

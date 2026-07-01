@@ -36,16 +36,21 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType, @unchecked Sendable {
     public func playTrack(withHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         if let track = fetcher.trackMap[hash] {
             player.play(sha1Hash: hash)
+            // tapping a track is an explicit request to hear it: make sure playback
+            // starts even if the player was restored in a paused state (otherwise the
+            // track just sits in the queue with no sound / no progress).
+            player.resume()
             closure(track, nil)
         } else {
             closure(nil, nil)   // XXX should make error here
         }
     }
-    
+
     public func playTracks(_ tracks: [AudioTrack], closure: @escaping (Bool, Error?) -> Void) {
         for track in tracks {
             player.play(sha1Hash: track.SHA1)
         }
+        player.resume()   // explicit play request: start even if restored paused
         closure(true, nil)
     }
     

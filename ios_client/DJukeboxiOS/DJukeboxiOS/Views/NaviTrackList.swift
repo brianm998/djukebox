@@ -4,29 +4,35 @@ import DJukeboxCommon
 
 public struct NaviTrackList: View {
     var client: Client
-    let tracks: [AudioTrack]
+    // Observe the fetcher and derive the song list from the live catalog for this
+    // band/album, rather than freezing a snapshot at navigation time — otherwise a
+    // catalog change (e.g. switching to local/offline) can't refresh this view.
+    @ObservedObject var trackFetcher: TrackFetcher
+    let album: AudioTrack   // representative track carrying the band + album to show
     let title: String
     @State private var showingActionSheet = false
     @State private var showAllTracksToast: Bool = false
     @State private var showOneTrackToast: Bool = false
     @State private var fuck: String = ""
-    
-    public init(_ client: Client, tracks: [AudioTrack], title: String) {
+
+    public init(_ client: Client, album: AudioTrack, title: String) {
         self.client = client
-        self.tracks = tracks
+        self.trackFetcher = client.trackFetcher
+        self.album = album
         self.title = title
     }
-    
+
     public var body: some View {
-        List(self.tracks) { track in
+        let tracks = trackFetcher.tracks(for: album).sorted()
+        return List(tracks) { track in
             Text(track.Title)
               .onTapGesture {
-                  self.client.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
+                  self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
                       // XXX check error, etc here
                       if let track = track {
                         self.fuck = "\(track.Title) playing"
                           withAnimation { self.showOneTrackToast = true }
-                      } 
+                      }
                   }
               }
         }
@@ -45,13 +51,13 @@ public struct NaviTrackList: View {
               ActionSheet(title: Text(""),
                           buttons: [
                             .default(Text("Play All")) {
-                                self.client.trackFetcher.audioPlayer.player?.playTracks(self.tracks.sorted()) { success, error in
-                                    self.client.trackFetcher.refreshQueue()
+                                self.trackFetcher.audioPlayer.player?.playTracks(tracks) { success, error in
+                                    self.trackFetcher.refreshQueue()
                                     withAnimation { self.showAllTracksToast = true }
                                 }
                             },
                             .default(Text("Cache All Locally")) {
-                                self.client.trackFetcher.cache(tracks: self.tracks)
+                                self.trackFetcher.cache(tracks: tracks)
                             },
                             .cancel()
                           ]

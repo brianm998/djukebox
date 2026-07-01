@@ -48,6 +48,58 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
         self.downloadedTracks = self.db?.allTracks() ?? []
         self.sanitizeDownloadedTracks()
         self.migrateLegacyTracksJsonIfNeeded()
+        self.reconcileWithDownloadedFiles()
+    }
+
+    // The SQLite catalog is only an index of what we've downloaded; the audio files
+    // are the source of truth. They drift apart in two ways: iOS reclaims
+    // Library/Caches under storage pressure (deleting the .mp3 while the row
+    // survives), and a past download bug saved HTTP error bodies as <sha1>.mp3 (a
+    // "present" file that isn't audio). Either way offline mode listed tracks that
+    // don't really exist. Keep only rows whose file is genuinely an audio file,
+    // prune the rest, and delete any bogus placeholder so the catalog self-heals.
+    private func reconcileWithDownloadedFiles() {
+        var present: [AudioTrack] = []
+        var drop: [String] = []
+        for track in self.downloadedTracks {
+            guard let url = self.cacheDirURL(forFilename: track.SHA1, withExtention: "mp3") else {
+                drop.append(track.SHA1)
+                continue
+            }
+            let path = url.path
+            if self.isLikelyAudioFile(atPath: path) {
+                present.append(track)
+            } else {
+                drop.append(track.SHA1)
+                // Remove a small non-audio placeholder (e.g. a saved error body) so it
+                // can't waste space or resurrect the row via download()'s "already
+                // exists" fast-path. Size-guarded so a genuine track is never deleted.
+                if FileManager.default.fileExists(atPath: path),
+                   let size = (try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? NSNumber,
+                   size.intValue < 65536 {
+                    try? FileManager.default.removeItem(atPath: path)
+                }
+            }
+        }
+        Log.i("local catalog reconcile: \(self.downloadedTracks.count) rows, \(present.count) valid audio, \(drop.count) missing/invalid")
+        guard !drop.isEmpty else { return }
+        self.db?.delete(shas: drop)
+        self.downloadedTracks = present
+        self.sanitizeDownloadedTracks()
+    }
+
+    // Cheaply decide whether a cached file is really audio by sniffing its first
+    // bytes (an mp3 starts with an "ID3" tag or an MPEG frame sync). This rejects
+    // saved HTTP error bodies (JSON/HTML/empty) without reading the whole file.
+    private func isLikelyAudioFile(atPath path: String) -> Bool {
+        guard let handle = FileHandle(forReadingAtPath: path) else { return false }
+        defer { try? handle.close() }
+        let head = handle.readData(ofLength: 3)
+        guard head.count == 3 else { return false }
+        let b = [UInt8](head)
+        if b[0] == 0x49, b[1] == 0x44, b[2] == 0x33 { return true }   // "ID3"
+        if b[0] == 0xFF, (b[1] & 0xE0) == 0xE0 { return true }         // MPEG frame sync
+        return false
     }
 
     public func clearLocalStore() {
@@ -83,7 +135,12 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                     closure(true)
                 } else {
                     let download = URLSession.shared.downloadTask(with: url) { localURL, urlResponse, error in
-                        if let localURL = localURL {
+                        // downloadTask writes the response body to localURL even for
+                        // HTTP errors (401/404/5xx), so we MUST check the status — else
+                        // an error page gets saved as <sha1>.mp3 and recorded as a real
+                        // downloaded track (junk that can't play).
+                        let status = (urlResponse as? HTTPURLResponse)?.statusCode ?? 0
+                        if let localURL = localURL, error == nil, (200..<300).contains(status) {
                             Log.i("moving from \(localURL) to \(destURL)")
                             do {
                                 try FileManager.default.moveItem(atPath: localURL.path, toPath: destURL.path)
@@ -93,6 +150,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                                 closure(false)
                             }
                         } else {
+                            Log.w("download failed for \(filename): HTTP \(status), error \(String(describing: error))")
                             closure(false)
                         }
                     }

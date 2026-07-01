@@ -300,8 +300,14 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         }
     }
     
+    // Resume playback if paused; a no-op if already playing. NOT a toggle (pause()
+    // handles pausing) so it's safe to call after enqueuing a user-tapped track to
+    // ensure playback actually starts even when the player was restored paused.
     public func resume() {
-        self.pause()
+        if isPaused {
+            isPaused = false
+            self.startPlayer()
+        }
     }
 
     fileprivate func  serviceQueue() {
