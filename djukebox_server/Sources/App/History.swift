@@ -17,7 +17,8 @@ public protocol HistoryType {
 // (`load(plays:skips:)`) and kept in sync write-through. All access is guarded
 // by a lock because the dictionaries are read by request handlers on event-loop
 // threads while the audio player writes from its own thread.
-public class History: HistoryType {
+// @unchecked Sendable: all mutable dictionary state is guarded by `lock`.
+public final class History: HistoryType, @unchecked Sendable {
 
     private var _plays: [String: [Double]] = [:]
     private var _skips: [String: [Double]] = [:]

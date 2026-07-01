@@ -2,7 +2,7 @@ import Foundation
 import DJukeboxCommon
 
 public protocol LocalTrackType: TrackFinderType {
-    func keepLocal(sha1Hash: String, closure: @escaping (Bool) -> Void)
+    func keepLocal(sha1Hash: String, closure: @escaping @Sendable (Bool) -> Void)
     func clearLocalStore()
     var downloadedTracks: [AudioTrack] { get }
     var downloadedTrackMap: [String: AudioTrack] { get }
@@ -13,7 +13,11 @@ public protocol LocalTrackType: TrackFinderType {
 // track metadata for each is persisted in a local SQLite database
 // (local_tracks.sqlite3) alongside them. The metadata is exactly what the server
 // transferred for the file; no play history is stored locally.
-public class LocalTracks: LocalCache, LocalTrackType {
+// @unchecked Sendable: implements LocalTrackType (refining the non-isolated
+// TrackFinderType), so it can't be @MainActor. Downloads and the metadata store are
+// serialized through the download completion path. See the client concurrency note
+// in AsyncAudioPlayer.
+public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
 
     private var cacheDir: URL? {
         return LocalCache.urlForLibrary(appending: ["Caches", "AudioTracks"])
@@ -68,7 +72,7 @@ public class LocalTracks: LocalCache, LocalTrackType {
     fileprivate func download(url: URL,
                               toFilename filename: String,
                               andExtention extention: String,
-                              closure: @escaping (Bool) -> Void)
+                              closure: @escaping @Sendable (Bool) -> Void)
     {
         DispatchQueue.main.async {
             if let _ = LocalCache.libDir,
@@ -101,7 +105,7 @@ public class LocalTracks: LocalCache, LocalTrackType {
         }
     }
 
-    private func download(sha1Hash: String, closure: @escaping (AudioTrackType?) -> Void) {
+    private func download(sha1Hash: String, closure: @escaping @Sendable (AudioTrackType?) -> Void) {
         if let (track, url) = trackFinder.track(forHash: sha1Hash) {
             self.download(url: url, toFilename: track.SHA1, andExtention: "mp3") { success in
                 if success {
@@ -155,7 +159,7 @@ public class LocalTracks: LocalCache, LocalTrackType {
         return nil
     }
 
-    public func keepLocal(sha1Hash: String, closure: @escaping (Bool) -> Void) {
+    public func keepLocal(sha1Hash: String, closure: @escaping @Sendable (Bool) -> Void) {
         self.download(sha1Hash: sha1Hash) { track in
             if let track = track as? AudioTrack {
                 self.downloadedTracks.append(track)

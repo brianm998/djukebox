@@ -2,7 +2,9 @@ import SwiftUI
 import DJukeboxCommon
 import DJukeboxClient
 
-fileprivate let kkUTTypePlainText = kUTTypePlainText
+// nonisolated(unsafe): kUTTypePlainText is an immutable CFString system constant;
+// CFString isn't Sendable but this value is never mutated.
+nonisolated(unsafe) fileprivate let kkUTTypePlainText = kUTTypePlainText
 
 // Mirrors the iOS control: in offline mode (no server) it offers to "Scan" for
 // one; while connected it shows "Local", which drops back to offline (cached

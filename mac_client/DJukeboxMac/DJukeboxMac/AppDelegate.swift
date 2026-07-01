@@ -16,9 +16,12 @@ import DJukeboxClient
 // machine is reached over loopback (trusted, no pairing), and a server on the
 // WiFi requires this device to pair (see PairingClient / PairingStore).
 
-var theWindow: NSWindow!
+// @MainActor: window handle only ever touched from the main-actor app lifecycle.
+@MainActor var theWindow: NSWindow!
 
-@NSApplicationMain
+// @main replaces the deprecated @NSApplicationMain (an error under Swift 6);
+// NSApplicationDelegate supplies the synthesized entry point.
+@main
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     var window: NSWindow!

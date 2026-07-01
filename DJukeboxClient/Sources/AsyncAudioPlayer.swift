@@ -4,7 +4,19 @@ import DJukeboxCommon
 // this class takes an AudioPlayerType and makes it async with closures so the UI can use it
 // a lot of this logic mirrors that in routes.swift on the server,
 // so that clients can have their own local playing queue
-public class AsyncAudioPlayer: AsyncAudioPlayerType {
+//
+// ---------------------------------------------------------------------------
+// Client concurrency model (Swift 6):
+// The client's playback/catalog/networking core is one callback graph bridged by
+// non-isolated DJukeboxCommon protocols (AudioPlayerType, TrackFinderType,
+// HistoryWriterType) that the server also implements — so those types can't be
+// @MainActor. Instead they are `@unchecked Sendable`: UI state is mutated on the
+// main thread (via DispatchQueue.main.async / SwiftUI), and playback commands are
+// serialized by the underlying AVFoundation/AVQueuePlayer. The genuinely
+// standalone UI state machines (ServerBrowser, PairingClient, PairingMonitor) are
+// @MainActor instead.
+// ---------------------------------------------------------------------------
+public class AsyncAudioPlayer: AsyncAudioPlayerType, @unchecked Sendable {
     var player: AudioPlayerType
     let fetcher: TrackFetcher
     let history: HistoryFetcher

@@ -37,10 +37,12 @@ public extension UIViewController {
     }
 }
 
-public class AlertLogHandler: LogHandler {
+// @unchecked: the non-Sendable DateFormatter is only ever touched inside the
+// serial alert `dispatchQueue`, so the class synchronizes its own state.
+public final class AlertLogHandler: LogHandler, @unchecked Sendable {
 
     public var dispatchQueue: DispatchQueue { return UIViewController.alertDispatchQueue }
-    public var level: Log.Level?
+    public let level: Log.Level?
     private let dateFormatter = DateFormatter()
 
     public init(at level: Log.Level) {

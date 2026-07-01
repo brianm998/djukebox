@@ -16,7 +16,14 @@ public struct LocalTrackCache {
 }
 
 // this is a view model used to update SwiftUI
-public class TrackFetcher: ObservableObject {
+//
+// @unchecked Sendable: this is both a SwiftUI view model and the client's
+// TrackFinderType (a non-isolated DJukeboxCommon protocol the audio players call
+// off the main thread), so it can't be @MainActor. Every @Published mutation is
+// routed to the main thread via DispatchQueue.main.async; the catalog maps
+// (allTracks / trackMap) are built off-main then published on-main. See the
+// client concurrency note in AsyncAudioPlayer.
+public class TrackFetcher: ObservableObject, @unchecked Sendable {
     var allTracks: [AudioTrack] = []
 
     var trackMap: [String:AudioTrack] = [:]
@@ -458,14 +465,17 @@ extension TrackFetcher: TrackFinderType {
         }
 
         var rest = tracks
-        
+
         let nextTrack = rest.removeFirst()
 
         Log.d("caching track \(nextTrack.SHA1)")
-        
+
+        // capture an immutable copy: the @Sendable keepLocal completion can't
+        // reference the mutable `rest` binding
+        let remaining = rest
         localTracks?.keepLocal(sha1Hash: nextTrack.SHA1) { success in
             //Log.d("cache download success: \(success)")
-            self.recursivelyCache(tracks: rest)
+            self.recursivelyCache(tracks: remaining)
         }
     }
     

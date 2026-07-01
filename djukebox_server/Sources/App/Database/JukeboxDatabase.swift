@@ -21,7 +21,9 @@ public enum JukeboxDatabaseError: Error {
 /// every call site here is synchronous and completion-expecting, and bridging
 /// async futures into them would either trap on an event loop or force the
 /// shared player protocols to become async.
-public final class JukeboxDatabase {
+// @unchecked Sendable: the sqlite handle and all access are funnelled through the
+// private serial `queue` (see the type doc above), so it is safe to share.
+public final class JukeboxDatabase: @unchecked Sendable {
 
     private var db: OpaquePointer?
     private let queue = DispatchQueue(label: "djukebox-database")

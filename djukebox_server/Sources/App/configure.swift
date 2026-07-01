@@ -15,8 +15,10 @@ let jukeboxDatabase = try! JukeboxDatabase(path: databasePath)
 
 let historyWriter = HistoryWriter(database: jukeboxDatabase, history: history)
 
-// advertises this server on the local network via mDNS / Bonjour
-var serviceAdvertiser: ServiceAdvertiser?
+// advertises this server on the local network via mDNS / Bonjour.
+// nonisolated(unsafe): assigned once from configure() at startup and only
+// retained thereafter (nothing reads it back concurrently).
+nonisolated(unsafe) var serviceAdvertiser: ServiceAdvertiser?
 
 // Owns the device-pairing state: the set of tokens belonging to already-paired
 // devices (seeded from the database) plus the short-lived table of pending
@@ -26,11 +28,11 @@ let pairingService = PairingService(database: jukeboxDatabase,
                                     tokenHashes: (try? jukeboxDatabase.loadPairedTokenHashes()) ?? [])
 
 #if os(Linux)
-let audioPlayer: AudioPlayerType = LinuxAudioPlayer(trackFinder: trackFinder,
-                                                    historyWriter: historyWriter)
+let audioPlayer: any AudioPlayerType & Sendable = LinuxAudioPlayer(trackFinder: trackFinder,
+                                                                   historyWriter: historyWriter)
 #else
-let audioPlayer: AudioPlayerType = MacAudioPlayer(trackFinder: trackFinder,
-                                                  historyWriter: historyWriter)
+let audioPlayer: any AudioPlayerType & Sendable = MacAudioPlayer(trackFinder: trackFinder,
+                                                                 historyWriter: historyWriter)
 #endif
 
 // where the music (and its *.json sidecars) live
@@ -47,7 +49,9 @@ let databasePath = ProcessInfo.processInfo.environment["DJUKEBOX_DB_PATH"] ?? "d
 // then updates the in-RAM history mirror. A failed database write propagates so
 // callers (POST /history, the audio player) can report it; the in-RAM mirror is
 // only touched on success and is rebuilt from the database on the next restart.
-public class HistoryWriter: HistoryWriterType {
+// @unchecked Sendable: immutable references to two collaborators that are
+// themselves internally synchronized (JukeboxDatabase's serial queue, History's lock).
+public final class HistoryWriter: HistoryWriterType, @unchecked Sendable {
     let database: JukeboxDatabase
     let history: History
 

@@ -30,7 +30,11 @@ public class HistoryEntry: Comparable, Identifiable, ObservableObject, Hashable 
     }
 }
 
-public class HistoryFetcher: ObservableObject {
+// @unchecked Sendable: a SwiftUI view model whose hasPlay/hasSkip lookups are
+// called synchronously by the (non-isolated) AsyncAudioPlayer, so it can't be
+// @MainActor. @Published mutations are routed to the main thread. See the client
+// concurrency note in AsyncAudioPlayer.
+public class HistoryFetcher: ObservableObject, @unchecked Sendable {
     @Published var all = PlayingHistory()
     @Published var recent: [HistoryEntry] = []
 

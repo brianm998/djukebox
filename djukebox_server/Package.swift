@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:6.0
 import PackageDescription
 
 let package = Package(
@@ -25,5 +25,6 @@ let package = Package(
             .target(name: "App"),
             .product(name: "XCTVapor", package: "vapor"),
         ])
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )

@@ -18,7 +18,10 @@ public struct ServerHistoryEntry: Codable {
     public let fullyPlayed: Bool
 }
 
-public class ServerConnection: ObservableObject, ServerType {
+// @unchecked Sendable: stored state is immutable (serverUrl / authHeaderValue are
+// `let`); networking is stateless URLSession work. Subclasses (ServerAudioPlayer)
+// add their own synchronization. See the client concurrency note in AsyncAudioPlayer.
+public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable {
     
     let serverUrl: String
     public let authHeaderValue: String

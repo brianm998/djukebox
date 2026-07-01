@@ -11,7 +11,9 @@ import AVFoundation
 import DJukeboxCommon
 import DJukeboxClient
 
-@UIApplicationMain
+// @main replaces the deprecated @UIApplicationMain (an error under Swift 6);
+// UIApplicationDelegate supplies the synthesized entry point.
+@main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {

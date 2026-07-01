@@ -1,6 +1,9 @@
 import Foundation
 
-public protocol AudioTrackType {
+// Sendable: track metadata is immutable value data; both conformers (the client
+// and server AudioTrack types) are already Sendable. This lets tracks cross the
+// audio-player / networking callback boundaries safely.
+public protocol AudioTrackType: Sendable {
     var Artist: String { get }
     var Album: String? { get }
     var Title: String { get }

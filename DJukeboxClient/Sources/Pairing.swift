@@ -83,6 +83,9 @@ public struct PendingPairRequest: Decodable, Identifiable, Equatable {
  submit(code:). On success the token is persisted and `onPaired` fires so the
  ServerBrowser can build a real Client.
  */
+// @MainActor: a UI state machine (new-device pairing). Its URLSession completions
+// and poll timer already marshal every @Published mutation to the main thread.
+@MainActor
 public class PairingClient: ObservableObject {
 
     public enum Phase: Equatable {
@@ -104,7 +107,9 @@ public class PairingClient: ObservableObject {
 
     private let onPaired: (String) -> Void
     private var requestId: String?
-    private var pollTimer: Timer?
+    // nonisolated(unsafe): only touched on the main thread, but the nonisolated
+    // deinit must be able to invalidate it (Timer isn't Sendable).
+    nonisolated(unsafe) private var pollTimer: Timer?
     private let session = URLSession.shared
 
     public init(serverURL: String,
@@ -277,6 +282,9 @@ public class PairingClient: ObservableObject {
  the server returns the 6-digit code to show. This is how the server "tells" all
  paired clients that someone wants to pair.
  */
+// @MainActor: a UI state machine (approver side). Its URLSession completions and
+// poll timer already marshal every @Published mutation to the main thread.
+@MainActor
 public class PairingMonitor: ObservableObject {
 
     @Published public private(set) var pending: [PendingPairRequest] = []
@@ -285,7 +293,9 @@ public class PairingMonitor: ObservableObject {
 
     private let serverURL: String
     private let authHeaderValue: String
-    private var pollTimer: Timer?
+    // nonisolated(unsafe): only touched on the main thread, but the nonisolated
+    // deinit must be able to invalidate it (Timer isn't Sendable).
+    nonisolated(unsafe) private var pollTimer: Timer?
     private let session = URLSession.shared
     // requests this device chose to ignore ("Not now") — hidden locally without
     // denying them for everyone else.
@@ -296,7 +306,9 @@ public class PairingMonitor: ObservableObject {
         self.authHeaderValue = server.authHeaderValue
     }
 
-    deinit { stop() }
+    // deinit is nonisolated, so it can't call the @MainActor stop(); invalidate the
+    // timer directly (matching PairingClient's deinit).
+    deinit { pollTimer?.invalidate() }
 
     public func start() {
         // no point polling an offline/local client (it has no server)

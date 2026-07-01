@@ -461,7 +461,7 @@ func playerRoutes(_ app: Application) throws {
         }
     }
 
-    func isInQueue(_ hash: String) -> Bool {
+    @Sendable func isInQueue(_ hash: String) -> Bool {
         if let playingTrack = audioPlayer.playingTrack,
            playingTrack.SHA1 == hash
         {
@@ -475,7 +475,7 @@ func playerRoutes(_ app: Application) throws {
         return false
     }
     
-    func listQueue() -> PlayingQueue {
+    @Sendable func listQueue() -> PlayingQueue {
         var tracks: [AudioTrack] = []
         if let playingTrack = audioPlayer.playingTrack as? AudioTrack {
             tracks.append(playingTrack)

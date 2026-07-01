@@ -1,6 +1,8 @@
 import Foundation
 
-public struct StringLogData: LogData {
+// @unchecked: immutable value holder; `encodable` is a non-Sendable existential
+// but is always nil here and never mutated.
+public struct StringLogData: LogData, @unchecked Sendable {
 
     public let encodable: Encodable? = nil
     public let description: String

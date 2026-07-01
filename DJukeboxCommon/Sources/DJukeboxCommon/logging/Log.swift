@@ -106,18 +106,20 @@ public class Log {
 
         If handlers are not set elsewhere, the following will then apply:
      */
-    public static var handlers: [Log.Output: LogHandler] =
+    // nonisolated(unsafe): handlers are configured once at app/server startup
+    // (before any logging happens) and only read afterwards.
+    nonisolated(unsafe) public static var handlers: [Log.Output: LogHandler] =
       [
         .console: ConsoleLogHandler(at: .debug),
       ]
-    
-    public enum Output {
+
+    public enum Output: Sendable {
         case console
         case file
         case alert
     }
-    
-    public enum Level: String, CustomStringConvertible, CaseIterable {
+
+    public enum Level: String, CustomStringConvertible, CaseIterable, Sendable {
         case debug
         case info
         case warn
@@ -680,9 +682,10 @@ extension Log {
 
 // after here are the internal implemenation details
 
-#if !os(macOS)
-fileprivate let backgroundTask = BackgroundTask.start(named: "log")
-#endif        
+// (Previously a fileprivate `backgroundTask` global lived here, but it was only
+// ever referenced by the commented-out code in logInternal below. Under Swift 6
+// it is not concurrency-safe — BackgroundTask is non-Sendable and .start() is
+// @MainActor — so the dead global has been removed.)
 
 fileprivate extension Log {
     
@@ -702,45 +705,40 @@ fileprivate extension Log {
                                _ function: String,
                                _ line: Int)
     {
-        // start background task
-#if !os(macOS)
-/*
-        if let backgroundTask = backgroundTask {
-            backgroundTask.end()
+        // Build everything the handlers need here on the calling thread, so that
+        // only Sendable values (String / LogData / Level) are captured by the
+        // @Sendable closure handed to the logging queue. (The generic, possibly
+        // non-Sendable `data` never crosses the concurrency boundary.)
+        let string: String
+        if let message = message {
+            string = message
+        } else if data != nil {
+            string = logLevel.description
+        } else {
+            string = ""
         }
-        
-        backgroundTask = newBackgroundTask
-*/
-#endif        
+
+        let fileLocation = "\(parseFileName(file)).\(function)@\(line)"
+
+        let extraData: LogData?
+        if let data = data {
+            if let encodableData = data as? Encodable,
+               let encodableLogData = EncodableLogData(with: encodableData)
+            {
+                // first we try to json encode any Encodable data
+                extraData = encodableLogData
+            } else if let stringConvertibleData = data as? CustomStringConvertible {
+                // then we try the description of any CustomStringConvertible data
+                extraData = StringLogData(with: stringConvertibleData)
+            } else {
+                // our final fallback for data we don't have a better way to encode
+                extraData = StringLogData(with: data)
+            }
+        } else {
+            extraData = nil
+        }
+
         logQueue.async {
-
-            var string = ""
-
-            if let message = message {
-                string = message
-            } else if data != nil {
-                string = logLevel.description
-            }
-
-            let fileLocation = "\(parseFileName(file)).\(function)@\(line)"
-
-            var extraData: LogData?
-
-            if let data = data {
-                if let encodableData = data as? Encodable,
-                   let encodableLogData = EncodableLogData(with: encodableData)
-                {
-                    // first we try to json encode any Encodable data
-                    extraData = encodableLogData
-                } else if let stringConvertibleData = data as? CustomStringConvertible {
-                    // then we try the description of any CustomStringConvertible data
-                    extraData = StringLogData(with: stringConvertibleData)
-                } else {
-                    // our final fallback for data we don't have a better way to encode
-                    extraData = StringLogData(with: data)
-                }
-            }
-
             for handler in handlers.values {
                 if let handlerLevel = handler.level,
                    logLevel <= handlerLevel

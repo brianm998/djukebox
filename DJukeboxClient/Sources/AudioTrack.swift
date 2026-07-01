@@ -2,7 +2,9 @@ import SwiftUI
 import DJukeboxCommon
 
 // copied from the server
-public class PlayingQueue: Decodable, Identifiable, ObservableObject {
+// Sendable: immutable (all stored properties are `let`), so it is safe to pass
+// between the URLSession callback threads and the main thread.
+public final class PlayingQueue: Decodable, Identifiable, ObservableObject, Sendable {
     public let isPaused: Bool
     public let tracks: [AudioTrack]
     public let playingTrackDuration: TimeInterval?
@@ -21,7 +23,8 @@ public class PlayingQueue: Decodable, Identifiable, ObservableObject {
 }
 
 // copied from the server
-public class PlayingHistory: Decodable, Identifiable, ObservableObject {
+// Sendable: immutable (all stored properties are `let`).
+public final class PlayingHistory: Decodable, Identifiable, ObservableObject, Sendable {
     let plays: [String: [Double]]
     let skips: [String: [Double]]
 
@@ -99,13 +102,16 @@ public class PlayingHistory: Decodable, Identifiable, ObservableObject {
 }
 
 // copied from the server
-public class AudioTrack: Decodable,
+// Sendable: immutable (all stored properties are `let`), so tracks can move freely
+// between the networking callbacks, the audio players, and the main thread.
+public final class AudioTrack: Decodable,
                          Identifiable,
                          Comparable,
                          Hashable,
                          Encodable,
                          ObservableObject,
-                         AudioTrackType
+                         AudioTrackType,
+                         Sendable
 {
     public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
         if lhs.Band == rhs.Band {

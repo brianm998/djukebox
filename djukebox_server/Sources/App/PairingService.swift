@@ -20,7 +20,9 @@ import DJukeboxCommon
  All state is guarded by one serial queue so it is safe to touch from any
  event-loop thread.
  */
-public final class PairingService {
+// @unchecked Sendable: every access to the mutable token set and request table
+// is funnelled through the serial `queue` (see the type doc above).
+public final class PairingService: @unchecked Sendable {
 
     // how long a pending request (and its code) stays valid
     private static let requestTTL: TimeInterval = 5 * 60

@@ -3,6 +3,9 @@ import UIKit
 
 private let maxNumberOfTasks = 100
 
+// @MainActor: this type drives UIApplication background-task APIs (which are
+// main-actor isolated in Swift 6) and owns the shared `activeTasks` registry.
+@MainActor
 public class BackgroundTask {
     let name: String
     var id: UIBackgroundTaskIdentifier

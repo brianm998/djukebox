@@ -10,7 +10,9 @@ import DJukeboxCommon
  avahi-publish-service (part of the avahi-utils package), matching the way the
  rest of the server shells out to platform tools (e.g. aplay).
  */
-public final class ServiceAdvertiser: NSObject {
+// @unchecked Sendable: a startup singleton. Its mutable handles (netService /
+// thread / process) are set once when start() runs and not mutated concurrently.
+public final class ServiceAdvertiser: NSObject, @unchecked Sendable {
     private let serviceName: String
     private let serviceType: String
     private let port: Int

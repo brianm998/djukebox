@@ -116,8 +116,9 @@ struct TrackList: View {
     }
 }
 
-// this is only here to avoid an autorelease crash upon release of sub-windows
-fileprivate var windows: [NSWindow] = [] 
+// this is only here to avoid an autorelease crash upon release of sub-windows.
+// @MainActor: only ever touched while opening sub-windows from the (main-actor) UI.
+@MainActor fileprivate var windows: [NSWindow] = []
 
 
 #else

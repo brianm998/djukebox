@@ -1,11 +1,13 @@
 
 import Foundation
 
-public class FileLogHandler: LogHandler {
-    
+// @unchecked: the non-Sendable DateFormatter and log file are only ever touched
+// inside the private serial `dispatchQueue`, so the class synchronizes its own state.
+public final class FileLogHandler: LogHandler, @unchecked Sendable {
+
     let dateFormatter = DateFormatter()
     public let dispatchQueue: DispatchQueue
-    public var level: Log.Level?
+    public let level: Log.Level?
     private let logfilename: String
 
     public init(at level: Log.Level) {

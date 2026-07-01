@@ -8,7 +8,9 @@ public extension Data {
     var utf8String: String? { return String(data: self, encoding: .utf8) }
 }
 
-public struct EncodableLogData: LogData {
+// @unchecked: immutable value holder; the stored `any Encodable` is not itself
+// Sendable, but it is a `let` set once at init and only used for read-only logging.
+public struct EncodableLogData: LogData, @unchecked Sendable {
 
     public let encodable: Encodable?
     public let description: String

@@ -1,9 +1,11 @@
 import Foundation
 
-public class ConsoleLogHandler: LogHandler {
+// @unchecked: the non-Sendable DateFormatter is only ever touched inside the
+// private serial `dispatchQueue`, so the class synchronizes its own state.
+public final class ConsoleLogHandler: LogHandler, @unchecked Sendable {
 
     public let dispatchQueue: DispatchQueue
-    public var level: Log.Level?
+    public let level: Log.Level?
     private let dateFormatter = DateFormatter()
 
     public init(at level: Log.Level) {

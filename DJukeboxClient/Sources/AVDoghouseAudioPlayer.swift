@@ -8,7 +8,11 @@ import DJukeboxCommon
 // The 'doghouse' is that we only keep a single item in the AVQueuePlayer's queue at a time.
 // this approach seems to avoid problems seen with other approaches, specifically running in the
 // background properly, and playing each track fully without skipping back
-public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
+// @unchecked Sendable: an AudioPlayerType (a non-isolated DJukeboxCommon protocol).
+// Playback runs through a single AVQueuePlayer and the queue/trackMap mutations are
+// driven from the main thread and AVFoundation's end-of-item notification. See the
+// client concurrency note in AsyncAudioPlayer.
+public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendable {
 
     public var trackQueue: [String] = []
 
@@ -16,8 +20,8 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
         var items = player.items()
         if items.count > 0 {
             let first = items.removeFirst()
-            if let hash = trackMap[first.asset],
-               let (track, _) = self.trackFinder.track(forHash: hash) 
+            if let hash = trackMap[first],
+               let (track, _) = self.trackFinder.track(forHash: hash)
             {
                 return track
             }
@@ -163,24 +167,28 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType {
         }
     }
 
-    private var trackMap: [AVAsset: String] = [:] // sha1 values
-    
+    // Keyed by the player item (object identity) rather than its AVAsset: AVAsset
+    // is non-Sendable and AVPlayerItem.init(asset:) is main-actor isolated, so
+    // handing the asset off to the item and keying the map on the item avoids a
+    // non-Sendable value living in two isolation regions at once.
+    private var trackMap: [AVPlayerItem: String] = [:] // sha1 values
+
     public func play(sha1Hash: String) {
         self.play(sha1Hash: sha1Hash, alwaysAdd: false)
     }
-    
+
     public func play(sha1Hash: String, alwaysAdd: Bool = false) {
         if let (_, url) = self.trackFinder.track(forHash: sha1Hash) {
-            let asset = AVAsset(url: url)
             if !alwaysAdd,
                let _ = self.playingTrack
             {
                 trackQueue.append(sha1Hash)
             } else {
-                player.insert(AVPlayerItem(asset: asset), after: nil)
+                let item = AVPlayerItem(asset: AVAsset(url: url))
+                player.insert(item, after: nil)
+                trackMap[item] = sha1Hash
                 if !isPaused { startPlayer() }
             }
-            trackMap[asset] = sha1Hash
         }
     }
 

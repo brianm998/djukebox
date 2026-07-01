@@ -2,14 +2,22 @@ import XCTest
 @testable import DJukeboxCommon
 
 final class DJukeboxCommonTests: XCTestCase {
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        XCTAssertEqual(DJukeboxCommon().text, "Hello, World!")
+    // `<=` on Log.Level compares severity: `.error` is the most severe and is
+    // shown by a handler set at any threshold; `.debug` is the least severe.
+    func testLevelSeverityOrdering() {
+        XCTAssertTrue(Log.Level.error <= Log.Level.debug)
+        XCTAssertTrue(Log.Level.warn <= Log.Level.info)
+        XCTAssertFalse(Log.Level.debug <= Log.Level.error)
     }
 
-    static var allTests = [
-        ("testExample", testExample),
+    func testStringLogData() {
+        let data = StringLogData(with: "hello")
+        XCTAssertEqual(data.description, "hello")
+        XCTAssertNil(data.encodable)
+    }
+
+    static let allTests = [
+        ("testLevelSeverityOrdering", testLevelSeverityOrdering),
+        ("testStringLogData", testStringLogData),
     ]
 }

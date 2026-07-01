@@ -19,7 +19,11 @@ final class VaporTimer {
     }
 }
 
-public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate {
+// @unchecked Sendable: a process-wide singleton audio player. Its queue mutations
+// are guarded by `trackQueueSemaphore`; the remaining playback state is only
+// touched from the serial audio dispatch queue / timer. Kept unchecked so the
+// server can hold it in a global `any AudioPlayerType & Sendable`.
+public class MacAudioPlayer: NSObject, AudioPlayerType, AVAudioPlayerDelegate, @unchecked Sendable {
     let dispatchQueue = DispatchQueue(label: "djukebox-audio-player")
 
     public var isPlaying = false

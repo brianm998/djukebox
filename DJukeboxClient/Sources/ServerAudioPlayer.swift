@@ -1,7 +1,10 @@
 import Foundation
 import DJukeboxCommon
 
-public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType {
+// @unchecked Sendable: bridges the (non-isolated) AsyncAudioPlayerType to server
+// endpoints. `isPaused`/`playingTrackPosition` are only touched from URLSession
+// callbacks and the main thread; treated as internally main-thread-disciplined.
+public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType, @unchecked Sendable {
     
 
     public var playingTrackPosition: TimeInterval = 0 // XXX

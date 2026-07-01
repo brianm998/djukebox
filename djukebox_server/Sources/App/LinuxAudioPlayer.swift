@@ -1,7 +1,10 @@
 import Foundation
 import DJukeboxCommon
 
-public class LinuxAudioPlayer: AudioPlayerType {
+// @unchecked Sendable: a process-wide singleton audio player whose playback work
+// is serialized on its private `dispatchQueue`. Held by the server in a global
+// `any AudioPlayerType & Sendable`.
+public final class LinuxAudioPlayer: AudioPlayerType, @unchecked Sendable {
 
     let dispatchQueue = DispatchQueue(label: "djukebox-audio-player")
 

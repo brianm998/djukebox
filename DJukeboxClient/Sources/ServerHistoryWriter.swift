@@ -2,7 +2,11 @@ import SwiftUI
 import DJukeboxCommon
 
 // this is used for writing locally played tracks to the history on the server
-public class ServerHistoryWriter: HistoryWriterType {
+//
+// @unchecked Sendable: implements the non-isolated HistoryWriterType and is called
+// from the audio player's background callbacks; it only holds an immutable server
+// reference and posts to it. See the client concurrency note in AsyncAudioPlayer.
+public class ServerHistoryWriter: HistoryWriterType, @unchecked Sendable {
 
     let server: ServerType
 

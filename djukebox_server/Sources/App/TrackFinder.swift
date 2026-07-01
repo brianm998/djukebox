@@ -1,12 +1,24 @@
 import Vapor
 import DJukeboxCommon
 
-public class TrackFinder: TrackFinderType {
+// @unchecked Sendable: the catalog dictionary is guarded by `lock`. It is
+// populated by reconcile()/ingest()/find() (startup and the /discover endpoint)
+// and only read by the request handlers.
+public final class TrackFinder: TrackFinderType, @unchecked Sendable {
 
-    public var tracks: [String: (AudioTrackType, [URL])] = [:]
+    private let lock = NSLock()
+    private var _tracks: [String: (AudioTrackType, [URL])] = [:]
+
+    /// A snapshot of the whole catalog, copied under the lock. Callers that need
+    /// only one track should prefer the `…(forHash:)` accessors, which don't copy.
+    public var tracks: [String: (AudioTrackType, [URL])] {
+        get { lock.lock(); defer { lock.unlock() }; return _tracks }
+        set { lock.lock(); defer { lock.unlock() }; _tracks = newValue }
+    }
 
     public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
-        if let (track, urls) = tracks[sha1Hash] {
+        lock.lock(); defer { lock.unlock() }
+        if let (track, urls) = _tracks[sha1Hash] {
             return (track, urls[0])
         } else {
             return nil
@@ -14,17 +26,19 @@ public class TrackFinder: TrackFinderType {
     }
 
     public func tracks(forArtist artist: String) -> [String: (AudioTrackType, [URL])] {
+        lock.lock(); defer { lock.unlock() }
         var ret: [String: (AudioTrackType, [URL])] = [:]
-        for (hash, (track, urls)) in tracks {
+        for (hash, (track, urls)) in _tracks {
             if track.Artist == artist {
                 ret[hash] = (track, urls)
             }
         }
         return ret
     }
-    
+
     public func audioTrack(forHash sha1Hash: String) -> AudioTrackType? {
-        if let (audioTrack, _) = tracks[sha1Hash] {
+        lock.lock(); defer { lock.unlock() }
+        if let (audioTrack, _) = _tracks[sha1Hash] {
             return audioTrack
         } else {
             return nil
@@ -58,11 +72,13 @@ public class TrackFinder: TrackFinderType {
                             // mutated a discarded copy, so a sha1 seen at more
                             // than one path kept only the first path. Append in
                             // place to the stored array.
-                            if tracks[audioTrack.SHA1] != nil {
-                                tracks[audioTrack.SHA1]!.1.append(trackUrl)
+                            lock.lock()
+                            if _tracks[audioTrack.SHA1] != nil {
+                                _tracks[audioTrack.SHA1]!.1.append(trackUrl)
                             } else {
-                                tracks[audioTrack.SHA1] = (audioTrack, [trackUrl])
+                                _tracks[audioTrack.SHA1] = (audioTrack, [trackUrl])
                             }
+                            lock.unlock()
                         } else {
                             Log.d("FAILED ON \(trackUrl)")
                         }

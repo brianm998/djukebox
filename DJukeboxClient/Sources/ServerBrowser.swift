@@ -27,6 +27,12 @@ public enum ServerConnectionState {
  Every step that can go wrong moves to `.failed` with a message so the UI can show
  something other than an empty view.
  */
+// @MainActor: a UI state machine driving @Published `state`. Its network callbacks
+// are all delivered on the main thread already — the NWBrowser/NWConnection handlers
+// are started with queue: .main and the loopback/verify URLSession completions hop
+// through DispatchQueue.main before touching `self` — so main-actor isolation lines
+// up with how the code already runs.
+@MainActor
 public class ServerBrowser: ObservableObject {
 
     @Published public private(set) var state: ServerConnectionState = .searching
@@ -182,18 +188,24 @@ public class ServerBrowser: ObservableObject {
         let browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: .tcp)
         self.browser = browser
 
+        // NWBrowser delivers these on .main (see browser.start below); hop through
+        // DispatchQueue.main so the body runs in the main-actor context.
         browser.stateUpdateHandler = { [weak self] browserState in
-            guard let self = self, gen == self.generation else { return }
-            if case .failed(let error) = browserState {
-                self.fail("Couldn't search the local network: \(error.localizedDescription)", gen: gen)
+            DispatchQueue.main.async {
+                guard let self = self, gen == self.generation else { return }
+                if case .failed(let error) = browserState {
+                    self.fail("Couldn't search the local network: \(error.localizedDescription)", gen: gen)
+                }
             }
         }
 
         browser.browseResultsChangedHandler = { [weak self] results, _ in
-            guard let self = self, gen == self.generation, !self.hasResolved else { return }
-            guard let result = results.first else { return }
-            self.hasResolved = true
-            self.resolve(result.endpoint, gen: gen)
+            DispatchQueue.main.async {
+                guard let self = self, gen == self.generation, !self.hasResolved else { return }
+                guard let result = results.first else { return }
+                self.hasResolved = true
+                self.resolve(result.endpoint, gen: gen)
+            }
         }
 
         browser.start(queue: .main)
@@ -215,24 +227,28 @@ public class ServerBrowser: ObservableObject {
         let connection = NWConnection(to: endpoint, using: .tcp)
         self.probe = connection
         connection.stateUpdateHandler = { [weak self] connectionState in
-            guard let self = self, gen == self.generation else { return }
-            switch connectionState {
-            case .ready:
-                if let remote = connection.currentPath?.remoteEndpoint,
-                   case let .hostPort(host, port) = remote {
-                    let urlString = self.urlString(host: host, port: port)
+            // delivered on .main (see connection.start below); hop through
+            // DispatchQueue.main so the body runs in the main-actor context.
+            DispatchQueue.main.async {
+                guard let self = self, gen == self.generation else { return }
+                switch connectionState {
+                case .ready:
+                    if let remote = connection.currentPath?.remoteEndpoint,
+                       case let .hostPort(host, port) = remote {
+                        let urlString = self.urlString(host: host, port: port)
+                        connection.cancel()
+                        self.probe = nil
+                        self.verify(urlString: urlString, gen: gen)
+                    } else {
+                        connection.cancel()
+                        self.fail("Found a DJukebox server but couldn't resolve its address.", gen: gen)
+                    }
+                case .failed(let error):
                     connection.cancel()
-                    self.probe = nil
-                    self.verify(urlString: urlString, gen: gen)
-                } else {
-                    connection.cancel()
-                    self.fail("Found a DJukebox server but couldn't resolve its address.", gen: gen)
+                    self.fail("Found a DJukebox server but couldn't connect: \(error.localizedDescription)", gen: gen)
+                default:
+                    break
                 }
-            case .failed(let error):
-                connection.cancel()
-                self.fail("Found a DJukebox server but couldn't connect: \(error.localizedDescription)", gen: gen)
-            default:
-                break
             }
         }
         connection.start(queue: .main)
