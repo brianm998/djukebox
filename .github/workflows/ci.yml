@@ -54,20 +54,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
-        with:
-          path: ios_client/DJukeboxiOS/Pods
-          key: ci-ios-pods-${{ hashFiles('ios_client/DJukeboxiOS/Podfile.lock') }}
-          restore-keys: ci-ios-pods-
-
-      - name: Install pods
-        run: pod install
-        working-directory: ios_client/DJukeboxiOS
-
       - name: Build
         run: |
           xcodebuild build \
-            -workspace DJukeboxiOS.xcworkspace \
+            -project DJukeboxiOS.xcodeproj \
             -scheme DJukeboxiOS \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGN_IDENTITY="" \
@@ -83,20 +73,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
-        with:
-          path: mac_client/DJukeboxMac/Pods
-          key: ci-macos-pods-${{ hashFiles('mac_client/DJukeboxMac/Podfile.lock') }}
-          restore-keys: ci-macos-pods-
-
-      - name: Install pods
-        run: pod install
-        working-directory: mac_client/DJukeboxMac
-
       - name: Build
         run: |
           xcodebuild build \
-            -workspace DJukeboxMac.xcworkspace \
+            -project DJukeboxMac.xcodeproj \
             -scheme DJukebox \
             -destination 'platform=macOS' \
             CODE_SIGN_IDENTITY="" \

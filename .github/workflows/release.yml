@@ -81,16 +81,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
-        with:
-          path: ios_client/DJukeboxiOS/Pods
-          key: release-ios-pods-${{ hashFiles('ios_client/DJukeboxiOS/Podfile.lock') }}
-          restore-keys: release-ios-pods-
-
-      - name: Install pods
-        run: pod install
-        working-directory: ios_client/DJukeboxiOS
-
       # Import the distribution certificate (same P12 as the macOS Developer ID cert).
       # Gracefully skips if the secret is absent.
       - name: Import certificate
@@ -137,7 +127,7 @@ jobs:
           ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
           xcodebuild archive \
-            -workspace DJukeboxiOS.xcworkspace \
+            -project DJukeboxiOS.xcodeproj \
             -scheme DJukeboxiOS \
             -archivePath "$RUNNER_TEMP/DJukeboxiOS.xcarchive" \
             -destination 'generic/platform=iOS' \
@@ -196,16 +186,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
-        with:
-          path: mac_client/DJukeboxMac/Pods
-          key: release-macos-pods-${{ hashFiles('mac_client/DJukeboxMac/Podfile.lock') }}
-          restore-keys: release-macos-pods-
-
-      - name: Install pods
-        run: pod install
-        working-directory: mac_client/DJukeboxMac
-
       # Import Developer ID Application + Installer certs into a throwaway keychain.
       # Gracefully skips (outputs has_cert=false) if the secret is absent.
       - name: Import Developer ID certificate
@@ -260,7 +240,7 @@ jobs:
           TEAM_ID:       ${{ secrets.APPLE_TEAM_ID }}
         run: |
           xcodebuild archive \
-            -workspace DJukeboxMac.xcworkspace \
+            -project DJukeboxMac.xcodeproj \
             -scheme DJukebox \
             -archivePath "$RUNNER_TEMP/DJukeboxMac.xcarchive" \
             -destination 'generic/platform=macOS' \
