@@ -289,6 +289,14 @@ public struct TrackVolumeSheet: View {
     @State private var userInteracting = false
     @State private var appliedSavedGain = false
     @State private var committed = false
+    // user-adjustable slider range (dB), defaulting to a -8 … +12 span. The +/-
+    // buttons above each end widen or narrow it, kept within the ±24 dB the audio
+    // pipeline allows.
+    @State private var lowerBound: Double = -8
+    @State private var upperBound: Double = 12
+    private let rangeStep: Double = 1     // dB each +/- tap moves an end
+    private let minSpan: Double = 4       // smallest span so the ends can't cross
+    private let boundLimit: Double = 24   // audio pipeline clamps gain to ±24 dB
 
     public init(trackFetcher: TrackFetcher, isPresented: Binding<Bool>) {
         self.trackFetcher = trackFetcher
@@ -301,13 +309,26 @@ public struct TrackVolumeSheet: View {
                 Text("Boost Volume").font(.headline)
                 Text(track.Title).font(.subheadline).foregroundColor(.gray)
 
-                HStack {
-                    Image(systemName: "speaker.fill")
-                    // reduction as well as boost, defaulting to -2 dB … +12 dB
-                    Slider(value: $decibels, in: -2...12, step: 0.5,
-                           onEditingChanged: { editing in userInteracting = editing })
-                      .frame(minWidth: 200)
-                    Image(systemName: "speaker.wave.3.fill")
+                VStack(spacing: 6) {
+                    // a -/+ pair above each end to narrow or widen that end of the range
+                    HStack {
+                        rangeAdjuster(minus: { adjustLower(by: -rangeStep) },
+                                      plus:  { adjustLower(by:  rangeStep) })
+                        Spacer()
+                        rangeAdjuster(minus: { adjustUpper(by: -rangeStep) },
+                                      plus:  { adjustUpper(by:  rangeStep) })
+                    }
+                    HStack {
+                        Image(systemName: "speaker.fill")
+                        // reduction as well as boost, over the user-adjustable range
+                        Slider(value: $decibels, in: lowerBound...upperBound, step: 0.5,
+                               onEditingChanged: { editing in userInteracting = editing })
+                          .frame(minWidth: 200)
+                        Image(systemName: "speaker.wave.3.fill")
+                        // total range at the end of the bar, updating as the ends move
+                        Text(String(format: "%+g…%+g dB", lowerBound, upperBound))
+                          .font(.caption).monospacedDigit().foregroundColor(.gray)
+                    }
                 }
                 Text(String(format: "%+.1f dB", decibels)).monospacedDigit()
 
@@ -339,6 +360,7 @@ public struct TrackVolumeSheet: View {
             // in progress (onEditingChanged tracks real user interaction)
             if !appliedSavedGain, !userInteracting {
                 appliedSavedGain = true
+                ensureBoundsContain(saved)
                 decibels = saved
                 originalDecibels = saved
             }
@@ -349,6 +371,7 @@ public struct TrackVolumeSheet: View {
             committed = false
             // best-effort immediate prefill from the last-known value…
             let cached = trackFetcher.currentTrackGainDB
+            ensureBoundsContain(cached)
             decibels = cached
             originalDecibels = cached
             // …then fetch THIS track's saved gain by its sha1 (onChange applies it)
@@ -381,6 +404,38 @@ public struct TrackVolumeSheet: View {
         committed = true
         trackFetcher.setVolume(decibels: decibels, scope: scope, for: track)
         isPresented = false
+    }
+
+    // A "-  +" pair that steps one end of the slider's range.
+    private func rangeAdjuster(minus: @escaping () -> Void,
+                               plus: @escaping () -> Void) -> some View {
+        HStack(spacing: 10) {
+            Button(action: minus) { Image(systemName: "minus.circle") }
+            Button(action: plus)  { Image(systemName: "plus.circle") }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // Move the reduction (low) end, kept within -24…0 and a minSpan gap below the top.
+    private func adjustLower(by delta: Double) {
+        let v = max(-boundLimit, min(0, lowerBound + delta))
+        lowerBound = min(v, upperBound - minSpan)
+        decibels = max(lowerBound, min(upperBound, decibels))
+    }
+
+    // Move the boost (high) end, kept within 0…+24 and a minSpan gap above the bottom.
+    private func adjustUpper(by delta: Double) {
+        let v = max(0, min(boundLimit, upperBound + delta))
+        upperBound = max(v, lowerBound + minSpan)
+        decibels = max(lowerBound, min(upperBound, decibels))
+    }
+
+    // Widen the range so a saved/prefilled gain sits inside it (else the slider
+    // thumb would pin to an end and misrepresent the stored value). Whichever end
+    // the value is past is moved out to the value exactly.
+    private func ensureBoundsContain(_ value: Double) {
+        if value < lowerBound { lowerBound = max(-boundLimit, value) }
+        if value > upperBound { upperBound = min(boundLimit, value) }
     }
 }
 
