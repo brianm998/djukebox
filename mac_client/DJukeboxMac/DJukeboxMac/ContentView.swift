@@ -15,23 +15,28 @@ struct ContentView: View {
 
     var body: some View {
         ServerConnectionView(browser) { client in
-            VStack {
-                ArtistAlbumTrackList(client)
-                // onScan rescans the network (ServerConnectionView shows the search
-                // screen meanwhile); onGoOffline stashes the play-local choice so a
-                // later reconnect can restore it.
-                PlayingTracksView(client,
-                                  onScan: { self.browser.start() },
-                                  onGoOffline: self.browser.rememberCurrentPlayLocal)
-                SearchView(client)
-                HistoryView(client)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            // PairingApprovalHost surfaces incoming pair requests from other devices
+            // so they can be allowed/denied from here.
+            PairingApprovalHost(server: client.serverConnection) {
+                VStack {
+                    ArtistAlbumTrackList(client)
+                    // onScan rescans the network (ServerConnectionView shows the search
+                    // screen meanwhile); onGoOffline stashes the play-local choice so a
+                    // later reconnect can restore it.
+                    PlayingTracksView(client,
+                                      onScan: { self.browser.start() },
+                                      onGoOffline: self.browser.rememberCurrentPlayLocal)
+                    SearchView(client)
+                    HistoryView(client)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .id(client.serverConnection.url)
         }
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(ServerBrowser(password: password, initialQueueType: .remote))
+        ContentView(ServerBrowser(initialQueueType: .remote))
     }
 }

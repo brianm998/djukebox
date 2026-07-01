@@ -31,6 +31,8 @@ public struct ServerConnectionView<Content: View>: View {
                              message: "Found a DJukebox server, connecting to it.",
                              isBusy: true,
                              browser: browser)
+        case .needsPairing(let pairing):
+            PairingEntryView(pairing)
         case .failed(let reason):
             ServerStatusView(glyph: "⚠️",
                              title: "No DJukebox server found",

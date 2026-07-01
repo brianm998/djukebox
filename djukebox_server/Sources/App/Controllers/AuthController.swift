@@ -1,33 +1,52 @@
 import Vapor
 import DJukeboxCommon
 
+/*
+ Gates the track/history/player routes.
+
+ There is no longer a shared password. A request is trusted if EITHER:
+
+  - it arrives over loopback (127.0.0.1 / ::1) — i.e. a client running on the same
+    machine as the daemon, which never has to pair; or
+  - it presents a bearer token belonging to a device that has completed pairing
+    (the `Authorization` header for most routes, the `:auth` path segment for the
+    streaming route).
+
+ Loopback is judged from the real TCP peer (`req.remoteAddress`), which Vapor does
+ not derive from forwarding headers, so it can't be spoofed by a remote client.
+ */
 class AuthController {
-    let config: Config
+    let pairing: PairingService
     let trackFinder: TrackFinderType
-    
-    init(config: Config, trackFinder: TrackFinderType) {
-        self.config = config
+
+    init(pairing: PairingService, trackFinder: TrackFinderType) {
+        self.pairing = pairing
         self.trackFinder = trackFinder
     }
 
-    // curl -H "Authorization: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425" http://localhost:8080/rand
+    private func isLoopback(_ req: Request) -> Bool {
+        guard let ip = req.remoteAddress?.ipAddress else { return false }
+        return ip == "127.0.0.1" || ip == "::1" || ip == "::ffff:127.0.0.1"
+    }
+
+    private func isAuthorized(_ req: Request, credential: String?) -> Bool {
+        if isLoopback(req) { return true }
+        if let credential = credential, pairing.accepts(token: credential) { return true }
+        return false
+    }
+
+    // curl -H "Authorization: <token>" http://localhost:8080/rand
     func headerAuth<T>(request req: Request, closure: () throws -> T) throws -> T {
-        for header in req.headers {
-            if header.name == "Authorization" {
-                if SHA512.hash(data: Data(config.Password.utf8)).hexEncodedString() == header.value {
-                    return try closure()
-                }
-            }
+        if isAuthorized(req, credential: req.headers.first(name: "Authorization")) {
+            return try closure()
         }
         throw Abort(.unauthorized)
     }
 
-    // curl http://localhost:8080/stream/0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425/efb753b304ce6d4302fe7dce19da7cf9d73da66d
+    // curl http://localhost:8080/stream/<token>/<sha1>
     func pathAuth<T>(request req: Request, closure: () async throws -> T) async throws -> T {
-        if let auth = req.parameters.get("auth") {
-            if SHA512.hash(data: Data(config.Password.utf8)).hexEncodedString() == auth {
-                return try await closure()
-            }
+        if isAuthorized(req, credential: req.parameters.get("auth")) {
+            return try await closure()
         }
         throw Abort(.unauthorized)
     }
@@ -62,4 +81,3 @@ class AuthController {
         }
     }
 }
-

@@ -29,9 +29,9 @@ public class Client {
     }
     
 
-    public init(serverURL: String, password: String, initialQueueType initialQueue: PlayingQueueType = .local) {
-        // the server connection for tracks and history 
-        self.serverConnection = ServerConnection(toUrl: serverURL, withPassword: password)
+    public init(serverURL: String, token: String, initialQueueType initialQueue: PlayingQueueType = .local) {
+        // the server connection for tracks and history
+        self.serverConnection = ServerConnection(toUrl: serverURL, withToken: token)
 
         // an observable view object for showing lots of track based info
         let fetcher = TrackFetcher(withServer: serverConnection)
@@ -58,7 +58,7 @@ public class Client {
          an audio player that subclasses the ServerConnection to use apis to manage a server queue
          */
         trackFetcher.add(queueType: .remote,
-                         withPlayer: ServerAudioPlayer(toUrl: serverURL, withPassword: password))
+                         withPlayer: ServerAudioPlayer(toUrl: serverURL, withToken: token))
 
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
 

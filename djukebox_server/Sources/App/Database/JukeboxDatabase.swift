@@ -81,7 +81,42 @@ public final class JukeboxDatabase {
           ON play_history(sha1, played_at, fully_played);
 
         CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+
+        -- one row per device that has completed pairing. We store only the SHA256
+        -- hash of the device's bearer token, never the token itself, so a leaked
+        -- database can't be replayed against the server.
+        CREATE TABLE IF NOT EXISTS paired_clients (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+          token_hash TEXT NOT NULL UNIQUE, created_at REAL NOT NULL, last_seen REAL NOT NULL);
         """)
+    }
+
+    // MARK: - paired clients
+
+    /// Records a newly paired device. `tokenHash` is the SHA256 hex of the bearer
+    /// token handed to the device; the raw token is never persisted.
+    public func addPairedClient(name: String, tokenHash: String, at time: Double) throws {
+        try queue.sync {
+            try execOnQueue("""
+              INSERT INTO paired_clients (name, token_hash, created_at, last_seen)
+              VALUES (?,?,?,?)
+              ON CONFLICT(token_hash) DO UPDATE SET name=excluded.name, last_seen=excluded.last_seen;
+              """, text: [name, tokenHash], doubles: [time, time])
+        }
+    }
+
+    /// The set of valid token hashes, loaded into RAM at startup so the per-request
+    /// auth check never has to touch the database.
+    public func loadPairedTokenHashes() throws -> Set<String> {
+        try queue.sync {
+            var hashes = Set<String>()
+            let stmt = try prepareOnQueue("SELECT token_hash FROM paired_clients;")
+            defer { sqlite3_finalize(stmt) }
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                if let hash = columnText(stmt, 0) { hashes.insert(hash) }
+            }
+            return hashes
+        }
     }
 
     // MARK: - history: write
@@ -478,9 +513,10 @@ public final class JukeboxDatabase {
     }
 
     /// Runs one or more statements with no result rows. Optional positional text
-    /// parameters bind to the single statement form.
-    private func execOnQueue(_ sql: String, text: [String] = []) throws {
-        if text.isEmpty {
+    /// parameters bind first (indices 1…n), then any double parameters bind after
+    /// them (indices n+1…), matching the order of `?` placeholders in the SQL.
+    private func execOnQueue(_ sql: String, text: [String] = [], doubles: [Double] = []) throws {
+        if text.isEmpty && doubles.isEmpty {
             var err: UnsafeMutablePointer<CChar>?
             if sqlite3_exec(db, sql, nil, nil, &err) != SQLITE_OK {
                 let msg = err.map { String(cString: $0) } ?? "unknown error"
@@ -492,6 +528,9 @@ public final class JukeboxDatabase {
         let stmt = try prepareOnQueue(sql)
         defer { sqlite3_finalize(stmt) }
         for (i, value) in text.enumerated() { bind(stmt, Int32(i + 1), value) }
+        for (i, value) in doubles.enumerated() {
+            sqlite3_bind_double(stmt, Int32(text.count + i + 1), value)
+        }
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw JukeboxDatabaseError.step(String(cString: sqlite3_errmsg(db)))
         }

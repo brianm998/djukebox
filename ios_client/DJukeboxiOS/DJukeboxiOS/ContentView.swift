@@ -30,6 +30,9 @@ struct ContentView: View {
     }
 
     private func tabs(_ client: Client) -> some View {
+        // PairingApprovalHost surfaces incoming pair requests from other devices so
+        // they can be allowed/denied here (no-op when running offline/local).
+        PairingApprovalHost(server: client.serverConnection) {
         TabView {
             if layoutIsLarge() {
                 ArtistAlbumTrackList(client) // looks ok on iPad, even mini
@@ -66,6 +69,8 @@ struct ContentView: View {
                   Text("history")
               }
         }
+        }
+        .id(client.serverConnection.url)
     }
 
     // kick off a fresh search and bring up the full-screen scan window
@@ -145,6 +150,6 @@ struct ServerScanView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(ServerBrowser(password: password))
+        ContentView(ServerBrowser())
     }
 }

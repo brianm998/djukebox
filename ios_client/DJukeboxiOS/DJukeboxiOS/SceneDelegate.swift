@@ -11,9 +11,10 @@ import SwiftUI
 import DJukeboxClient
 import DJukeboxCommon
 
-// The server is now discovered on the local network via mDNS / Bonjour
-// (see ServerBrowser), so there's no hardcoded server address here anymore.
-let password = "foobar"
+// The server is discovered on the local network via mDNS / Bonjour (see
+// ServerBrowser). There's no shared password anymore: an iOS device always
+// reaches the server over the WiFi, so it pairs with it (see PairingClient /
+// PairingStore) and keeps a per-device token afterwards.
 
 enum QueueType {
     case local
@@ -32,7 +33,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Create the SwiftUI view that provides the window contents.
         // On iOS, if no server turns up we quietly drop into local-only mode
         // rather than showing a failure screen.
-        let browser = ServerBrowser(password: password, autoFallbackToLocal: true)
+        let browser = ServerBrowser(autoFallbackToLocal: true)
         browser.start()
         let contentView = ContentView(browser)
 

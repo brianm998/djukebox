@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import CryptoKit
 import DJukeboxCommon
 
 public protocol ServerType {
@@ -26,12 +25,13 @@ public class ServerConnection: ObservableObject, ServerType {
 
     public var url: String { return serverUrl }
     
-    public init(toUrl url: String, withPassword password: String) {
+    // The bearer token IS the credential now (no client-side hashing). For a
+    // loopback connection on the same machine as the daemon, the server trusts the
+    // peer regardless of the token, so a placeholder like "local" is fine and keeps
+    // the streaming path (/stream/<token>/<sha1>) well-formed.
+    public init(toUrl url: String, withToken token: String) {
         self.serverUrl = url
-        self.authHeaderValue =
-          SHA512.hash(data: Data(password.utf8)).map {
-              String(format: "%02hhx", $0)
-          }.joined()
+        self.authHeaderValue = token
     }
 
     internal func request(path: String, closure: @escaping (Bool, Error?) -> Void) {

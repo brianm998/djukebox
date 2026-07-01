@@ -18,6 +18,13 @@ let historyWriter = HistoryWriter(database: jukeboxDatabase, history: history)
 // advertises this server on the local network via mDNS / Bonjour
 var serviceAdvertiser: ServiceAdvertiser?
 
+// Owns the device-pairing state: the set of tokens belonging to already-paired
+// devices (seeded from the database) plus the short-lived table of pending
+// pairing requests. Loopback clients are trusted without a token; everyone on the
+// WiFi must pair. Lazily initialised, so it is built after `jukeboxDatabase`.
+let pairingService = PairingService(database: jukeboxDatabase,
+                                    tokenHashes: (try? jukeboxDatabase.loadPairedTokenHashes()) ?? [])
+
 #if os(Linux)
 let audioPlayer: AudioPlayerType = LinuxAudioPlayer(trackFinder: trackFinder,
                                                     historyWriter: historyWriter)
@@ -25,15 +32,6 @@ let audioPlayer: AudioPlayerType = LinuxAudioPlayer(trackFinder: trackFinder,
 let audioPlayer: AudioPlayerType = MacAudioPlayer(trackFinder: trackFinder,
                                                   historyWriter: historyWriter)
 #endif
-
-/*
- First look for config file in DJUKEBOX_CONFIGFILE env var
- If not found, next look DJukeboxConfig.json in working directory
- Finally, fall back to hardcoded for now
-*/
-let defaultConfig = Config(Password:"foobar",
-                           TrackPaths: ["/mnt/tree/mp3"]) // XXX this isn't used (remove it)
-//0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425
 
 // where the music (and its *.json sidecars) live
 let musicDir = ProcessInfo.processInfo.environment["DJUKEBOX_MUSIC_DIR"] ?? "/qp/mp3/"
@@ -44,11 +42,6 @@ let historyDir = ProcessInfo.processInfo.environment["DJUKEBOX_HISTORY_DIR"] ?? 
 // the sqlite database file. Defaults to db.sqlite in the working directory
 // (already in .gitignore); override with DJUKEBOX_DB_PATH.
 let databasePath = ProcessInfo.processInfo.environment["DJUKEBOX_DB_PATH"] ?? "db.sqlite"
-
-public struct Config: Content {
-    let Password: String
-    let TrackPaths: [String]
-}
 
 // Writes play/skip events through to the database (the store of record) first,
 // then updates the in-RAM history mirror. A failed database write propagates so
@@ -114,6 +107,10 @@ public func configure(_ app: Application) throws {
                                        port: app.http.server.configuration.port)
     advertiser.start()
     serviceAdvertiser = advertiser
+
+    // build pairing state (token set loaded from the database)
+    Log.d("pairing: \(jukeboxDatabase.count(ofTable: "paired_clients")) paired device(s); loopback is trusted without pairing")
+    _ = pairingService
 
     // register routes
     try routes(app)

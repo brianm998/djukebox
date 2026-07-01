@@ -1,24 +1,31 @@
 import Foundation
 import Network
-import CryptoKit
 import DJukeboxCommon
 
 // The states a ServerBrowser moves through while finding and connecting to a server.
 public enum ServerConnectionState {
-    case searching              // looking for a server on the local network
-    case connecting             // found one, resolving / verifying it
-    case connected(Client)      // ready to use
-    case failed(String)         // gave up; the string is a human readable reason
+    case searching                  // looking for a server on the local network
+    case connecting                 // found one, resolving / verifying it
+    case needsPairing(PairingClient)// reached a server over WiFi but this device isn't paired
+    case connected(Client)          // ready to use
+    case failed(String)             // gave up; the string is a human readable reason
 }
 
 /*
- Discovers a DJukebox server on the local network via mDNS / Bonjour rather than
- relying on a hardcoded IP address.
+ Discovers a DJukebox server and connects to it.
 
- It browses for the `_djukebox._tcp` service the server advertises, resolves the
- first match to a host and port, verifies the server actually answers, and only
- then builds a `Client`. Every step that can go wrong moves it to `.failed` with
- a message, so the UI can show something other than an empty view.
+ Two ways in:
+  - Loopback first (the mac client): a daemon running on this same machine is
+    reachable at 127.0.0.1 and trusts loopback without pairing. We probe it first
+    and, if it answers, connect immediately.
+  - Bonjour discovery (always on iOS, and the fallback on mac): browse for the
+    `_djukebox._tcp` service the server advertises, resolve it, and connect. A
+    server reached this way is on the WiFi, so it requires a pairing token. If this
+    device has a stored token we use it; otherwise (or if the server rejects it) we
+    drop into the pairing flow instead of failing.
+
+ Every step that can go wrong moves to `.failed` with a message so the UI can show
+ something other than an empty view.
  */
 public class ServerBrowser: ObservableObject {
 
@@ -32,13 +39,19 @@ public class ServerBrowser: ObservableObject {
     public var allowsOfflineMode: Bool { autoFallbackToLocal }
 
     private let serviceType: String
-    private let password: String
     private let initialQueueType: PlayingQueueType
-    private let authHeaderValue: String
     private let searchTimeout: TimeInterval
     // when true, giving up on discovery drops into offline mode (local cache only)
     // instead of showing the failure screen. The iOS client opts in; the mac client doesn't.
     private let autoFallbackToLocal: Bool
+    // when true, probe a same-machine daemon at 127.0.0.1 before browsing the WiFi
+    // (the mac client). Loopback is trusted by the server without pairing.
+    private let tryLoopbackFirst: Bool
+    private let loopbackPort: Int
+
+    // the token the server trusts for loopback connections (content is ignored by
+    // the server for loopback peers, but the streaming path needs a non-empty value)
+    private static let loopbackToken = "local"
 
     private var browser: NWBrowser?
     private var probe: NWConnection?
@@ -48,31 +61,123 @@ public class ServerBrowser: ObservableObject {
     // the play-local choice from before we went offline, so a later scan can
     // restore it; nil means "no previous setting" (scan then defaults to remote)
     private var rememberedQueueType: PlayingQueueType?
+    // strong ref to the in-flight pairing client (state also holds it, but keep it
+    // here so it survives any transient state changes)
+    private var pairingClient: PairingClient?
 
     public init(serviceType: String = "_djukebox._tcp",
-                password: String,
                 initialQueueType: PlayingQueueType = .local,
                 autoFallbackToLocal: Bool = false,
+                tryLoopbackFirst: Bool = false,
+                loopbackPort: Int = 8080,
                 searchTimeout: TimeInterval = 12.0)
     {
         self.serviceType = serviceType
-        self.password = password
         self.initialQueueType = initialQueueType
         self.autoFallbackToLocal = autoFallbackToLocal
+        self.tryLoopbackFirst = tryLoopbackFirst
+        self.loopbackPort = loopbackPort
         self.searchTimeout = searchTimeout
-        // same hashing the ServerConnection uses, so we can verify connectivity up front
-        self.authHeaderValue = SHA512.hash(data: Data(password.utf8)).map {
-            String(format: "%02hhx", $0)
-        }.joined()
     }
 
-    // Begin browsing the local network for a server.
+    // Begin finding a server: probe loopback first (if enabled), then browse WiFi.
     public func start() {
         cancelAll()
         generation += 1
         let gen = generation
         hasResolved = false
         DispatchQueue.main.async { self.state = .searching }
+
+        if tryLoopbackFirst {
+            probeLoopback(gen: gen)
+        } else {
+            startBonjour(gen: gen)
+        }
+    }
+
+    // Search again from scratch.
+    public func retry() { start() }
+
+    // Capture the current play-local choice before the client goes offline, so a
+    // later scan/reconnect can put it back. No-op if we're already offline.
+    public func rememberCurrentPlayLocal() {
+        if let client = currentClient,
+           !client.trackFetcher.useLocalContentOnly,
+           let queueType = client.trackFetcher.queueType
+        {
+            rememberedQueueType = queueType
+        }
+    }
+
+    // Stop searching and run from locally-cached tracks only (offline mode).
+    public func goOffline() {
+        cancelAll()
+        generation += 1
+        makeLocalClient(gen: generation)
+    }
+
+    // Build a client with no server, backed only by the local track cache.
+    private func makeLocalClient(gen: Int) {
+        guard gen == self.generation else { return }
+        // An empty server URL means the (unused) server calls just fail quietly;
+        // everything the client shows comes from the on-device cache instead.
+        let client = Client(serverURL: "", token: Self.loopbackToken, initialQueueType: .local)
+        try? client.trackFetcher.watch(queue: .local)  // offline always plays local
+        client.trackFetcher.useLocalContentOnly = true
+        self.currentClient = client
+        self.state = .connected(client)
+        Log.i("offline mode: no server found, playing locally cached tracks only")
+    }
+
+    // Bypass discovery and connect to a host the user typed in.
+    public func connectManually(toHost host: String, port: Int) {
+        cancelAll()
+        generation += 1
+        let gen = generation
+        let trimmed = host.trimmingCharacters(in: .whitespaces)
+        let urlString: String
+        if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") {
+            urlString = trimmed
+        } else {
+            urlString = "http://\(trimmed):\(port)"
+        }
+        DispatchQueue.main.async { self.state = .connecting }
+        verify(urlString: urlString, gen: gen)
+    }
+
+    // MARK: - loopback
+
+    // Probe a daemon on this machine. On success connect immediately (loopback is
+    // trusted, no pairing); on any failure fall back to Bonjour discovery.
+    private func probeLoopback(gen: Int) {
+        let urlString = "http://127.0.0.1:\(loopbackPort)"
+        guard let url = URL(string: "\(urlString)/tracks") else {
+            startBonjour(gen: gen)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 2.0   // keep the fall-through to WiFi snappy
+        URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                guard gen == self.generation else { return }
+                if error == nil,
+                   let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
+                    Log.i("found a local daemon at 127.0.0.1:\(self.loopbackPort)")
+                    self.connect(toURL: urlString, token: Self.loopbackToken, gen: gen)
+                } else {
+                    Log.i("no local daemon; browsing the WiFi for a server")
+                    self.startBonjour(gen: gen)
+                }
+            }
+        }.resume()
+    }
+
+    // MARK: - Bonjour discovery
+
+    private func startBonjour(gen: Int) {
+        guard gen == self.generation else { return }
+        DispatchQueue.main.async { if gen == self.generation { self.state = .searching } }
 
         let browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: .tcp)
         self.browser = browser
@@ -102,60 +207,6 @@ public class ServerBrowser: ObservableObject {
             }
         }
     }
-
-    // Search again from scratch.
-    public func retry() { start() }
-
-    // Capture the current play-local choice before the client goes offline, so a
-    // later scan/reconnect can put it back. No-op if we're already offline.
-    public func rememberCurrentPlayLocal() {
-        if let client = currentClient,
-           !client.trackFetcher.useLocalContentOnly,
-           let queueType = client.trackFetcher.queueType
-        {
-            rememberedQueueType = queueType
-        }
-    }
-
-    // Stop searching and run from locally-cached tracks only (offline mode).
-    // Used both as the automatic fallback when no server is found and when the
-    // user explicitly chooses to go offline.
-    public func goOffline() {
-        cancelAll()
-        generation += 1
-        makeLocalClient(gen: generation)
-    }
-
-    // Build a client with no server, backed only by the local track cache.
-    private func makeLocalClient(gen: Int) {
-        guard gen == self.generation else { return }
-        // An empty server URL means the (unused) server calls just fail quietly;
-        // everything the client shows comes from the on-device cache instead.
-        let client = Client(serverURL: "", password: self.password, initialQueueType: .local)
-        try? client.trackFetcher.watch(queue: .local)  // offline always plays local
-        client.trackFetcher.useLocalContentOnly = true
-        self.currentClient = client
-        self.state = .connected(client)
-        Log.i("offline mode: no server found, playing locally cached tracks only")
-    }
-
-    // Bypass discovery and connect to a host the user typed in.
-    public func connectManually(toHost host: String, port: Int) {
-        cancelAll()
-        generation += 1
-        let gen = generation
-        let trimmed = host.trimmingCharacters(in: .whitespaces)
-        let urlString: String
-        if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") {
-            urlString = trimmed
-        } else {
-            urlString = "http://\(trimmed):\(port)"
-        }
-        DispatchQueue.main.async { self.state = .connecting }
-        verify(urlString: urlString, gen: gen)
-    }
-
-    // MARK: - private
 
     private func resolve(_ endpoint: NWEndpoint, gen: Int) {
         DispatchQueue.main.async { self.state = .connecting }
@@ -218,15 +269,21 @@ public class ServerBrowser: ObservableObject {
         return String(host[..<pct])
     }
 
-    // Confirm the server actually answers (and the password is accepted) before committing.
+    // MARK: - verify / pair / connect
+
+    // Confirm a WiFi server answers and that we're allowed in. Uses this device's
+    // stored token if it has one. A 401 (or no token) means we need to pair.
     private func verify(urlString: String, gen: Int) {
         guard let url = URL(string: "\(urlString)/tracks") else {
             self.fail("\(urlString) is not a valid server address.", gen: gen)
             return
         }
+        let token = PairingStore.load()
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
+        if let token = token {
+            request.setValue(token, forHTTPHeaderField: "Authorization")
+        }
         request.timeoutInterval = 8.0
         URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
             guard let self = self else { return }
@@ -236,23 +293,40 @@ public class ServerBrowser: ObservableObject {
                     self.fail("Couldn't reach the DJukebox server: \(error.localizedDescription)", gen: gen)
                     return
                 }
-                if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                    self.fail("The DJukebox server refused the connection (HTTP \(http.statusCode)). "
-                              + "Check the password.", gen: gen)
-                    return
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                if (200..<300).contains(status), let token = token {
+                    // our stored token still works
+                    self.connect(toURL: urlString, token: token, gen: gen)
+                } else if status == 401 || token == nil {
+                    // not paired (or token no longer accepted): start pairing
+                    self.beginPairing(urlString: urlString, gen: gen)
+                } else {
+                    self.fail("The DJukebox server refused the connection (HTTP \(status)).", gen: gen)
                 }
-                self.connect(toURL: urlString, gen: gen)
             }
         }.resume()
     }
 
-    private func connect(toURL urlString: String, gen: Int) {
+    // Hand off to the pairing flow. On success we build a real client with the new token.
+    private func beginPairing(urlString: String, gen: Int) {
+        guard gen == self.generation else { return }
+        Log.i("not paired with \(urlString); starting pairing flow")
+        let pairing = PairingClient(serverURL: urlString) { [weak self] token in
+            guard let self = self, gen == self.generation else { return }
+            self.connect(toURL: urlString, token: token, gen: gen)
+        }
+        self.pairingClient = pairing
+        self.state = .needsPairing(pairing)
+        pairing.start()
+    }
+
+    private func connect(toURL urlString: String, token: String, gen: Int) {
         guard gen == self.generation else { return }
         // were we offline (i.e. is this a scan/reconnect) before this connection?
         let reconnectingFromOffline = currentClient?.trackFetcher.useLocalContentOnly ?? false
         cancelAll()
         let client = Client(serverURL: urlString,
-                            password: self.password,
+                            token: token,
                             initialQueueType: self.initialQueueType)
         // we reached a server, so use it: don't restore a stale offline preference
         if client.trackFetcher.useLocalContentOnly {
@@ -264,6 +338,7 @@ public class ServerBrowser: ObservableObject {
             try? client.trackFetcher.watch(queue: rememberedQueueType ?? .remote)
         }
         rememberedQueueType = nil
+        self.pairingClient = nil
         self.currentClient = client
         self.state = .connected(client)
         Log.i("connected to DJukebox server at \(urlString)")

@@ -11,9 +11,10 @@ import CryptoKit
 import DJukeboxCommon
 import DJukeboxClient
 
-// The server is now discovered on the local network via mDNS / Bonjour
-// (see ServerBrowser), so there's no hardcoded server address here anymore.
-let password = "foobar"
+// The server is discovered on the local network via mDNS / Bonjour (see
+// ServerBrowser), and there's no shared password anymore: a daemon on this same
+// machine is reached over loopback (trusted, no pairing), and a server on the
+// WiFi requires this device to pair (see PairingClient / PairingStore).
 
 var theWindow: NSWindow!
 
@@ -38,13 +39,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
           ]
 #endif
 
-        // Like the iOS client: default to playing tracks locally on this machine,
-        // and quietly drop into local-only mode (cached tracks) when no server is
-        // found rather than showing a failure screen. The server may now live on a
-        // different machine on the same WiFi network.
-        let browser = ServerBrowser(password: password,
-                                    initialQueueType: .local,
-                                    autoFallbackToLocal: true)
+        // Try a daemon on this machine (127.0.0.1) first — it's trusted over
+        // loopback and needs no pairing. If there isn't one, browse the WiFi and
+        // pair as needed. Default to playing locally, and quietly drop into
+        // local-only mode (cached tracks) when no server is found.
+        let browser = ServerBrowser(initialQueueType: .local,
+                                    autoFallbackToLocal: true,
+                                    tryLoopbackFirst: true)
         browser.start()
         let contentView = ContentView(browser)
 
