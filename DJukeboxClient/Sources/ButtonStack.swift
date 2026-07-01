@@ -288,6 +288,7 @@ public struct TrackVolumeSheet: View {
     @State private var originalDecibels: Double = 0
     @State private var userInteracting = false
     @State private var appliedSavedGain = false
+    @State private var committed = false
 
     public init(trackFetcher: TrackFetcher, isPresented: Binding<Bool>) {
         self.trackFetcher = trackFetcher
@@ -302,27 +303,24 @@ public struct TrackVolumeSheet: View {
 
                 HStack {
                     Image(systemName: "speaker.fill")
-                    Slider(value: $decibels, in: 0...12, step: 0.5,
+                    // reduction as well as boost, defaulting to -2 dB … +12 dB
+                    Slider(value: $decibels, in: -2...12, step: 0.5,
                            onEditingChanged: { editing in userInteracting = editing })
                       .frame(minWidth: 200)
                     Image(systemName: "speaker.wave.3.fill")
                 }
-                Text(String(format: "+%.1f dB", decibels)).monospacedDigit()
+                Text(String(format: "%+.1f dB", decibels)).monospacedDigit()
 
-                Text("Apply this boost to:").font(.subheadline)
-                HStack(spacing: 12) {
-                    Button("This Track") { apply(.track, track) }
-                    if track.Album != nil {
-                        Button("This Album") { apply(.album, track) }
+                Text("Apply to:").font(.subheadline)
+                VStack(alignment: .leading, spacing: 8) {
+                    scopeRow("This Track:", track.Title, .track, track)
+                    if let album = track.Album {
+                        scopeRow("This Album:", album, .album, track)
                     }
-                    Button("This Artist") { apply(.artist, track) }
+                    scopeRow("This Artist:", track.Band, .artist, track)
                 }
 
-                Button("Cancel") {
-                    // undo the live audition (restore what was saved when we opened)
-                    trackFetcher.previewVolume(decibels: originalDecibels)
-                    isPresented = false
-                }
+                Button("Cancel") { isPresented = false }
             } else {
                 Text("Nothing playing")
                 Button("Cancel") { isPresented = false }
@@ -348,6 +346,7 @@ public struct TrackVolumeSheet: View {
         .onAppear {
             appliedSavedGain = false
             userInteracting = false
+            committed = false
             // best-effort immediate prefill from the last-known value…
             let cached = trackFetcher.currentTrackGainDB
             decibels = cached
@@ -357,12 +356,38 @@ public struct TrackVolumeSheet: View {
                 trackFetcher.refreshSavedGain(forHash: sha1)
             }
         }
+        .onDisappear {
+            // if the user auditioned a level but didn't save it (Cancel, or swipe
+            // to dismiss), restore the level that was in effect when we opened
+            if !committed {
+                trackFetcher.previewVolume(decibels: originalDecibels)
+            }
+        }
+    }
+
+    // One "This X:  <name>" row that applies the current slider value to that scope.
+    private func scopeRow(_ label: String, _ name: String,
+                          _ scope: VolumeScope, _ track: AudioTrack) -> some View {
+        Button { apply(scope, track) } label: {
+            HStack(spacing: 8) {
+                Text(label).frame(width: 84, alignment: .trailing)
+                Text(name).lineLimit(1).truncationMode(.tail)
+                Spacer(minLength: 0)
+            }
+        }
     }
 
     private func apply(_ scope: VolumeScope, _ track: AudioTrack) {
+        committed = true
         trackFetcher.setVolume(decibels: decibels, scope: scope, for: track)
         isPresented = false
     }
+}
+
+// A short signed dB label for a gain (e.g. "+6 dB", "-2 dB"), or nil at 0 dB.
+public func volumeGainLabel(_ decibels: Double) -> String? {
+    guard decibels != 0 else { return nil }
+    return String(format: "%+g dB", decibels)
 }
 
 // Boosts the volume of the currently-playing track (Mac / iPad). Opens the shared
@@ -376,7 +401,13 @@ public struct TrackVolumeButton: View {
     }
 
     public var body: some View {
-        Button("Volume") { showingPicker = true }
+        Button(action: { showingPicker = true }) {
+            if let label = volumeGainLabel(trackFetcher.currentTrackGainDB) {
+                Text("Volume  \(label)")
+            } else {
+                Text("Volume")
+            }
+        }
         .disabled(trackFetcher.currentTrack == nil)
         .sheet(isPresented: $showingPicker) {
             TrackVolumeSheet(trackFetcher: trackFetcher, isPresented: $showingPicker)

@@ -259,6 +259,16 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
                 self.currentTrack = nil
                 self.pendingTracks = []
             }
+            // keep the volume-button label in sync with whatever is now playing
+            let gainSha1 = self.currentTrack?.SHA1
+            if gainSha1 != self.lastGainSha1 {
+                self.lastGainSha1 = gainSha1
+                if let gainSha1 = gainSha1 {
+                    self.refreshSavedGain(forHash: gainSha1)
+                } else {
+                    self.currentTrackGainDB = 0
+                }
+            }
             var totalDuration: TimeInterval = 0
             // XXX make this track the PlayingQueue directly
             if let duration = playingQueue.playingTrackDuration,
@@ -433,6 +443,8 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
                 Log.e("could not set \(scope) volume: \(error)")
             } else {
                 Log.d("set \(scope) volume to \(decibels) dB for \(track.Title)")
+                // refresh the button label to the new effective gain for this track
+                self.refreshSavedGain(forHash: track.SHA1)
             }
         }
     }
@@ -449,6 +461,10 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     // server and updates this on the main thread (views observe it); we avoid
     // threading a caller closure across the async boundary (Swift 6 data-race).
     @Published public var currentTrackGainDB: Double = 0
+
+    // the sha1 currentTrackGainDB was last fetched for, so update(playingQueue:)
+    // only re-fetches when the playing track actually changes
+    private var lastGainSha1: String?
 
     public func refreshSavedGain(forHash hash: String) {
         server.savedGain(forHash: hash) { db, _ in

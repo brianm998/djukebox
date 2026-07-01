@@ -174,6 +174,7 @@ public struct SmallButtonView: View {
   public var body: some View {
         let localPlayToggle = Binding<Bool>(get: { self.trackFetcher.queueType == .local },
                                             set: { try? self.trackFetcher.watch(queue: $0 ? .local : .remote) })
+        let volumeLabel = volumeGainLabel(trackFetcher.currentTrackGainDB).map { "Set Volume…  (\($0))" } ?? "Set Volume…"
         return VStack {
 
                 HStack {
@@ -194,7 +195,7 @@ public struct SmallButtonView: View {
                                             self.playForMinutes = 0
                                             self.showingPlayForPicker = true
                                         },
-                                        .default(Text("Set Volume…")) { self.showingVolumePicker = true },
+                                        .default(Text(volumeLabel)) { self.showingVolumePicker = true },
                                         .default(Text("Refresh Queue")) { self.trackFetcher.refreshQueue() },
                                         .default(Text("Refresh Tracks")) { self.trackFetcher.refreshTracks() },
                                         .default(Text("Cache Current Queue")) { self.trackFetcher.cacheQueue() },
