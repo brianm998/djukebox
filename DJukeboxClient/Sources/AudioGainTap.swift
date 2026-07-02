@@ -59,13 +59,13 @@ public final class PlaybackGain: @unchecked Sendable {
             unprepare: gainTapUnprepare,
             process: gainTapProcess)
 
-        var tap: MTAudioProcessingTap?
+        var tap: Unmanaged<MTAudioProcessingTap>?
         let status = MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks,
                                                 kMTAudioProcessingTapCreationFlag_PreEffects, &tap)
 
         let params = AVMutableAudioMixInputParameters(track: track)
         if status == noErr, let tap = tap {
-            params.audioTapProcessor = tap
+            params.audioTapProcessor = tap.takeRetainedValue()
         } else {
             // creation failed → gainTapFinalize won't run, so balance the retain
             Unmanaged<PlaybackGain>.fromOpaque(clientInfo).release()

@@ -17,9 +17,10 @@ struct BandList: View {
             HStack() {
                 Text("Bands")
                 if self.trackFetcher.allTracks.count > 0 {
+                    let fetcher = trackFetcher
                     let action = {
                         DispatchQueue.global().async {
-                            self.trackFetcher.cache(tracks: self.trackFetcher.allTracks)
+                            fetcher.cache(tracks: fetcher.allTracks)
                         }
                     }
                     Button(action: action) {

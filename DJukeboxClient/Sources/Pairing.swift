@@ -231,7 +231,7 @@ public class PairingClient: ObservableObject {
     private func startPolling() {
         stopPolling()
         let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.pollStatus()
+            Task { @MainActor in self?.pollStatus() }
         }
         pollTimer = timer
     }
@@ -316,7 +316,7 @@ public class PairingMonitor: ObservableObject {
         stop()
         poll()
         let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.poll()
+            Task { @MainActor in self?.poll() }
         }
         pollTimer = timer
     }
