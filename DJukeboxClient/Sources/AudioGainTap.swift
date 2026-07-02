@@ -59,13 +59,25 @@ public final class PlaybackGain: @unchecked Sendable {
             unprepare: gainTapUnprepare,
             process: gainTapProcess)
 
+        // MTAudioProcessingTapCreate's out-parameter type changed across SDKs:
+        // Swift 6.1 toolchains (Xcode 16.x) import it as Unmanaged<MTAudioProcessingTap>?
+        // (manual retain/release), while Swift 6.2+ toolchains (Xcode 26+) bridge it
+        // directly as MTAudioProcessingTap? (ARC-managed). Our CI matrix runs both.
+        #if swift(>=6.2)
+        var tap: MTAudioProcessingTap?
+        #else
         var tap: Unmanaged<MTAudioProcessingTap>?
+        #endif
         let status = MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks,
                                                 kMTAudioProcessingTapCreationFlag_PreEffects, &tap)
 
         let params = AVMutableAudioMixInputParameters(track: track)
         if status == noErr, let tap = tap {
+            #if swift(>=6.2)
+            params.audioTapProcessor = tap
+            #else
             params.audioTapProcessor = tap.takeRetainedValue()
+            #endif
         } else {
             // creation failed → gainTapFinalize won't run, so balance the retain
             Unmanaged<PlaybackGain>.fromOpaque(clientInfo).release()
