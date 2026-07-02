@@ -119,7 +119,7 @@ public class HistoryFetcher: ObservableObject, @unchecked Sendable {
                 }
             }
         }
-        history.sort()
+        history.sort(by: >) // most recent first
         self.recent = history
     }
 

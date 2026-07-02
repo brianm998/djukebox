@@ -4,12 +4,15 @@ public struct HistoryView: View {
 
     @ObservedObject var historyFetcher: HistoryFetcher
     @ObservedObject var trackFetcher: TrackFetcher
+    @State private var isScrolledToTop = true
+
+    private static let topAnchorID = "history-top-anchor"
 
     public init(_ client: Client) {
         self.historyFetcher = client.historyFetcher
         self.trackFetcher = client.trackFetcher
     }
-    
+
     public var body: some View {
         VStack {
             HStack {
@@ -19,14 +22,28 @@ public struct HistoryView: View {
                     self.historyFetcher.decrementHistoryAge()
                 })
             }
-            List {
-                ForEach(historyFetcher.recent, id: \.self) { historyEntry in
-                    TrackDetail(track: historyEntry.track,
-                                trackFetcher: self.trackFetcher)
+            ScrollViewReader { proxy in
+                List {
+                    // zero-height sentinel used to detect/restore a top-of-list scroll position
+                    Color.clear
+                        .frame(height: 0)
+                        .listRowInsets(EdgeInsets())
+                        .onAppear { self.isScrolledToTop = true }
+                        .onDisappear { self.isScrolledToTop = false }
+                        .id(Self.topAnchorID)
+                    ForEach(historyFetcher.recent, id: \.self) { historyEntry in
+                        TrackDetail(track: historyEntry.track,
+                                    trackFetcher: self.trackFetcher)
+                    }
+                }
+                .onChange(of: historyFetcher.recent.count) { _ in
+                    if self.isScrolledToTop {
+                        proxy.scrollTo(Self.topAnchorID, anchor: .top)
+                    }
                 }
             }
         }
-    }    
+    }
 
     func stepperText() -> String {
         let age = Int(historyFetcher.recentHistoryDurationSeconds)
