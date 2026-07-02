@@ -39,6 +39,12 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     let trackFinder: TrackFinderType
     private var db: LocalDatabase?
 
+    // SHA1s kept (downloaded) while the background reconcile scan was running;
+    // main-queue only. The scan's drop list is a snapshot from init, so anything
+    // in here must survive the apply step — its file was just written.
+    private var keptDuringReconcile = Set<String>()
+    private var reconcilePending = true
+
     public init(trackFinder: TrackFinderType) {
         self.trackFinder = trackFinder
         super.init()
@@ -58,34 +64,59 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     // "present" file that isn't audio). Either way offline mode listed tracks that
     // don't really exist. Keep only rows whose file is genuinely an audio file,
     // prune the rest, and delete any bogus placeholder so the catalog self-heals.
+    //
+    // The scan opens every cached file (~8 seconds for a 10k-track cache), and it
+    // used to run inline in init — on the main thread, stalling the whole connect
+    // flow at app startup. It now scans a snapshot of the catalog on a background
+    // queue and applies the result on the main queue as a subtraction, so tracks
+    // downloaded while the scan was running are kept. Until it lands, offline
+    // browsing may briefly list a track whose file is gone — the same staleness
+    // the catalog already had before this launch.
     private func reconcileWithDownloadedFiles() {
-        var present: [AudioTrack] = []
-        var drop: [String] = []
-        for track in self.downloadedTracks {
-            guard let url = self.cacheDirURL(forFilename: track.SHA1, withExtention: "mp3") else {
-                drop.append(track.SHA1)
-                continue
+        let snapshot = self.downloadedTracks
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            var presentCount = 0
+            var drop: [String] = []
+            for track in snapshot {
+                guard let url = self.cacheDirURL(forFilename: track.SHA1, withExtention: "mp3") else {
+                    drop.append(track.SHA1)
+                    continue
+                }
+                let path = url.path
+                if self.isLikelyAudioFile(atPath: path) {
+                    presentCount += 1
+                } else {
+                    drop.append(track.SHA1)
+                    // Remove a small non-audio placeholder (e.g. a saved error body) so it
+                    // can't waste space or resurrect the row via download()'s "already
+                    // exists" fast-path. Size-guarded so a genuine track is never deleted.
+                    if FileManager.default.fileExists(atPath: path),
+                       let size = (try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? NSNumber,
+                       size.intValue < 65536 {
+                        try? FileManager.default.removeItem(atPath: path)
+                    }
+                }
             }
-            let path = url.path
-            if self.isLikelyAudioFile(atPath: path) {
-                present.append(track)
-            } else {
-                drop.append(track.SHA1)
-                // Remove a small non-audio placeholder (e.g. a saved error body) so it
-                // can't waste space or resurrect the row via download()'s "already
-                // exists" fast-path. Size-guarded so a genuine track is never deleted.
-                if FileManager.default.fileExists(atPath: path),
-                   let size = (try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? NSNumber,
-                   size.intValue < 65536 {
-                    try? FileManager.default.removeItem(atPath: path)
+            Log.i("local catalog reconcile: \(snapshot.count) rows, \(presentCount) valid audio, \(drop.count) missing/invalid")
+            // decide AND apply the drop on the main queue, serialized with
+            // keepLocal's upsert/append: a track re-downloaded mid-scan is in
+            // keptDuringReconcile and must not have its fresh row deleted
+            DispatchQueue.main.async {
+                let dropSet = Set(drop).subtracting(self.keptDuringReconcile)
+                self.keptDuringReconcile.removeAll()
+                self.reconcilePending = false
+                guard !dropSet.isEmpty else { return }
+                self.db?.delete(shas: Array(dropSet))
+                self.downloadedTracks.removeAll { dropSet.contains($0.SHA1) }
+                self.sanitizeDownloadedTracks()
+                // if the UI is showing the local catalog (offline mode), it just
+                // changed underneath it — republish
+                if let fetcher = self.trackFinder as? TrackFetcher, fetcher.useLocalContentOnly {
+                    fetcher.refreshTracks()
                 }
             }
         }
-        Log.i("local catalog reconcile: \(self.downloadedTracks.count) rows, \(present.count) valid audio, \(drop.count) missing/invalid")
-        guard !drop.isEmpty else { return }
-        self.db?.delete(shas: drop)
-        self.downloadedTracks = present
-        self.sanitizeDownloadedTracks()
     }
 
     // Cheaply decide whether a cached file is really audio by sniffing its first
@@ -103,22 +134,26 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     }
 
     public func clearLocalStore() {
-        do {
-            if let cacheDir = self.cacheDir {
-                let list = try FileManager.default.contentsOfDirectory(at: cacheDir,
-                                                                       includingPropertiesForKeys: nil)
-                // remove the cached audio only; leave the database file (its
-                // contents are emptied below) so the open connection stays valid.
-                for url in list where url.pathExtension == "mp3" {
+        if let cacheDir = self.cacheDir,
+           let list = try? FileManager.default.contentsOfDirectory(at: cacheDir,
+                                                                   includingPropertiesForKeys: nil)
+        {
+            // remove the cached audio only; leave the database file (its
+            // contents are emptied below) so the open connection stays valid.
+            // Per-file catch: the background reconcile scan can delete a junk
+            // placeholder concurrently, and one missing file must not abort
+            // the clear before the database/catalog resets below.
+            for url in list where url.pathExtension == "mp3" {
+                do {
                     try FileManager.default.removeItem(at: url)
+                } catch {
+                    Log.e("error \(error)")
                 }
             }
-            self.db?.clear()
-            self.downloadedTracks = []
-            self.downloadedTrackMap = [:]
-        } catch {
-            Log.e("error \(error)")
         }
+        self.db?.clear()
+        self.downloadedTracks = []
+        self.downloadedTrackMap = [:]
     }
 
     fileprivate func download(url: URL,
@@ -130,10 +165,16 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
             if let _ = LocalCache.libDir,
                let destURL = self.cacheDirURL(forFilename: filename, withExtention: extention)
             {
-                if FileManager.default.fileExists(atPath: destURL.path) {
+                if FileManager.default.fileExists(atPath: destURL.path),
+                   self.isLikelyAudioFile(atPath: destURL.path)
+                {
                     Log.i("\(destURL.path) already exists")
                     closure(true)
                 } else {
+                    // whatever is there isn't audio (e.g. an old saved error
+                    // body) — clear it so it can't satisfy this fast-path again
+                    // or collide with the download's moveItem below
+                    try? FileManager.default.removeItem(atPath: destURL.path)
                     let download = URLSession.shared.downloadTask(with: url) { localURL, urlResponse, error in
                         // downloadTask writes the response body to localURL even for
                         // HTTP errors (401/404/5xx), so we MUST check the status — else
@@ -220,10 +261,17 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     public func keepLocal(sha1Hash: String, closure: @escaping @Sendable (Bool) -> Void) {
         self.download(sha1Hash: sha1Hash) { track in
             if let track = track as? AudioTrack {
-                self.downloadedTracks.append(track)
-                self.sanitizeDownloadedTracks()
-                self.db?.upsert(track)
-                closure(true)
+                // mutate the catalog (in memory AND the database) on the main
+                // queue only, serialized with the reconcile scan's apply step —
+                // which also checks keptDuringReconcile so its stale drop list
+                // can't delete this fresh row
+                DispatchQueue.main.async {
+                    self.db?.upsert(track)
+                    if self.reconcilePending { self.keptDuringReconcile.insert(track.SHA1) }
+                    self.downloadedTracks.append(track)
+                    self.sanitizeDownloadedTracks()
+                    closure(true)
+                }
             } else {
                 Log.e("couldn't download \(String(describing: track))")
                 closure(false)
@@ -240,7 +288,13 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
 
     public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
         if let track = self.downloadedTrackMap[sha1Hash],
-           let url = self.cacheDirURL(forFilename: track.SHA1, withExtention: "mp3")
+           let url = self.cacheDirURL(forFilename: track.SHA1, withExtention: "mp3"),
+           // a stale row (file evicted by iOS / junk placeholder) must never
+           // reach the player: a missing file makes a failed AVPlayerItem that
+           // wedges the doghouse queue. The reconcile scan prunes such rows
+           // asynchronously, so until it lands this sniff (a 3-byte read) is
+           // what makes them fall through to the server stream URL instead.
+           self.isLikelyAudioFile(atPath: url.path)
         {
             return (track, url)
         }

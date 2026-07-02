@@ -72,14 +72,18 @@ public class Client {
 
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
 
-        trackFetcher.initialize(with: runtimeState)
-        
-        // this allows clients to keep some tracks locally (i.e. offline)
+        // this allows clients to keep some tracks locally (i.e. offline).
+        // Wired up before initialize(): setting useLocalContentOnly there fires
+        // refreshTracks() via its didSet, which needs localTracks in place when
+        // restoring offline mode. (An explicit refreshTracks() used to follow as
+        // a workaround, fetching the whole catalog from the server a second time.)
         let localTracks = LocalTracks(trackFinder: self.trackFetcher)
         trackFetcher.localTracks = localTracks
-        
-        historyFetcher.refresh()
-        trackFetcher.refreshTracks()
+
+        trackFetcher.initialize(with: runtimeState)
+
+        // (no historyFetcher.refresh() here: its init already fetched the full
+        // history, and the 1s timer below keeps it current incrementally)
         trackFetcher.refreshQueue()
         trackFetcher.refreshMasterGain()
 

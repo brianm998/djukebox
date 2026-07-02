@@ -318,23 +318,44 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     }
     
     @objc func playerDidFinishPlaying(note: NSNotification) {
-        Log.d("playerDidFinishPlaying")
+        // AVFoundation posts this on its own thread, but everything the handler
+        // touches is main-thread state: trackQueue/trackMap, AVPlayerItem
+        // creation in play() (main-actor isolated, see trackMap's comment), and
+        // the local track catalog behind trackFinder — hop over before touching
+        // any of it.
+        let finishedBox = UncheckedSendableBox(note.object as? AVPlayerItem)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            Log.d("playerDidFinishPlaying")
 
-        if let track = self.playingTrack {
-            do {
-                try historyWriter.writePlay(of: track.SHA1, at: Date())
-            } catch {
-                Log.d("coudn't write history: \(error)")
+            // resolve the played track from the finished item itself: by the
+            // time this runs the AVQueuePlayer has already dropped the item, so
+            // playingTrack would report nil (or the next track) instead.
+            if let finished = finishedBox.value,
+               let hash = self.trackMap[finished]
+            {
+                do {
+                    try self.historyWriter.writePlay(of: hash, at: Date())
+                } catch {
+                    Log.d("coudn't write history: \(error)")
+                }
+            }
+
+            // only refill if the doghouse is still empty: a play() call can land
+            // in the finish-to-hop gap and insert its own item, and adding a
+            // second one here would break the one-item-at-a-time invariant for
+            // good. (The guard stays OUT of serviceQueue() itself — skip() calls
+            // it while the current item is still in the player, by design.)
+            if self.player.items().isEmpty {
+                self.serviceQueue()
+            }
+            // drop the finished item's gain (its tap is torn down with the item)
+            // and its trackMap entry (nothing looks up a played item again)
+            if let finished = finishedBox.value {
+                self.forgetGain(for: finished)
+                self.trackMap[finished] = nil
             }
         }
-
-        serviceQueue()
-        // drop the finished item's gain (its tap is torn down with the item)
-        if let finished = note.object as? AVPlayerItem {
-            forgetGain(for: finished)
-        }
-        // called every time each song finishes playing.
-        // we could trim the trackMap here of already played tracks
     }
 
     public func shuffleQueue() {

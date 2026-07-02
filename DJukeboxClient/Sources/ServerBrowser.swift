@@ -157,7 +157,9 @@ public class ServerBrowser: ObservableObject {
     // trusted, no pairing); on any failure fall back to Bonjour discovery.
     private func probeLoopback(gen: Int) {
         let urlString = "http://127.0.0.1:\(loopbackPort)"
-        guard let url = URL(string: "\(urlString)/tracks") else {
+        // /queue: same auth gate as everything else, tiny body (/tracks would
+        // download the entire catalog just to learn the status code)
+        guard let url = URL(string: "\(urlString)/queue") else {
             startBonjour(gen: gen)
             return
         }
@@ -224,7 +226,15 @@ public class ServerBrowser: ObservableObject {
         DispatchQueue.main.async { self.state = .connecting }
 
         // Connecting to the Bonjour endpoint resolves it to a concrete host/port.
-        let connection = NWConnection(to: endpoint, using: .tcp)
+        // Restrict the probe to IPv4: the server only listens on IPv4, but mDNS
+        // also advertises the host's IPv6 link-local address, and letting the
+        // probe try that first cost seconds of connect/reset fallback at startup
+        // (and the address we extract here is what all later HTTP goes to).
+        let params = NWParameters.tcp
+        if let ip = params.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options {
+            ip.version = .v4
+        }
+        let connection = NWConnection(to: endpoint, using: params)
         self.probe = connection
         connection.stateUpdateHandler = { [weak self] connectionState in
             // delivered on .main (see connection.start below); hop through
@@ -252,6 +262,20 @@ public class ServerBrowser: ObservableObject {
             }
         }
         connection.start(queue: .main)
+
+        // The searchTimeout watchdog only fires while state is .searching, and we
+        // just moved to .connecting — a probe with no viable candidate (e.g. the
+        // service resolves to no IPv4 address) sits in .preparing/.waiting forever
+        // without ever reaching .failed. Give the probe its own deadline so
+        // fail()'s offline fallback still happens. Reuse the browse-phase budget:
+        // a working-but-slow connect (mDNS retransmit backoff on lossy WiFi, a
+        // sleeping server waking on demand) can legitimately need well over 5s.
+        DispatchQueue.main.asyncAfter(deadline: .now() + searchTimeout) { [weak self] in
+            guard let self = self, gen == self.generation, self.probe === connection else { return }
+            connection.cancel()
+            self.probe = nil
+            self.fail("Found a DJukebox server but couldn't connect to it.", gen: gen)
+        }
     }
 
     private func urlString(host: NWEndpoint.Host, port: NWEndpoint.Port) -> String {
@@ -289,8 +313,11 @@ public class ServerBrowser: ObservableObject {
 
     // Confirm a WiFi server answers and that we're allowed in. Uses this device's
     // stored token if it has one. A 401 (or no token) means we need to pair.
+    // /queue is gated by the same header auth as everything else but its response
+    // is tiny — /tracks (used here previously) returned the entire multi-megabyte
+    // catalog just to learn the status code, adding seconds to every startup.
     private func verify(urlString: String, gen: Int) {
-        guard let url = URL(string: "\(urlString)/tracks") else {
+        guard let url = URL(string: "\(urlString)/queue") else {
             self.fail("\(urlString) is not a valid server address.", gen: gen)
             return
         }
