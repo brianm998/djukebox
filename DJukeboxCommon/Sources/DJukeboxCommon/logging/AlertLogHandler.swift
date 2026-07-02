@@ -3,7 +3,9 @@ import Foundation
 #if !os(macOS)
 import UIKit
 public extension UIViewController {
-    static let alertDispatchQueue = DispatchQueue(label: "alerts")
+    // nonisolated: a plain Sendable DispatchQueue used purely for scheduling/gating
+    // alert presentation, not for touching UIKit itself.
+    nonisolated static let alertDispatchQueue = DispatchQueue(label: "alerts")
 
     @discardableResult
     func show(alert: UIAlertController,
@@ -13,14 +15,16 @@ public extension UIViewController {
               completion: (() -> Void)? = nil) -> Bool
     {
         guard tryNumber < maxTries else { return false }
-        
+
         if let _ = self.presentedViewController {
             UIViewController.alertDispatchQueue.asyncAfter(deadline: .now() + 0.5) {
                 UIViewController.alertDispatchQueue.suspend()
-                if !self.show(alert: alert, //on: selfviewController,
-                              animated: animated, tryNumber: tryNumber + 1)
-                {
-                    UIViewController.alertDispatchQueue.resume()
+                Task { @MainActor in
+                    if !self.show(alert: alert, //on: selfviewController,
+                                  animated: animated, tryNumber: tryNumber + 1)
+                    {
+                        UIViewController.alertDispatchQueue.resume()
+                    }
                 }
             }
             return false
@@ -68,19 +72,20 @@ public final class AlertLogHandler: LogHandler, @unchecked Sendable {
             let threeEmos = logLevel.emo + logLevel.emo + logLevel.emo
             let alertTitle = "\(threeEmos)  \(logLevel)  \(threeEmos)"
 
-            let alert = UIAlertController(title: alertTitle,
-                                          message: logString,
-                                          preferredStyle: .alert)
-            let okAction = UIAlertAction(title: "Ok", style: .cancel) { action in
-                // un-pause the dispatch queue
-                self.dispatchQueue.resume()
-            }
-            alert.addAction(okAction)
-            // pause the alert dispatch queue 
-            self.dispatchQueue.suspend()
+            // Building/showing the alert touches UIKit, which is main-actor-isolated;
+            // hop over from this background dispatchQueue closure to do it.
+            Task { @MainActor in
+                let alert = UIAlertController(title: alertTitle,
+                                              message: logString,
+                                              preferredStyle: .alert)
+                let okAction = UIAlertAction(title: "Ok", style: .cancel) { action in
+                    // un-pause the dispatch queue
+                    self.dispatchQueue.resume()
+                }
+                alert.addAction(okAction)
+                // pause the alert dispatch queue
+                self.dispatchQueue.suspend()
 
-            // can't access the UIApplication.keyWindow property on a background thread
-            DispatchQueue.main.async {
                 if let vc = UIApplication.shared.keyWindow?.rootViewController {
                     // we have a view controller to show it on
                     if !vc.show(alert: alert) {
