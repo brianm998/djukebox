@@ -183,97 +183,123 @@ public struct RefreshQueueButton: View {
 public struct PlayUntilButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var showingPicker = false
-    @State private var selectedTime = Date()
 
     public init(trackFetcher: TrackFetcher) {
         self.trackFetcher = trackFetcher
     }
 
     public var body: some View {
-        Button("Play Until") {
-            selectedTime = Date().addingTimeInterval(3600)
-            showingPicker = true
-        }
+        Button("Play Until") { showingPicker = true }
         .sheet(isPresented: $showingPicker) {
-            VStack(spacing: 24) {
-                Text("Play Until").font(.headline)
-                #if os(iOS)
-                DatePicker("", selection: $selectedTime, in: Date()..., displayedComponents: [.date, .hourAndMinute])
-                    .labelsHidden()
-                    .datePickerStyle(.wheel)
-                #else
-                DatePicker("", selection: $selectedTime, in: Date()..., displayedComponents: [.date, .hourAndMinute])
-                    .labelsHidden()
-                    .datePickerStyle(.graphical)
-                    .frame(maxWidth: 360)
-                #endif
-                HStack {
-                    Button("Cancel") { showingPicker = false }
-                    Spacer()
-                    Button("Confirm") {
-                        trackFetcher.playUntil(date: selectedTime)
-                        showingPicker = false
-                    }
-                    .bold()
-                }
-            }
-            .padding()
+            PlayUntilSheet(trackFetcher: trackFetcher, isPresented: $showingPicker)
         }
+    }
+}
+
+// "Play until a wall-clock time" picker, factored out of PlayUntilButton so it can
+// also be presented from a menu (a .sheet attached inside a macOS Menu won't fire).
+public struct PlayUntilSheet: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    @Binding var isPresented: Bool
+    @State private var selectedTime = Date()
+
+    public init(trackFetcher: TrackFetcher, isPresented: Binding<Bool>) {
+        self.trackFetcher = trackFetcher
+        self._isPresented = isPresented
+    }
+
+    public var body: some View {
+        VStack(spacing: 24) {
+            Text("Play Until").font(.headline)
+            #if os(iOS)
+            DatePicker("", selection: $selectedTime, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                .labelsHidden()
+                .datePickerStyle(.wheel)
+            #else
+            DatePicker("", selection: $selectedTime, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                .labelsHidden()
+                .datePickerStyle(.graphical)
+                .frame(maxWidth: 360)
+            #endif
+            HStack {
+                Button("Cancel") { isPresented = false }
+                Spacer()
+                Button("Confirm") {
+                    trackFetcher.playUntil(date: selectedTime)
+                    isPresented = false
+                }
+                .bold()
+            }
+        }
+        .padding()
+        .onAppear { selectedTime = Date().addingTimeInterval(3600) }
     }
 }
 
 public struct PlayForButton: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var showingPicker = false
-    @State private var hours = 1
-    @State private var minutes = 0
 
     public init(trackFetcher: TrackFetcher) {
         self.trackFetcher = trackFetcher
     }
 
     public var body: some View {
-        Button("Play For") {
-            hours = 1
-            minutes = 0
-            showingPicker = true
-        }
+        Button("Play For") { showingPicker = true }
         .sheet(isPresented: $showingPicker) {
-            VStack(spacing: 24) {
-                Text("Play For").font(.headline)
-                #if os(iOS)
-                HStack(spacing: 0) {
-                    Picker("Hours", selection: $hours) {
-                        ForEach(0...23, id: \.self) { h in Text("\(h)h").tag(h) }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 100)
-                    Picker("Minutes", selection: $minutes) {
-                        ForEach(0...59, id: \.self) { m in Text("\(m)m").tag(m) }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 100)
-                }
-                #else
-                HStack(spacing: 16) {
-                    Stepper("\(hours)h", value: $hours, in: 0...23)
-                    Stepper("\(minutes)m", value: $minutes, in: 0...59)
-                }
-                .frame(minWidth: 240)
-                #endif
-                HStack {
-                    Button("Cancel") { showingPicker = false }
-                    Spacer()
-                    Button("Confirm") {
-                        let duration = TimeInterval(hours * 3600 + minutes * 60)
-                        trackFetcher.playUntil(date: Date().addingTimeInterval(duration))
-                        showingPicker = false
-                    }
-                    .bold()
-                }
-            }
-            .padding()
+            PlayForSheet(trackFetcher: trackFetcher, isPresented: $showingPicker)
         }
+    }
+}
+
+// "Play for a duration" picker, factored out of PlayForButton for the same reason
+// as PlayUntilSheet — so a menu item can present it.
+public struct PlayForSheet: View {
+    @ObservedObject var trackFetcher: TrackFetcher
+    @Binding var isPresented: Bool
+    @State private var hours = 1
+    @State private var minutes = 0
+
+    public init(trackFetcher: TrackFetcher, isPresented: Binding<Bool>) {
+        self.trackFetcher = trackFetcher
+        self._isPresented = isPresented
+    }
+
+    public var body: some View {
+        VStack(spacing: 24) {
+            Text("Play For").font(.headline)
+            #if os(iOS)
+            HStack(spacing: 0) {
+                Picker("Hours", selection: $hours) {
+                    ForEach(0...23, id: \.self) { h in Text("\(h)h").tag(h) }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 100)
+                Picker("Minutes", selection: $minutes) {
+                    ForEach(0...59, id: \.self) { m in Text("\(m)m").tag(m) }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 100)
+            }
+            #else
+            HStack(spacing: 16) {
+                Stepper("\(hours)h", value: $hours, in: 0...23)
+                Stepper("\(minutes)m", value: $minutes, in: 0...59)
+            }
+            .frame(minWidth: 240)
+            #endif
+            HStack {
+                Button("Cancel") { isPresented = false }
+                Spacer()
+                Button("Confirm") {
+                    let duration = TimeInterval(hours * 3600 + minutes * 60)
+                    trackFetcher.playUntil(date: Date().addingTimeInterval(duration))
+                    isPresented = false
+                }
+                .bold()
+            }
+        }
+        .padding()
     }
 }
 

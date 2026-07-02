@@ -77,6 +77,11 @@ public struct BigButtonView: View {
     let onScan: () -> Void
     let onGoOffline: () -> Void
 
+    // presented from the controls menu (a .sheet inside a macOS Menu won't fire, so
+    // the state is hoisted here and the sheets hang off the bar itself)
+    @State private var showingPlayUntil = false
+    @State private var showingPlayFor = false
+
     public init(trackFetcher: TrackFetcher,
                 onScan: @escaping () -> Void,
                 onGoOffline: @escaping () -> Void)
@@ -90,67 +95,71 @@ public struct BigButtonView: View {
         let localPlayToggle = Binding<Bool>(get: { self.trackFetcher.queueType == .local },
                                             set: { try? self.trackFetcher.watch(queue: $0 ? .local : .remote) })
 
-        return HStack {
-            Spacer()
+        // master volume sits on its own row beneath the button bar
+        return VStack {
+            HStack {
+                Spacer()
 
-            // mode: play-local toggle (online only, since offline forces local) + offline/scan
-            VStack {
-                if !trackFetcher.useLocalContentOnly {
-                    HStack {
-                        Text("Play Local:")
-                        Toggle("", isOn: localPlayToggle).labelsHidden()
+                // mode: play-local toggle (online only, since offline forces local) + offline/scan
+                VStack {
+                    if !trackFetcher.useLocalContentOnly {
+                        HStack {
+                            Text("Play Local:")
+                            Toggle("", isOn: localPlayToggle).labelsHidden()
+                        }
                     }
+                    OfflineScanButton(trackFetcher: trackFetcher, onScan: onScan, onGoOffline: onGoOffline)
                 }
-                OfflineScanButton(trackFetcher: trackFetcher, onScan: onScan, onGoOffline: onGoOffline)
+
+                SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
+
+                if(self.trackFetcher.audioPlayer.isPaused) {
+                    PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
+                } else {
+                    PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
+                }
+
+                if trackFetcher.totalDuration > 0 {
+                    VerticalPlayingTimeRemainingView(trackFetcher: trackFetcher)
+                }
+
+                // per-track volume boost stays out of the menu (kept on the bar)
+                TrackVolumeButton(trackFetcher: trackFetcher)
+
+                // everything else collapsed into one menu — the bar had too many
+                // buttons and was laying out badly
+                Menu {
+                    Section("Play") {
+                        Button("Random") { self.trackFetcher.playRandomTrack() }
+                        Button("New Random") { self.trackFetcher.playNewRandomTrack() }
+                        Button("Play Until…") { self.showingPlayUntil = true }
+                        Button("Play For…") { self.showingPlayFor = true }
+                    }
+                    Section("Queue") {
+                        Button("Shuffle Queue") { self.trackFetcher.shuffleQueue() }
+                        Button("Clear Queue", role: .destructive) { self.trackFetcher.clearPlayingQueue() }
+                        Button("Refresh Queue") { self.trackFetcher.refreshQueue() }
+                    }
+                    Section("Library & Cache") {
+                        Button("Refresh Tracks") { self.trackFetcher.refreshTracks() }
+                        Button("Cache Queue") { self.trackFetcher.cacheQueue() }
+                        Button("Clear Cache", role: .destructive) { self.trackFetcher.clearCache() }
+                    }
+                } label: {
+                    Label("Controls", systemImage: "ellipsis.circle")
+                }
+                .fixedSize()
+
+                Spacer()
             }
-
-            SkipCurrentTrackButton(trackFetcher: self.trackFetcher)
-
-            if(self.trackFetcher.audioPlayer.isPaused) {
-                PlayButton(audioPlayer: self.trackFetcher.audioPlayer)
-            } else {
-                PauseButton(audioPlayer: self.trackFetcher.audioPlayer)
+            .sheet(isPresented: $showingPlayUntil) {
+                PlayUntilSheet(trackFetcher: trackFetcher, isPresented: $showingPlayUntil)
             }
-
-            if trackFetcher.totalDuration > 0 {
-                VerticalPlayingTimeRemainingView(trackFetcher: trackFetcher)
+            .sheet(isPresented: $showingPlayFor) {
+                PlayForSheet(trackFetcher: trackFetcher, isPresented: $showingPlayFor)
             }
 
             MasterVolumeControl(trackFetcher: trackFetcher)
-
-            VStack {
-                PlayRandomTrackButton(trackFetcher: trackFetcher)
-                PlayNewRandomTrackButton(trackFetcher: trackFetcher)
-            }
-
-            // queue + cache controls (grouped to stay within the ViewBuilder limit)
-            Group {
-                ShuffleQueueButton(trackFetcher: trackFetcher)
-                ClearQueueButton(trackFetcher: trackFetcher)
-
-                VStack {
-                    PlayUntilButton(trackFetcher: trackFetcher)
-                    PlayForButton(trackFetcher: trackFetcher)
-                    TrackVolumeButton(trackFetcher: trackFetcher)
-                }
-
-                VStack {
-                    // download the current playing queue for offline playback
-                    Button(action: { self.trackFetcher.cacheQueue() }) {
-                        Text("Cache Q").underline().foregroundColor(Color.blue)
-                    }
-                    // wipe the local track cache
-                    Button(action: { self.trackFetcher.clearCache() }) {
-                        Text("Clear Cache").underline().foregroundColor(Color.red)
-                    }
-                }
-
-                VStack {
-                    RefreshTracksFromServerButton(trackFetcher: trackFetcher)
-                    RefreshQueueButton(trackFetcher: trackFetcher)
-                }
-            }
-            Spacer()
         }
         /*
 
