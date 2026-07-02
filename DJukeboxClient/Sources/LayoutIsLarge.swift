@@ -4,6 +4,7 @@ import UIKit
 #endif
 
 // do we have a big, or a small screen?
+@MainActor
 public func layoutIsLarge() -> Bool {
     #if os(iOS)// || os(watchOS) || os(tvOS)
     if UIDevice.current.userInterfaceIdiom == .pad {

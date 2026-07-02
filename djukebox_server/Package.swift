@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "djukebox_server",
     platforms: [
-       .macOS(.v11)
+       .macOS(.v13)
     ],
     dependencies: [
         // 💧 A server-side Swift web framework.

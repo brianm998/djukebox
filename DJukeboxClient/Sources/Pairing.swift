@@ -51,6 +51,7 @@ public enum PairingStore {
     }
 
     /// A friendly default name for this device, shown in the pair request.
+    @MainActor
     public static var defaultDeviceName: String {
 #if os(iOS)
         return UIDevice.current.name
