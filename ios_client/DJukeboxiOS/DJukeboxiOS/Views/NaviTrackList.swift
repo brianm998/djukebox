@@ -5,10 +5,10 @@ import DJukeboxCommon
 public struct NaviTrackList: View {
     var client: Client
     // Observe the fetcher and derive the song list from the live catalog for this
-    // band/album, rather than freezing a snapshot at navigation time — otherwise a
+    // artist/album, rather than freezing a snapshot at navigation time — otherwise a
     // catalog change (e.g. switching to local/offline) can't refresh this view.
     @ObservedObject var trackFetcher: TrackFetcher
-    let album: AudioTrack   // representative track carrying the band + album to show
+    let album: AudioTrack   // representative track carrying the artist + album to show
     let title: String
     @State private var showingActionSheet = false
     @State private var showAllTracksToast: Bool = false

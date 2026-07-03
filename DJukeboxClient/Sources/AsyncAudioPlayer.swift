@@ -118,8 +118,8 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType, @unchecked Sendable {
         }
     }
     
-    public func playRandomTrack(forBand band: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
-        let tracks = fetcher.tracks(forBand: band)
+    public func playRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+        let tracks = fetcher.tracks(forArtist: artist)
         let track = tracks[Int.random(in: 0..<tracks.count)]
         player.play(sha1Hash: track.SHA1)
     }
@@ -162,15 +162,15 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType, @unchecked Sendable {
         return false
     }
 
-    public func playNewRandomTrack(forBand band: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+    public func playNewRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
         var randomTrack: AudioTrack?
         var max = 100
-        let tracksForThisBand = fetcher.tracks(forBand: band)
+        let tracksForThisArtist = fetcher.tracks(forArtist: artist)
         while randomTrack == nil,
               max > 0
         {
             max -= 1
-            let track = tracksForThisBand[Int.random(in: 0..<tracksForThisBand.count)]
+            let track = tracksForThisArtist[Int.random(in: 0..<tracksForThisArtist.count)]
             if !history.hasPlay(for: track.SHA1),
                !history.hasSkip(for: track.SHA1),
                !isInQueue(track.SHA1)

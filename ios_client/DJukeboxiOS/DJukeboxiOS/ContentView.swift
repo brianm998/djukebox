@@ -86,8 +86,8 @@ struct ContentView: View {
                     // iPhone browses via a navigation stack; its bars are themed
                     // globally (see AppDelegate) so it sits on the neon gradient.
                     NavigationView {
-                        NaviBandList(client)
-                            .navigationBarTitle("Bands", displayMode: .inline)
+                        NaviArtistList(client)
+                            .navigationBarTitle("Artists", displayMode: .inline)
                     }
                 }
             }

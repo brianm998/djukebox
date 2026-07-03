@@ -2,11 +2,11 @@ import SwiftUI
 import DJukeboxClient
 import DJukeboxCommon
 
-public struct NaviBandList: View {
+public struct NaviArtistList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     var client: Client
-    @State private var searchQuery: String = "" 
-    
+    @State private var searchQuery: String = ""
+
     public init(_ client: Client) {
         self.trackFetcher = client.trackFetcher
         self.client = client
@@ -19,16 +19,15 @@ public struct NaviBandList: View {
                 .djField()
                 .padding([.horizontal, .top])
 
-            List(trackFetcher.bands(matching: self.searchQuery)) { (band: AudioTrack) in
+            List(trackFetcher.artists(matching: self.searchQuery)) { (artist: AudioTrack) in
                 NavigationLink(destination: NaviAlbumList(self.client,
-                                                          band: band.Band,
-                                                          title: band.Band))
+                                                          artist: artist.Artist,
+                                                          title: artist.Artist))
                 {
-                    Text(band.Band).foregroundColor(DJTheme.textPrimary)
+                    Text(artist.Artist).foregroundColor(DJTheme.textPrimary)
                 }
             }
             .djListChrome()
         }
     }
 }
-

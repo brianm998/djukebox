@@ -9,7 +9,9 @@
 import Foundation
 
 public enum PanelKind: String, Codable, CaseIterable, Identifiable, Sendable {
-    case bands
+    // Raw value pinned to the pre-rename name ("bands") so window layouts saved
+    // before the Band -> Artist rename still decode.
+    case artists = "bands"
     case albums
     case songs
     case playingControls
@@ -21,7 +23,7 @@ public enum PanelKind: String, Codable, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .bands:           return "Bands"
+        case .artists:          return "Artists"
         case .albums:          return "Albums"
         case .songs:           return "Songs"
         case .playingControls: return "Controls"
@@ -33,7 +35,7 @@ public enum PanelKind: String, Codable, CaseIterable, Identifiable, Sendable {
 
     public var systemImage: String {
         switch self {
-        case .bands:           return "person.3"
+        case .artists:          return "person.3"
         case .albums:          return "square.stack"
         case .songs:           return "music.note.list"
         case .playingControls: return "play.circle"
@@ -45,12 +47,46 @@ public enum PanelKind: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 /// An optional fixed scope for a browse panel: an albums panel pinned to an
-/// artist, or a songs panel pinned to an album (nil album = the band's singles).
-/// Bound panels show their fixed content regardless of the window's live browse
-/// selection; unbound panels follow the window's cascade.
-public enum PanelBinding: Codable, Hashable, Sendable {
+/// artist, or a songs panel pinned to an album (nil album = the artist's
+/// singles). Bound panels show their fixed content regardless of the window's
+/// live browse selection; unbound panels follow the window's cascade.
+public enum PanelBinding: Hashable, Sendable {
     case artist(String)
-    case album(band: String, album: String?)
+    case album(artist: String, album: String?)
+}
+
+extension PanelBinding: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case artist, album
+    }
+
+    // Wire-compatible shape for `.album`: the inner key is still "band" (from
+    // before the Band -> Artist rename) even though the Swift label is now
+    // `artist`, so previously saved window layouts keep loading.
+    private struct AlbumPayload: Codable {
+        let band: String
+        let album: String?
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let artist = try container.decodeIfPresent(String.self, forKey: .artist) {
+            self = .artist(artist)
+            return
+        }
+        let payload = try container.decode(AlbumPayload.self, forKey: .album)
+        self = .album(artist: payload.band, album: payload.album)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .artist(let value):
+            try container.encode(value, forKey: .artist)
+        case .album(let artist, let album):
+            try container.encode(AlbumPayload(band: artist, album: album), forKey: .album)
+        }
+    }
 }
 
 /// A single placed panel. Its `id` is stable across saves and drives SwiftUI

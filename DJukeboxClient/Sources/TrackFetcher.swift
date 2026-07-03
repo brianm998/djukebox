@@ -88,21 +88,21 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         }
     }
     
-    // what is shown on the bands list
-    @Published public var bands: [AudioTrack] = [] // XXX use different model objects for bands and albums
+    // what is shown on the artists list
+    @Published public var artists: [AudioTrack] = [] // XXX use different model objects for artists and albums
 
-    public func bands(matching queryString: String) -> [AudioTrack] {
+    public func artists(matching queryString: String) -> [AudioTrack] {
         if queryString.count == 0 {
-            return self.bands
+            return self.artists
         } else {
-            // filter bands by
+            // filter artists by
             var ret: [AudioTrack] = []
 
             let lowerCaseQuery = queryString.lowercased()
-            
-            for band in bands {
-                if band.Band.lowercased().contains(lowerCaseQuery) {
-                    ret.append(band)
+
+            for artist in artists {
+                if artist.Artist.lowercased().contains(lowerCaseQuery) {
+                    ret.append(artist)
                 }
             }
             return ret
@@ -142,12 +142,12 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
 
     @Published public var queueType: PlayingQueueType!
     
-    var desiredBand: String?
+    var desiredArtist: String?
     var desiredAlbum: String?
 
-    // the band whose album list is currently shown in the mac/iPad middle column,
+    // the artist whose album list is currently shown in the mac/iPad middle column,
     // remembered so it can be re-derived when the catalog changes (e.g. going local)
-    var shownAlbumsBand: String?
+    var shownAlbumsArtist: String?
 
     var queues: [PlayingQueueType: AsyncAudioPlayerType] = [:]
 
@@ -186,7 +186,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         let lowerCaseQuery = searchQuery.lowercased()
         
         for track in self.allTracks {
-            if track.Band.lowercased().contains(lowerCaseQuery) {
+            if track.Artist.lowercased().contains(lowerCaseQuery) {
                 results.append(track)
             } else if let album = track.Album,
                 album.lowercased().contains(lowerCaseQuery) {
@@ -201,18 +201,18 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     
     // updates the ui to show the current set of tracks we have
     fileprivate func update(with tracks: [AudioTrack]) {
-        var bandMap: [String:AudioTrack] = [:]
+        var artistMap: [String:AudioTrack] = [:]
         var sha1Map: [String:AudioTrack] = [:]
         for track in tracks {
             if track.Album == nil {
-                Log.d("band \(track.Band) has orphaned tracks")
+                Log.d("artist \(track.Artist) has orphaned tracks")
             }
-            bandMap[track.Band] = track
+            artistMap[track.Artist] = track
             sha1Map[track.SHA1] = track
         }
         DispatchQueue.main.async {
             self.allTracks = tracks
-            self.bands = Array(bandMap.values).sorted()
+            self.artists = Array(artistMap.values).sorted()
             self.trackMap = sha1Map
             self.reapplyBrowseColumns()
             self.maybeDoInitialSetup()
@@ -226,12 +226,12 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     // three columns reflect the new catalog. (The iPhone navigation views derive
     // their own lists live and don't depend on this.)
     fileprivate func reapplyBrowseColumns() {
-        if let band = self.shownAlbumsBand {
-            self.albums = self.albums(forBand: band)
+        if let artist = self.shownAlbumsArtist {
+            self.albums = self.albums(forArtist: artist)
         }
-        if let band = self.desiredBand {
+        if let artist = self.desiredArtist {
             self.tracks = self.allTracks.filter {
-                $0.Band == band && $0.Album == self.desiredAlbum
+                $0.Artist == artist && $0.Album == self.desiredAlbum
             }.sorted()
         }
     }
@@ -318,12 +318,12 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     public func tracks(for audioTrack: AudioTrack) -> [AudioTrack] {
         var tracks: [AudioTrack] = []
 
-        desiredBand = audioTrack.Band
+        desiredArtist = audioTrack.Artist
         desiredAlbum = audioTrack.Album
 
         if let desiredAlbum = desiredAlbum {
             for track in allTracks {
-                if track.Band == desiredBand,
+                if track.Artist == desiredArtist,
                    track.Album == desiredAlbum
                 {
                     tracks.append(track)
@@ -331,7 +331,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
             }
         } else {
             for track in allTracks {
-                if track.Band == desiredBand,
+                if track.Artist == desiredArtist,
                    track.Album == nil
                 {
                     tracks.append(track)
@@ -340,73 +340,73 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         }
         return tracks
     }
-    
-    // show all tracks for the band/album combo in the passed AudioTrack
+
+    // show all tracks for the artist/album combo in the passed AudioTrack
     func showTracks(for audioTrack: AudioTrack) {
         var tracks = self.tracks(for: audioTrack)
 
-        self.showAlbums(forBand: audioTrack.Band)
-        
+        self.showAlbums(forArtist: audioTrack.Artist)
+
         DispatchQueue.main.async {
             self.tracks = tracks.sorted()
             if let desiredAlbum = self.desiredAlbum {
                 self.trackTitle = "\(desiredAlbum)"
-            } else if let desiredBand = self.desiredBand {
-                self.trackTitle = "\(desiredBand)"
+            } else if let desiredArtist = self.desiredArtist {
+                self.trackTitle = "\(desiredArtist)"
             } else {
                 self.trackTitle = "songs" // XXX
             }
         }
     }
-    
-    public func albums(forBand band: String) -> [AudioTrack] {
-        Log.d("for band \(band)")
+
+    public func albums(forArtist artist: String) -> [AudioTrack] {
+        Log.d("for artist \(artist)")
 
         var albumMap: [String:AudioTrack] = [:]
 
         let singles = "Singles"
-        
+
         for track in allTracks {
-            if track.Band == band {
+            if track.Artist == artist {
                 if let album = track.Album {
                     albumMap[album] = track
                 } else {
                     albumMap[singles] = track
-                    Log.d("missing album for track \(track.Band) \(track.Title)")
+                    Log.d("missing album for track \(track.Artist) \(track.Title)")
                 }
             }
         }
         return Array(albumMap.values).sorted()
     }
-    
-    func showAlbums(forBand band: String) {
-        let albums = self.albums(forBand: band)
+
+    func showAlbums(forArtist artist: String) {
+        let albums = self.albums(forArtist: artist)
         DispatchQueue.main.async {
-            Log.d("show albums for \(band)")
-            self.shownAlbumsBand = band
+            Log.d("show albums for \(artist)")
+            self.shownAlbumsArtist = artist
             self.albums = albums
-            self.albumTitle = "\(band)"
+            self.albumTitle = "\(artist)"
         }
     }
 
-    public func cacheTracks(forBand band: String) {
-        self.cache(tracks: self.tracks(forBand: band))
+    public func cacheTracks(forArtist artist: String) {
+        self.cache(tracks: self.tracks(forArtist: artist))
     }
 
-    public func tracks(forBand band: String) -> [AudioTrack] {
+    public func tracks(forArtist artist: String) -> [AudioTrack] {
         var ret: [AudioTrack] = []
         for track in allTracks {
-            if track.Band == band {
+            if track.Artist == artist {
                 ret.append(track)
             }
         }
         return ret
     }
 
-    // Pure filter (no side effects) for a bound songs panel: a band's tracks on a
-    // specific album (nil album = the band's singles).
-    public func tracks(forBand band: String, album: String?) -> [AudioTrack] {
-        allTracks.filter { $0.Band == band && $0.Album == album }.sorted()
+    // Pure filter (no side effects) for a bound songs panel: an artist's tracks
+    // on a specific album (nil album = the artist's singles).
+    public func tracks(forArtist artist: String, album: String?) -> [AudioTrack] {
+        allTracks.filter { $0.Artist == artist && $0.Album == album }.sorted()
     }
 
     public func clearPlayingQueue() {
@@ -451,7 +451,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     // Persist a playback-gain adjustment (in dB) for a track, scoping it to just
     // that track, its whole album, or its whole artist. The server stores it and
     // applies it the next time a matching track plays. "artist"/"album" key off
-    // the Band field (and Album), matching how the catalog is browsed.
+    // the Artist field (and Album), matching how the catalog is browsed.
     public func setVolume(decibels: Double, scope: VolumeScope, for track: AudioTrack) {
         let adjustment: VolumeAdjustment
         switch scope {
@@ -462,10 +462,10 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
                 Log.e("cannot set album volume: \(track.Title) has no album")
                 return
             }
-            adjustment = VolumeAdjustment(scope: "album", band: track.Band,
+            adjustment = VolumeAdjustment(scope: "album", artist: track.Artist,
                                           album: album, decibels: decibels)
         case .artist:
-            adjustment = VolumeAdjustment(scope: "artist", band: track.Band, decibels: decibels)
+            adjustment = VolumeAdjustment(scope: "artist", artist: track.Artist, decibels: decibels)
         }
         server.setVolumeAdjustment(adjustment) { success, error in
             if let error = error {

@@ -8,8 +8,8 @@ public struct HistoryEntry: Content {
 }
 
 public struct AudioTrack: Content, AudioTrackType {
+    public let Credit: String
     public let Artist: String
-    public let Band: String
     public let Album: String?
     public let Conductor: String?
     public let Title: String
@@ -22,6 +22,16 @@ public struct AudioTrack: Content, AudioTrackType {
     public let Genre: String?
     public let Year: String?
     public let OriginalDate: String?
+
+    // Wire-compatible with the .json sidecars written by mp3.pl (and every
+    // existing file on disk): those keys predate the Credit/Artist rename, so
+    // they're pinned here rather than renamed.
+    private enum CodingKeys: String, CodingKey {
+        case Credit = "Artist"
+        case Artist = "Band"
+        case Album, Conductor, Title, Filename, SHA1, Duration
+        case AudioBitrate, SampleRate, TrackNumber, Genre, Year, OriginalDate
+    }
 
     public var timeInterval: Double? {
         if let duration = self.Duration {
@@ -53,8 +63,8 @@ public struct AudioTrack: Content, AudioTrackType {
     
     public var sanitized: AudioTrack {
         return AudioTrack(
+          Credit: self.Credit,
           Artist: self.Artist,
-          Band: self.Band,
           Album: self.Album,
           Conductor: self.Conductor,
           Title: self.Title,
@@ -86,12 +96,12 @@ public struct PlayingHistory: Content {
 // A persisted playback gain (in decibels) scoped to a single track, a whole
 // album, or a whole artist. Used both as the POST body when a client sets/clears
 // an adjustment and as the elements of the GET /volume listing. Only the fields
-// relevant to `scope` need be set: track -> sha1, album -> band + album,
-// artist -> band.
+// relevant to `scope` need be set: track -> sha1, album -> artist + album,
+// artist -> artist.
 public struct VolumeAdjustment: Content {
     public let scope: String        // "track" | "album" | "artist"
     public let sha1: String?
-    public let band: String?
+    public let artist: String?
     public let album: String?
     public let decibels: Double
 }
@@ -228,13 +238,13 @@ func playerRoutes(_ app: Application) throws {
         }
     }
 
-    // Play a randomly selected track by a given artist
+    // Play a randomly selected track by a given credit
     // curl localhost:8080/rand/Queen
-    app.get("rand", ":artist") { req -> AudioTrack in
+    app.get("rand", ":credit") { req -> AudioTrack in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        if let artist = req.parameters.get("artist") {
+        if let credit = req.parameters.get("credit") {
             return try authControl.headerAuth(request: req) {
-                let array = trackFinder.tracks(forArtist: artist)
+                let array = trackFinder.tracks(forCredit: credit)
                 let random = Int.random(in: 0..<array.count)
                 let hash = Array(array.keys)[random]
                 audioPlayer.play(sha1Hash: hash)
@@ -279,13 +289,13 @@ func playerRoutes(_ app: Application) throws {
         }
     }
     
-    // Play a randomly selected track by a given artist
+    // Play a randomly selected track by a given credit
     // curl localhost:8080/newrand/Queen
-    app.get("newrand", ":artist") { req -> AudioTrack in
+    app.get("newrand", ":credit") { req -> AudioTrack in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        if let artist = req.parameters.get("artist") {
+        if let credit = req.parameters.get("credit") {
             return try authControl.headerAuth(request: req) {
-                let array = trackFinder.tracks(forArtist: artist)
+                let array = trackFinder.tracks(forCredit: credit)
 
                 var sha1Hash: String?
                 var max = 100
@@ -528,7 +538,7 @@ func volumeRoutes(_ app: Application) throws {
         return try authControl.headerAuth(request: req) {
             jukeboxDatabase.allVolumeAdjustments().map {
                 VolumeAdjustment(scope: $0.scope, sha1: $0.sha1,
-                                 band: $0.band, album: $0.album, decibels: $0.decibels)
+                                 artist: $0.artist, album: $0.album, decibels: $0.decibels)
             }
         }
     }
@@ -543,7 +553,7 @@ func volumeRoutes(_ app: Application) throws {
         return try authControl.headerAuth(request: req) {
             guard let sha1 = req.parameters.get("sha1") else { throw Abort(.badRequest) }
             let db = jukeboxDatabase.effectiveGainDecibels(forHash: sha1)
-            return VolumeAdjustment(scope: "track", sha1: sha1, band: nil, album: nil, decibels: db)
+            return VolumeAdjustment(scope: "track", sha1: sha1, artist: nil, album: nil, decibels: db)
         }
     }
 
@@ -572,7 +582,7 @@ func volumeRoutes(_ app: Application) throws {
             let adj = try req.content.decode(VolumeAdjustment.self)
             let clamped = max(-volumeDecibelLimit, min(volumeDecibelLimit, adj.decibels))
             try jukeboxDatabase.setVolumeAdjustment(scope: adj.scope, sha1: adj.sha1,
-                                                    band: adj.band, album: adj.album,
+                                                    artist: adj.artist, album: adj.album,
                                                     decibels: clamped,
                                                     at: Date().timeIntervalSince1970)
             return Response(status: .ok)
@@ -586,7 +596,7 @@ func volumeRoutes(_ app: Application) throws {
         return try authControl.headerAuth(request: req) {
             let adj = try req.content.decode(VolumeAdjustment.self)
             try jukeboxDatabase.clearVolumeAdjustment(scope: adj.scope, sha1: adj.sha1,
-                                                      band: adj.band, album: adj.album)
+                                                      artist: adj.artist, album: adj.album)
             return Response(status: .ok)
         }
     }

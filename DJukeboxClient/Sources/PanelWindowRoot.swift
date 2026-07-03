@@ -76,7 +76,7 @@ struct PanelWindowRoot: View {
     }
 
     /// This window's own browse client: a copy sharing the audio player, with a
-    /// fresh TrackFetcher so its band/album/track selection is independent.
+    /// fresh TrackFetcher so its artist/album/track selection is independent.
     private func buildBrowseClient(from shared: Client) {
         let client = shared.copy()
         client.trackFetcher = TrackFetcher(withServer: shared.serverConnection)

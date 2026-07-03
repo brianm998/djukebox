@@ -25,11 +25,11 @@ public final class TrackFinder: TrackFinderType, @unchecked Sendable {
         }
     }
 
-    public func tracks(forArtist artist: String) -> [String: (AudioTrackType, [URL])] {
+    public func tracks(forCredit credit: String) -> [String: (AudioTrackType, [URL])] {
         lock.lock(); defer { lock.unlock() }
         var ret: [String: (AudioTrackType, [URL])] = [:]
         for (hash, (track, urls)) in _tracks {
-            if track.Artist == artist {
+            if track.Credit == credit {
                 ret[hash] = (track, urls)
             }
         }

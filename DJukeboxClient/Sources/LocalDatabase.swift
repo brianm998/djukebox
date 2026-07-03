@@ -26,11 +26,12 @@ public final class LocalDatabase {
             _ = exec("PRAGMA journal_mode = WAL;", expectRow: true)
             ok = exec("""
               CREATE TABLE IF NOT EXISTS local_tracks (
-                sha1 TEXT PRIMARY KEY, artist TEXT NOT NULL, band TEXT NOT NULL, album TEXT,
+                sha1 TEXT PRIMARY KEY, credit TEXT NOT NULL, artist TEXT NOT NULL, album TEXT,
                 conductor TEXT, title TEXT NOT NULL, filename TEXT NOT NULL, duration TEXT,
                 audio_bitrate TEXT, sample_rate TEXT, track_number TEXT, genre TEXT,
                 year TEXT, original_date TEXT, downloaded_at REAL NOT NULL);
               """)
+            if ok { migrateLegacyColumnNames() }
         }
         if !ok { return nil }
         Log.i("opened local database at \(path)")
@@ -44,17 +45,17 @@ public final class LocalDatabase {
         queue.sync {
             var tracks: [AudioTrack] = []
             guard let stmt = prepare("""
-              SELECT sha1, artist, band, album, conductor, title, filename, duration,
+              SELECT sha1, credit, artist, album, conductor, title, filename, duration,
                      audio_bitrate, sample_rate, track_number, genre, year, original_date
               FROM local_tracks;
               """) else { return tracks }
             defer { sqlite3_finalize(stmt) }
             while sqlite3_step(stmt) == SQLITE_ROW {
-                guard let sha1 = text(stmt, 0), let artist = text(stmt, 1),
-                      let band = text(stmt, 2), let title = text(stmt, 5),
+                guard let sha1 = text(stmt, 0), let credit = text(stmt, 1),
+                      let artist = text(stmt, 2), let title = text(stmt, 5),
                       let filename = text(stmt, 6) else { continue }
                 tracks.append(AudioTrack(
-                  Artist: artist, Band: band, Album: text(stmt, 3),
+                  Credit: credit, Artist: artist, Album: text(stmt, 3),
                   Conductor: text(stmt, 4), Title: title, Filename: filename,
                   SHA1: sha1, Duration: text(stmt, 7), AudioBitrate: text(stmt, 8),
                   SampleRate: text(stmt, 9), TrackNumber: text(stmt, 10),
@@ -69,11 +70,11 @@ public final class LocalDatabase {
         queue.sync {
             guard let stmt = prepare("""
               INSERT INTO local_tracks
-                (sha1, artist, band, album, conductor, title, filename, duration,
+                (sha1, credit, artist, album, conductor, title, filename, duration,
                  audio_bitrate, sample_rate, track_number, genre, year, original_date, downloaded_at)
               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
               ON CONFLICT(sha1) DO UPDATE SET
-                artist=excluded.artist, band=excluded.band, album=excluded.album,
+                credit=excluded.credit, artist=excluded.artist, album=excluded.album,
                 conductor=excluded.conductor, title=excluded.title, filename=excluded.filename,
                 duration=excluded.duration, audio_bitrate=excluded.audio_bitrate,
                 sample_rate=excluded.sample_rate, track_number=excluded.track_number,
@@ -81,8 +82,8 @@ public final class LocalDatabase {
               """) else { return }
             defer { sqlite3_finalize(stmt) }
             bind(stmt, 1, track.SHA1)
-            bind(stmt, 2, track.Artist)
-            bind(stmt, 3, track.Band)
+            bind(stmt, 2, track.Credit)
+            bind(stmt, 3, track.Artist)
             bind(stmt, 4, track.Album)
             bind(stmt, 5, track.Conductor)
             bind(stmt, 6, track.Title)
@@ -134,6 +135,32 @@ public final class LocalDatabase {
 
     public func clear() {
         queue.sync { _ = exec("DELETE FROM local_tracks;") }
+    }
+
+    /// Renames columns left over from before the Credit/Artist rename (formerly
+    /// Artist/Band). Idempotent and safe to run on every launch: a fresh
+    /// `CREATE TABLE` already has the new names, so this simply won't find the
+    /// old ones to rename.
+    private func migrateLegacyColumnNames() {
+        var columns = columnNames(ofTable: "local_tracks")
+        if columns.contains("artist") && !columns.contains("credit") {
+            _ = exec("ALTER TABLE local_tracks RENAME COLUMN artist TO credit;")
+            columns = columnNames(ofTable: "local_tracks")
+        }
+        if columns.contains("band") && !columns.contains("artist") {
+            _ = exec("ALTER TABLE local_tracks RENAME COLUMN band TO artist;")
+        }
+    }
+
+    private func columnNames(ofTable table: String) -> Set<String> {
+        // table is a fixed internal identifier, never user input.
+        var names = Set<String>()
+        guard let stmt = prepare("PRAGMA table_info(\(table));") else { return names }
+        defer { sqlite3_finalize(stmt) }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let name = text(stmt, 1) { names.insert(name) }
+        }
+        return names
     }
 
     // MARK: - low-level helpers (assume already on the serial queue)

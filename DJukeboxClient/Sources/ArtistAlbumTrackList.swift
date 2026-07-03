@@ -7,7 +7,7 @@ public struct ArtistAlbumTrackList: View {
 
     public var body: some View {
         HStack(spacing: 0) {
-            BandList(client)
+            ArtistList(client)
             DJNeonVDivider()
             AlbumList(client)
             DJNeonVDivider()

@@ -118,28 +118,32 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// shared library panels.
     static func panelView(_ panel: Panel, client: Client, browser: ServerBrowser) -> AnyView {
         switch panel.kind {
-        case .bands:  return AnyView(BandList(client))
+        case .artists:  return AnyView(ArtistList(client))
         case .albums:
-            if case .artist(let band) = panel.binding {
-                return AnyView(BoundAlbumList(client, band: band))
+            if case .artist(let artist) = panel.binding {
+                return AnyView(BoundAlbumList(client, artist: artist))
             }
             return AnyView(AlbumList(client))
         case .songs:
-            if case .album(let band, let album) = panel.binding {
-                return AnyView(BoundTrackList(client, band: band, album: album))
+            if case .album(let artist, let album) = panel.binding {
+                return AnyView(BoundTrackList(client, artist: artist, album: album))
             }
             return AnyView(TrackList(client))
         case .playingControls:
+            // Transport buttons + master volume only.
             return AnyView(
-                VStack(alignment: .leading, spacing: 0) {
-                    BigButtonView(trackFetcher: client.trackFetcher,
-                                  onScan: { browser.start() },
-                                  onGoOffline: browser.rememberCurrentPlayLocal)
-                    PlayingTrackView(trackFetcher: client.trackFetcher)
-                }
+                BigButtonView(trackFetcher: client.trackFetcher,
+                              onScan: { browser.start() },
+                              onGoOffline: browser.rememberCurrentPlayLocal)
             )
         case .playingList:
-            return AnyView(PlayingQueueView(trackFetcher: client.trackFetcher))
+            // Now-playing (track + progress) atop the up-next queue.
+            return AnyView(
+                VStack(spacing: 0) {
+                    PlayingTrackView(trackFetcher: client.trackFetcher)
+                    PlayingQueueView(trackFetcher: client.trackFetcher)
+                }
+            )
         case .allSearch:
             return AnyView(SearchView(client))
         case .history:

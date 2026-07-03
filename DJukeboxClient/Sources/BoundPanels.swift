@@ -15,27 +15,27 @@ import DJukeboxCommon
 public struct BoundAlbumList: View {
     let client: Client
     @ObservedObject var trackFetcher: TrackFetcher
-    let band: String
+    let artist: String
 
-    public init(_ client: Client, band: String) {
+    public init(_ client: Client, artist: String) {
         self.client = client
         self.trackFetcher = client.trackFetcher
-        self.band = band
+        self.artist = artist
     }
 
     public var body: some View {
         VStack {
             HStack {
-                Text(band).foregroundColor(DJTheme.textPrimary)
+                Text(artist).foregroundColor(DJTheme.textPrimary)
                 Spacer()
             }.padding(.horizontal, 4)
-            List(trackFetcher.albums(forBand: band)) { album in
+            List(trackFetcher.albums(forArtist: artist)) { album in
                 Text(album.Album ?? "Singles")
                   .foregroundColor(album.Album == nil ? DJTheme.neonMagenta : DJTheme.textPrimary)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture { self.trackFetcher.showTracks(for: album) }
-                  .albumTearOut(band: album.Band, album: album.Album)
+                  .albumTearOut(artist: album.Artist, album: album.Album)
             }
             .djListChrome()
         }
@@ -45,21 +45,21 @@ public struct BoundAlbumList: View {
 public struct BoundTrackList: View {
     let client: Client
     @ObservedObject var trackFetcher: TrackFetcher
-    let band: String
+    let artist: String
     let album: String?
 
-    public init(_ client: Client, band: String, album: String?) {
+    public init(_ client: Client, artist: String, album: String?) {
         self.client = client
         self.trackFetcher = client.trackFetcher
-        self.band = band
+        self.artist = artist
         self.album = album
     }
 
     public var body: some View {
-        let tracks = trackFetcher.tracks(forBand: band, album: album)
+        let tracks = trackFetcher.tracks(forArtist: artist, album: album)
         return VStack {
             HStack {
-                Text(album ?? "\(band) singles").foregroundColor(DJTheme.textPrimary)
+                Text(album ?? "\(artist) singles").foregroundColor(DJTheme.textPrimary)
                 if tracks.count > 0 {
                     Button("Play All") {
                         self.trackFetcher.audioPlayer.player?.playTracks(tracks) { _, _ in

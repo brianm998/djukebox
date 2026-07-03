@@ -4,7 +4,7 @@ import Foundation
 // and server AudioTrack types) are already Sendable. This lets tracks cross the
 // audio-player / networking callback boundaries safely.
 public protocol AudioTrackType: Sendable {
-    var Artist: String { get }
+    var Credit: String { get }
     var Album: String? { get }
     var Title: String { get }
     var Filename: String { get }

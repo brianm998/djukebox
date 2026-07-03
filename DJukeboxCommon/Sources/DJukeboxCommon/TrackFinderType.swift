@@ -6,6 +6,6 @@ public protocol TrackFinderType {
     func audioTrack(forHash sha1Hash: String) -> AudioTrackType?
     //func find(atFilePath path: String)
 //    var tracks: [String: (AudioTrackType, [URL])] { get }
-  //  func tracks(forArtist: String) -> [String: (AudioTrackType, [URL])]
+  //  func tracks(forCredit: String) -> [String: (AudioTrackType, [URL])]
 }
 

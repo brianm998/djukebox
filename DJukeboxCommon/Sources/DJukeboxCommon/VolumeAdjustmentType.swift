@@ -4,8 +4,9 @@ import Foundation
 // gain is resolved with precedence track > album > artist (see
 // VolumeAdjustmentSource); the most specific match wins.
 //
-// Note on keys: what the clients browse as an "artist" is the `Band` field, and
-// an album is identified by (Band, Album) — not the per-track `Artist` field.
+// Note on keys: what the clients browse as an "artist" is the `Artist` field
+// (renamed from `Band`), and an album is identified by (Artist, Album) — not
+// the separate per-track `Credit` field (renamed from `Artist`).
 // The server assembles the storage keys from those fields.
 public enum VolumeScope: String, Sendable, Codable {
     case track

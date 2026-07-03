@@ -89,16 +89,16 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType, @uncheck
         self.requestJson(atPath: "rand", closure: closure)
     }
 
-    public func playRandomTrack(forBand band: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
-        self.requestJson(atPath: "rand/\(band)", closure: closure)
+    public func playRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+        self.requestJson(atPath: "rand/\(artist)", closure: closure)
     }
-    
+
     public func playNewRandomTrack(closure: @escaping (AudioTrack?, Error?) -> Void) {
         self.requestJson(atPath: "newrand", closure: closure)
     }
-    
-    public func playNewRandomTrack(forBand band: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
-        self.requestJson(atPath: "newrand/\(band)", closure: closure)
+
+    public func playNewRandomTrack(forArtist artist: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
+        self.requestJson(atPath: "newrand/\(artist)", closure: closure)
     }
     
     public func clearPlayingQueue(closure: @escaping (Bool, Error?) -> Void) {

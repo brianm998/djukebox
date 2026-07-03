@@ -1,7 +1,7 @@
 import SwiftUI
 import DJukeboxCommon
 
-public struct BandList: View {
+public struct ArtistList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var searchQuery: String = ""
     var client: Client
@@ -15,7 +15,7 @@ public struct BandList: View {
         VStack {
             Spacer()
             HStack() {
-                Text("Bands")
+                Text("Artists")
                 if self.trackFetcher.allTracks.count > 0 {
                     let fetcher = trackFetcher
                     let action = {
@@ -30,22 +30,22 @@ public struct BandList: View {
             }
             HStack {
                 Spacer()
-                TextField("band search", text: $searchQuery)
+                TextField("artist search", text: $searchQuery)
                 Button(action: {
                     self.searchQuery = ""
                 }) {
                     Text("X")
                 }
             }
-            List(trackFetcher.bands(matching: self.searchQuery)) { band in
-                Text(band.Band)
+            List(trackFetcher.artists(matching: self.searchQuery)) { artist in
+                Text(artist.Artist)
                   .foregroundColor(DJTheme.textPrimary)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture {
-                      self.trackFetcher.showAlbums(forBand: band.Band)
+                      self.trackFetcher.showAlbums(forArtist: artist.Artist)
                   }
-                  .artistTearOut(band: band.Band)
+                  .artistTearOut(artist: artist.Artist)
             }
             .djListChrome()
         }

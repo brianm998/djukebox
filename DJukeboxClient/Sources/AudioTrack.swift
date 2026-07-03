@@ -114,7 +114,7 @@ public final class AudioTrack: Decodable,
                          Sendable
 {
     public static func < (lhs: AudioTrack, rhs: AudioTrack) -> Bool {
-        if lhs.Band == rhs.Band {
+        if lhs.Artist == rhs.Artist {
             // dig in deeper
             if let lhsAlbum = lhs.Album,
                let rhsAlbum = rhs.Album
@@ -133,7 +133,7 @@ public final class AudioTrack: Decodable,
                 return lhs.Title < rhs.Title
             }
         } else {
-            return lhs.Band < rhs.Band
+            return lhs.Artist < rhs.Artist
         }
     }
     
@@ -190,8 +190,8 @@ public final class AudioTrack: Decodable,
         return nil
     }
 
+    public let Credit: String
     public let Artist: String
-    public let Band: String
     public let Album: String?
     public let Conductor: String?
     public let Title: String
@@ -205,15 +205,25 @@ public final class AudioTrack: Decodable,
     public let Year: String?
     public let OriginalDate: String?
 
+    // Wire-compatible with the server's AudioTrack (and the .json sidecars
+    // written by mp3.pl): those keys predate the Credit/Artist rename, so
+    // they're pinned here rather than renamed.
+    private enum CodingKeys: String, CodingKey {
+        case Credit = "Artist"
+        case Artist = "Band"
+        case Album, Conductor, Title, Filename, SHA1, Duration
+        case AudioBitrate, SampleRate, TrackNumber, Genre, Year, OriginalDate
+    }
+
     // Memberwise initializer so tracks can be reconstructed from the local
     // SQLite store (a class only gets a synthesized init(from:) for Decodable).
-    public init(Artist: String, Band: String, Album: String?, Conductor: String?,
+    public init(Credit: String, Artist: String, Album: String?, Conductor: String?,
                 Title: String, Filename: String, SHA1: String, Duration: String?,
                 AudioBitrate: String?, SampleRate: String?, TrackNumber: String?,
                 Genre: String?, Year: String?, OriginalDate: String?)
     {
+        self.Credit = Credit
         self.Artist = Artist
-        self.Band = Band
         self.Album = Album
         self.Conductor = Conductor
         self.Title = Title

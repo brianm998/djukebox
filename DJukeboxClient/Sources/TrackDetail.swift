@@ -23,9 +23,9 @@ public struct TrackDetail: View {
         HStack(alignment: .center) {
             if layoutIsLarge() {
                 Button(action: {
-                           self.trackFetcher.showAlbums(forBand: self.track.Artist)
+                           self.trackFetcher.showAlbums(forArtist: self.track.Credit)
                        }) {
-                    Text(track.Artist).underline().foregroundColor(DJTheme.neonCyan)
+                    Text(track.Credit).underline().foregroundColor(DJTheme.neonCyan)
                 }.buttonStyle(PlainButtonStyle())
                 if self.hasAlbum(track) {
                     Button(action: {
@@ -41,9 +41,9 @@ public struct TrackDetail: View {
             } else {
                 VStack(alignment: .leading) {
                     Button(action: {
-                               self.trackFetcher.showAlbums(forBand: self.track.Artist)
+                               self.trackFetcher.showAlbums(forArtist: self.track.Credit)
                            }) {
-                        Text(track.Artist).foregroundColor(DJTheme.neonCyan)
+                        Text(track.Credit).foregroundColor(DJTheme.neonCyan)
                     }.buttonStyle(PlainButtonStyle())
                     if self.hasAlbum(track) {
                         Button(action: {

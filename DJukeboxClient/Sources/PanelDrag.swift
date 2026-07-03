@@ -54,17 +54,17 @@ private struct RowDrag: ViewModifier {
 
 public extension View {
     /// Drag an artist row → dock (or open) an albums panel scoped to that artist.
-    func artistTearOut(band: String) -> some View {
-        modifier(RowDrag { Panel(.albums, binding: .artist(band)) })
+    func artistTearOut(artist: String) -> some View {
+        modifier(RowDrag { Panel(.albums, binding: .artist(artist)) })
     }
     /// Drag an album row → dock (or open) a songs panel scoped to that album.
-    func albumTearOut(band: String, album: String?) -> some View {
-        modifier(RowDrag { Panel(.songs, binding: .album(band: band, album: album)) })
+    func albumTearOut(artist: String, album: String?) -> some View {
+        modifier(RowDrag { Panel(.songs, binding: .album(artist: artist, album: album)) })
     }
 }
 #else
 public extension View {
-    func artistTearOut(band: String) -> some View { self }
-    func albumTearOut(band: String, album: String?) -> some View { self }
+    func artistTearOut(artist: String) -> some View { self }
+    func albumTearOut(artist: String, album: String?) -> some View { self }
 }
 #endif

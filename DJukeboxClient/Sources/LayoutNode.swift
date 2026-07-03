@@ -162,12 +162,12 @@ public indirect enum LayoutNode: Identifiable, Sendable {
 
     // MARK: - Default
 
-    /// Mirrors the classic macOS layout: a bands|albums|songs browse row on top,
-    /// then controls, queue, search and history stacked beneath.
+    /// Mirrors the classic macOS layout: an artists|albums|songs browse row on
+    /// top, then controls, queue, search and history stacked beneath.
     public static func defaultLayout() -> LayoutNode {
         let browse = LayoutNode.split(
             id: UUID(), axis: .horizontal,
-            children: [.leaf(Panel(.bands)), .leaf(Panel(.albums)), .leaf(Panel(.songs))],
+            children: [.leaf(Panel(.artists)), .leaf(Panel(.albums)), .leaf(Panel(.songs))],
             fractions: [0.33, 0.33, 0.34])
         return .split(
             id: UUID(), axis: .vertical,

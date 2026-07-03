@@ -378,7 +378,7 @@ public struct TrackVolumeSheet: View {
                     if let album = track.Album {
                         scopeRow("This Album:", album, .album, track)
                     }
-                    scopeRow("This Artist:", track.Band, .artist, track)
+                    scopeRow("This Artist:", track.Artist, .artist, track)
                 }
 
                 Button("Cancel") { isPresented = false }
