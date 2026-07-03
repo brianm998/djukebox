@@ -33,11 +33,12 @@ struct AlbumList: View {
             }
             List(trackFetcher.albums) { band in
                 Text(band.Album ?? "Singles") // XXX constant
-                  .foregroundColor(band.Album == nil ? Color.red : Color.black)
+                  .foregroundColor(band.Album == nil ? DJTheme.neonMagenta : DJTheme.textPrimary)
                   .onTapGesture {
                       self.trackFetcher.showTracks(for: band)
                   }
             }
+            .djListChrome()
         }
     }
 }

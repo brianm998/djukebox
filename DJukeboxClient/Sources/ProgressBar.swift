@@ -24,21 +24,21 @@ public struct ProgressBar: View {
                 ZStack(alignment: .leading) {
                     Rectangle().frame(width: geometry.size.width,
                                       height: geometry.size.height)
-                      .opacity(0.3)
-                      .foregroundColor(Color.gray)
+                      .opacity(0.25)
+                      .foregroundColor(DJTheme.textSecondary)
 
                     Rectangle().frame(width: min(CGFloat(self.state.level/self.state.max)*geometry.size.width,
                                                  geometry.size.width),
                                       height: geometry.size.height)
-                      .foregroundColor(Color.green)
+                      .foregroundStyle(DJTheme.neonGradientHorizontal)
                       .animation(.linear)
 
                 }
                 if self.labelClosure != nil && self.state.level > 0 {
                     Text(self.labelClosure!(self.state.max-self.state.level))
                       .offset(x: -8)
-                      .foregroundColor(Color.gray)
-                      .opacity(0.7)
+                      .foregroundColor(DJTheme.textPrimary)
+                      .opacity(0.85)
                 }
             }
 //            .cornerRadius(6)

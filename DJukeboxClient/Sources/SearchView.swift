@@ -22,6 +22,7 @@ public struct SearchView: View {
                                 trackFetcher: self.trackFetcher)
                 }
             }
+            .djListChrome()
         }
     }
 }

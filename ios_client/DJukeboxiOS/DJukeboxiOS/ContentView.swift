@@ -33,6 +33,10 @@ struct ContentView: View {
         // ServerConnectionView → the tab view once a client is ready). Without
         // this the overlay tracks the content's size and the icon slides.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .foregroundStyle(DJTheme.textPrimary)
+        .tint(DJTheme.accent)
+        .djScreenBackground()
+        .preferredColorScheme(.dark)
         // Brief branded splash over everything at launch, then a cross-fade to
         // the UI (which shows the "Looking for DJukebox…" status if still connecting).
         .overlay {
@@ -50,6 +54,22 @@ struct ContentView: View {
         // PairingApprovalHost surfaces incoming pair requests from other devices so
         // they can be allowed/denied here (no-op when running offline/local).
         PairingApprovalHost(server: client.serverConnection) {
+            // iPad gets the pinned branding bar in the upper-left; iPhone doesn't
+            // (its screen is too small to spend the vertical space).
+            if layoutIsLarge() {
+                VStack(spacing: 0) {
+                    DJHeaderBar()
+                    DJNeonDivider()
+                    tabView(client)
+                }
+            } else {
+                tabView(client)
+            }
+        }
+        .id(client.serverConnection.url)
+    }
+
+    private func tabView(_ client: Client) -> some View {
         TabView {
             if layoutIsLarge() {
                 ArtistAlbumTrackList(client) // looks ok on iPad, even mini
@@ -86,8 +106,6 @@ struct ContentView: View {
                   Text("history")
               }
         }
-        }
-        .id(client.serverConnection.url)
     }
 
     // kick off a fresh search and bring up the full-screen scan window

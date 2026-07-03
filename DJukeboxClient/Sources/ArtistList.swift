@@ -39,10 +39,12 @@ struct BandList: View {
             }
             List(trackFetcher.bands(matching: self.searchQuery)) { band in
                 Text(band.Band)
+                  .foregroundColor(DJTheme.textPrimary)
                   .onTapGesture {
                       self.trackFetcher.showAlbums(forBand: band.Band)
                   }
             }
+            .djListChrome()
         }
     }
 }

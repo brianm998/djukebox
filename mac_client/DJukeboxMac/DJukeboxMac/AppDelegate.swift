@@ -52,11 +52,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         browser.start()
         let contentView = ContentView(browser)
 
-        // Create the window and set the content view. 
+        // Create the window and set the content view.
         window = NSWindow(
           contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
-          styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+          styleMask: [.titled, .closable, .miniaturizable, .resizable],
           backing: .buffered, defer: false)
+        window.title = "DJukebox"
         window.center()
         window.setFrameAutosaveName("Main Window")
         window.contentView = NSHostingView(rootView: contentView)

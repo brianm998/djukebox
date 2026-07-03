@@ -36,6 +36,7 @@ public struct HistoryView: View {
                                     trackFetcher: self.trackFetcher)
                     }
                 }
+                .djListChrome()
                 .onChange(of: historyFetcher.recent.count) { _ in
                     if self.isScrolledToTop {
                         proxy.scrollTo(Self.topAnchorID, anchor: .top)

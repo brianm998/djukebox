@@ -6,9 +6,11 @@ public struct ArtistAlbumTrackList: View {
     public init(_ client: Client) { self.client = client }
 
     public var body: some View {
-        HStack {
+        HStack(spacing: 0) {
             BandList(client)
+            DJNeonVDivider()
             AlbumList(client)
+            DJNeonVDivider()
             TrackList(client)
         }
     }

@@ -26,7 +26,7 @@ public struct OfflineScanButton: View {
     public var body: some View {
         if trackFetcher.useLocalContentOnly {
             Button(action: onScan) {
-                Text("Scan").underline().foregroundColor(Color.blue)
+                Text("Scan").underline().foregroundColor(DJTheme.neonCyan)
             }
         } else {
             Button(action: {
@@ -36,7 +36,7 @@ public struct OfflineScanButton: View {
                 try? self.trackFetcher.watch(queue: .local)
                 self.trackFetcher.useLocalContentOnly = true
             }) {
-                Text("Local").underline().foregroundColor(Color.blue)
+                Text("Local").underline().foregroundColor(DJTheme.neonCyan)
             }
         }
     }

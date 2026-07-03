@@ -15,27 +15,44 @@ struct ContentView: View {
     init(_ browser: ServerBrowser) { self.browser = browser }
 
     var body: some View {
-        ServerConnectionView(browser) { client in
-            // PairingApprovalHost surfaces incoming pair requests from other devices
-            // so they can be allowed/denied from here.
-            PairingApprovalHost(server: client.serverConnection) {
-                VStack {
-                    ArtistAlbumTrackList(client)
-                    // onScan rescans the network (ServerConnectionView shows the search
-                    // screen meanwhile); onGoOffline stashes the play-local choice so a
-                    // later reconnect can restore it.
-                    PlayingTracksView(client,
-                                      onScan: { self.browser.start() },
-                                      onGoOffline: self.browser.rememberCurrentPlayLocal)
-                    SearchView(client)
-                    HistoryView(client)
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Branding bar (app-icon badge + neon wordmark) stays pinned to the top-left,
+        // above both the connection/search screen and the connected UI.
+        VStack(spacing: 0) {
+            DJHeaderBar()
+            DJNeonDivider()
+            ServerConnectionView(browser) { client in
+                // PairingApprovalHost surfaces incoming pair requests from other devices
+                // so they can be allowed/denied from here.
+                PairingApprovalHost(server: client.serverConnection) {
+                    // Each section is its own neon "jukebox panel" on the gradient.
+                    VStack(spacing: 10) {
+                        ArtistAlbumTrackList(client)
+                            .djCard()
+                        // onScan rescans the network (ServerConnectionView shows the search
+                        // screen meanwhile); onGoOffline stashes the play-local choice so a
+                        // later reconnect can restore it.
+                        PlayingTracksView(client,
+                                          onScan: { self.browser.start() },
+                                          onGoOffline: self.browser.rememberCurrentPlayLocal)
+                            .djCard()
+                        SearchView(client)
+                            .djCard()
+                        HistoryView(client)
+                            .djCard()
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .id(client.serverConnection.url)
             }
-            .id(client.serverConnection.url)
         }
         // Fill the window so the splash overlay's geometry — and the centered icon —
         // stay put when the underlying UI swaps in once a client is ready.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .foregroundStyle(DJTheme.textPrimary)
+        .tint(DJTheme.accent)
+        .djScreenBackground()
+        .preferredColorScheme(.dark)
         // Brief branded splash over everything at launch, then a cross-fade to the UI.
         .overlay {
             if showSplash {

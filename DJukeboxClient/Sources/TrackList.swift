@@ -41,7 +41,7 @@ struct TrackList: View {
             }
             List(trackFetcher.tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
-                  .foregroundColor(self.client.historyFetcher.eventCount(for: track.SHA1) == 0 ? Color.green : Color.gray)
+                  .foregroundColor(self.client.historyFetcher.eventCount(for: track.SHA1) == 0 ? DJTheme.neonCyan : DJTheme.textSecondary)
                   .onTapGesture {
                       self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
                           self.trackFetcher.refreshQueue()
@@ -54,6 +54,7 @@ struct TrackList: View {
                       return provider
                   }
             }
+            .djListChrome()
     }
           .gesture(
             DragGesture(minimumDistance: 100)
@@ -154,7 +155,7 @@ struct TrackList: View {
             }
             List(trackFetcher.tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
-                  .foregroundColor(self.client.historyFetcher.eventCount(for: track.SHA1) == 0 ? Color.green : Color.gray)
+                  .foregroundColor(self.client.historyFetcher.eventCount(for: track.SHA1) == 0 ? DJTheme.neonCyan : DJTheme.textSecondary)
                   .onTapGesture {
                       self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
                           self.trackFetcher.refreshQueue()
@@ -167,6 +168,7 @@ struct TrackList: View {
                       return provider
                   }
             }
+            .djListChrome()
     }
           .gesture(
             DragGesture(minimumDistance: 100)

@@ -25,13 +25,13 @@ public struct TrackDetail: View {
                 Button(action: {
                            self.trackFetcher.showAlbums(forBand: self.track.Artist)
                        }) {
-                    Text(track.Artist).underline().foregroundColor(Color.blue)
+                    Text(track.Artist).underline().foregroundColor(DJTheme.neonCyan)
                 }.buttonStyle(PlainButtonStyle())
                 if self.hasAlbum(track) {
                     Button(action: {
                                self.trackFetcher.showTracks(for: self.track)
                            }) {
-                        Text(track.Album!).underline().foregroundColor(Color.blue)
+                        Text(track.Album!).underline().foregroundColor(DJTheme.neonCyan)
                     }.buttonStyle(PlainButtonStyle())
                 }
                 Text(track.Title)
@@ -43,13 +43,13 @@ public struct TrackDetail: View {
                     Button(action: {
                                self.trackFetcher.showAlbums(forBand: self.track.Artist)
                            }) {
-                        Text(track.Artist).foregroundColor(Color.blue)
+                        Text(track.Artist).foregroundColor(DJTheme.neonCyan)
                     }.buttonStyle(PlainButtonStyle())
                     if self.hasAlbum(track) {
                         Button(action: {
                                    self.trackFetcher.showTracks(for: self.track)
                                }) {
-                            Text(track.Album!).underline().foregroundColor(Color.blue)
+                            Text(track.Album!).underline().foregroundColor(DJTheme.neonCyan)
                         }.buttonStyle(PlainButtonStyle())
                     }
                     Text(track.Title)

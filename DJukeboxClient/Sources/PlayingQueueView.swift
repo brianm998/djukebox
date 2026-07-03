@@ -19,6 +19,7 @@ public struct PlayingQueueView: View {
               .onMove(perform: move)
               //.onInsert(of: ["public.url"], perform: drop) // XXX doesn't work
         }
+        .djListChrome()
     }
     private func drop(at index: Int, _ items: [NSItemProvider]) {
         for item in items {
