@@ -13,18 +13,21 @@ public struct NaviBandList: View {
     }
 
     public var body: some View {
-        VStack {
+        VStack(spacing: 8) {
             TextField("search here", text: $searchQuery)
-            Spacer()
-            
+                .textFieldStyle(.plain)
+                .djField()
+                .padding([.horizontal, .top])
+
             List(trackFetcher.bands(matching: self.searchQuery)) { (band: AudioTrack) in
                 NavigationLink(destination: NaviAlbumList(self.client,
                                                           band: band.Band,
                                                           title: band.Band))
                 {
-                    Text(band.Band)
+                    Text(band.Band).foregroundColor(DJTheme.textPrimary)
                 }
             }
+            .djListChrome()
         }
     }
 }

@@ -26,9 +26,10 @@ public struct NaviAlbumList: View {
                                                        album: album,
                                                        title: album.Album ?? ""))
             {
-                Text(album.Album ?? "")
+                Text(album.Album ?? "").foregroundColor(DJTheme.textPrimary)
             }
         }
+          .djListChrome()
           .navigationBarTitle(Text(title), displayMode: .inline)
           .navigationBarItems(trailing:
                                 Button(action: {self.showingActionSheet = true }) {

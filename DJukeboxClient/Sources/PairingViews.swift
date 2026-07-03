@@ -36,45 +36,53 @@ public struct PairingEntryView: View {
     public init(_ pairing: PairingClient) { self.pairing = pairing }
 
     public var body: some View {
-        VStack(spacing: 16) {
+        VStack {
             Spacer()
 
-            Text("🔗").font(.system(size: 52))
+            VStack(spacing: 16) {
+                Text("🔗").font(.system(size: 52))
 
-            Text("Pair this device")
-                .font(.title).bold()
+                Text("Pair this device")
+                    .font(.title).bold()
+                    .foregroundColor(DJTheme.textPrimary)
 
-            Text(statusMessage)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 420)
-
-            switch pairing.phase {
-            case .requesting, .waiting, .submitting:
-                ProgressView().padding(.top, 4)
-
-            case .readyForCode:
-                codeEntry
-
-            case .denied:
-                Button("Try Again") { restart() }
-
-            case .paired:
-                Text("✅").font(.system(size: 40))
-
-            case .failed:
-                Button("Try Again") { restart() }
-            }
-
-            if let note = pairing.note {
-                Text(note)
-                    .font(.footnote)
-                    .foregroundColor(.red)
+                Text(statusMessage)
+                    .font(.body)
+                    .foregroundColor(DJTheme.textSecondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 420)
+
+                switch pairing.phase {
+                case .requesting, .waiting, .submitting:
+                    ProgressView().padding(.top, 4)
+
+                case .readyForCode:
+                    codeEntry
+
+                case .denied:
+                    Button("Try Again") { restart() }
+                        .buttonStyle(.borderedProminent).tint(DJTheme.neonViolet)
+
+                case .paired:
+                    Text("✅").font(.system(size: 40))
+
+                case .failed:
+                    Button("Try Again") { restart() }
+                        .buttonStyle(.borderedProminent).tint(DJTheme.neonViolet)
+                }
+
+                if let note = pairing.note {
+                    Text(note)
+                        .font(.footnote)
+                        .foregroundColor(DJTheme.neonMagenta)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 420)
+                }
             }
+            .padding(28)
+            .frame(maxWidth: 460)
+            .djCard(padding: 4)
 
             Spacer()
         }
@@ -89,13 +97,16 @@ public struct PairingEntryView: View {
                 .numericKeyboard()
                 .multilineTextAlignment(.center)
                 .font(.system(size: 32, weight: .semibold, design: .monospaced))
+                .foregroundColor(DJTheme.neonCyan)
                 .frame(maxWidth: 220)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .textFieldStyle(.plain)
+                .djField()
                 .onChange(of: code) { newValue in
                     code = groupedPairingCode(newValue)
                 }
 
             Button("Pair") { pairing.submit(code: code) }
+                .buttonStyle(.borderedProminent).tint(DJTheme.neonViolet)
                 .disabled(code.filter(\.isNumber).count != 6)
         }
     }
@@ -166,24 +177,30 @@ public struct PairingApprovalView: View {
                 Text("🔗").font(.system(size: 48))
                 Text("Pairing “\(active.name)”")
                     .font(.title2).bold()
+                    .foregroundColor(DJTheme.textPrimary)
                     .multilineTextAlignment(.center)
                 Text("Enter this code on the new device:")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DJTheme.textSecondary)
                 Text(groupedPairingCode(active.code))
                     .font(.system(size: 44, weight: .bold, design: .monospaced))
+                    .foregroundColor(DJTheme.neonCyan)
                     .padding(.vertical, 8)
                 Button("Done") { monitor.clearCode() }
+                    .buttonStyle(.borderedProminent).tint(DJTheme.neonViolet)
             } else if let request = monitor.pending.first {
                 Text("🔗").font(.system(size: 48))
                 Text("“\(request.name)” wants to pair")
                     .font(.title2).bold()
+                    .foregroundColor(DJTheme.textPrimary)
                     .multilineTextAlignment(.center)
                 Text("Allow this device to control your DJukebox?")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DJTheme.textSecondary)
                     .multilineTextAlignment(.center)
                 HStack(spacing: 16) {
                     Button("Deny") { monitor.deny(request) }
+                        .buttonStyle(.bordered).tint(DJTheme.neonMagenta)
                     Button("Allow") { monitor.approve(request) }
+                        .buttonStyle(.borderedProminent).tint(DJTheme.neonViolet)
                         .keyboardShortcut(.defaultAction)
                 }
                 Button("Not now") { monitor.ignore(request) }
@@ -195,5 +212,7 @@ public struct PairingApprovalView: View {
         }
         .padding(28)
         .frame(minWidth: 320)
+        .background(DJTheme.screenGradient)
+        .preferredColorScheme(.dark)
     }
 }

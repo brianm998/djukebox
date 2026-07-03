@@ -43,8 +43,42 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         } catch let error as NSError {
             Log.e("Failed to set the audio session category and mode: \(error.localizedDescription)")
         }
-        
+
+        configureBarAppearance()
+
         return true
+    }
+
+    // Theme the tab bar and navigation bars to match the dark neon look: a dark
+    // translucent background (so the screen gradient shows through) with cyan
+    // selected / lavender unselected items and bright titles.
+    private func configureBarAppearance() {
+        let cyan     = UIColor(red: 0x12/255.0, green: 0xDB/255.0, blue: 0xFF/255.0, alpha: 1)
+        let lavender = UIColor(red: 0xB9/255.0, green: 0xA8/255.0, blue: 0xE0/255.0, alpha: 1)
+        let bright   = UIColor(red: 0xF3/255.0, green: 0xE9/255.0, blue: 0xFF/255.0, alpha: 1)
+        let barTint  = UIColor(red: 0x0B/255.0, green: 0x06/255.0, blue: 0x20/255.0, alpha: 0.55)
+
+        let tab = UITabBarAppearance()
+        tab.configureWithTransparentBackground()
+        tab.backgroundColor = barTint
+        for item in [tab.stackedLayoutAppearance, tab.inlineLayoutAppearance, tab.compactInlineLayoutAppearance] {
+            item.normal.iconColor = lavender
+            item.normal.titleTextAttributes = [.foregroundColor: lavender]
+            item.selected.iconColor = cyan
+            item.selected.titleTextAttributes = [.foregroundColor: cyan]
+        }
+        UITabBar.appearance().standardAppearance = tab
+        UITabBar.appearance().scrollEdgeAppearance = tab
+
+        let nav = UINavigationBarAppearance()
+        nav.configureWithTransparentBackground()
+        nav.backgroundColor = barTint
+        nav.titleTextAttributes = [.foregroundColor: bright]
+        nav.largeTitleTextAttributes = [.foregroundColor: bright]
+        UINavigationBar.appearance().standardAppearance = nav
+        UINavigationBar.appearance().scrollEdgeAppearance = nav
+        UINavigationBar.appearance().compactAppearance = nav
+        UINavigationBar.appearance().tintColor = cyan
     }
 
     // MARK: UISceneSession Lifecycle

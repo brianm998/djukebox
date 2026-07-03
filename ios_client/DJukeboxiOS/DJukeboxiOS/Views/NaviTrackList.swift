@@ -26,6 +26,7 @@ public struct NaviTrackList: View {
         let tracks = trackFetcher.tracks(for: album).sorted()
         return List(tracks) { track in
             Text(track.Title)
+              .foregroundColor(DJTheme.textPrimary)
               .onTapGesture {
                   self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
                       // XXX check error, etc here
@@ -36,6 +37,7 @@ public struct NaviTrackList: View {
                   }
               }
         }
+          .djListChrome()
           .toast(isPresented: $showOneTrackToast) {
               Text(self.fuck)
           }
@@ -88,9 +90,12 @@ struct Toast<Presenting, Content>: View where Presenting: View, Content: View {
 
                 ZStack {
                     Capsule()
-                        .fill(Color.gray)
+                        .fill(DJTheme.panel)
+                        .overlay(Capsule().strokeBorder(DJTheme.neonGradient, lineWidth: 1.5))
+                        .shadow(color: DJTheme.neonMagenta.opacity(0.5), radius: 6)
 
                     self.content()
+                        .foregroundColor(DJTheme.textPrimary)
                 } //ZStack (inner)
                 .frame(width: geometry.size.width / 1.25, height: geometry.size.height / 10)
                 .opacity(self.isPresented ? 1 : 0)

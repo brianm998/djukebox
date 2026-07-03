@@ -71,36 +71,44 @@ struct ContentView: View {
 
     private func tabView(_ client: Client) -> some View {
         TabView {
-            if layoutIsLarge() {
-                ArtistAlbumTrackList(client) // looks ok on iPad, even mini
-                  .tabItem {
-                      Image(systemName: "list.dash")
-                      Text("tracks")
-                  }
-            } else {
-                NavigationView {
-                    NaviBandList(client)
-                      .navigationBarTitle("Bands", displayMode: .inline)
+            Group {
+                if layoutIsLarge() {
+                    ArtistAlbumTrackList(client) // looks ok on iPad, even mini
+                        .djCard()
+                        .padding(8)
+                } else {
+                    // iPhone browses via a navigation stack; its bars are themed
+                    // globally (see AppDelegate) so it sits on the neon gradient.
+                    NavigationView {
+                        NaviBandList(client)
+                            .navigationBarTitle("Bands", displayMode: .inline)
+                    }
                 }
-                  .tabItem {
-                      Image(systemName: "list.dash")
-                      Text("tracks")
-                  }
+            }
+            .tabItem {
+                Image(systemName: "list.dash")
+                Text("tracks")
             }
 
             PlayingTracksView(client, onScan: startScan, onGoOffline: browser.rememberCurrentPlayLocal)
+              .djCard()
+              .padding(8)
               .tabItem {
                   Image(systemName: "music.note.list")
                   Text("playing")
               }
 
             SearchView(client)
+              .djCard()
+              .padding(8)
               .tabItem {
                   Image(systemName: "magnifyingglass.circle.fill")
                   Text("search")
               }
 
             HistoryView(client)
+              .djCard()
+              .padding(8)
               .tabItem {
                   Image(systemName: "gobackward")
                   Text("history")
