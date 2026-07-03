@@ -40,6 +40,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
     private var windows: [UUID: NSWindow] = [:]
     private var saveWork: DispatchWorkItem?
 
+    public let dragSession = PanelDragSession()
     public private(set) weak var primaryWindow: NSWindow?
 
     public init(browser: ServerBrowser,
@@ -47,6 +48,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
         self.browser = browser
         self.makeView = makeView
         super.init()
+        dragSession.controller = self
     }
 
     public var isConnected: Bool { browser.currentClient != nil }
@@ -176,6 +178,98 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
         }
     }
 
+    // MARK: - Docking (Milestone 2: drop onto a window)
+
+    /// Which window/leaf/zone the given screen point is over (nil = empty desktop).
+    func computeDropTarget(screenPoint: CGPoint,
+                           draggingPanelID: UUID,
+                           leafFrames: [UUID: [UUID: CGRect]]) -> DropTarget? {
+        guard let (winID, window) = windowUnder(screenPoint),
+              let local = windowLocalPoint(screenPoint, window: window),
+              let frames = leafFrames[winID] else { return nil }
+        guard let (leafID, rect) = frames.first(where: { $0.value.contains(local) }) else { return nil }
+        // No indicator over the panel being dragged itself.
+        if leafID == draggingPanelID { return nil }
+        return DropTarget(windowID: winID, leafID: leafID, zone: zone(for: local, in: rect))
+    }
+
+    /// Apply a drop: edge zones split the target leaf; center swaps the two panels.
+    func handleDrop(panel: Panel, from sourceID: UUID, target: DropTarget) {
+        guard panel.id != target.leafID else { return }   // self-drop
+        defer {
+            windows[target.windowID]?.makeKeyAndOrderFront(nil)
+            persist()
+        }
+
+        if target.zone == .center {
+            if sourceID == target.windowID {
+                models[sourceID]?.root = models[sourceID]?.root.swappingPanels(panel.id, target.leafID) ?? models[sourceID]!.root
+            } else if let src = models[sourceID], let dst = models[target.windowID],
+                      let a = src.root.panel(withID: panel.id),
+                      let b = dst.root.panel(withID: target.leafID) {
+                src.root = src.root.settingPanel(id: panel.id, to: b)
+                dst.root = dst.root.settingPanel(id: target.leafID, to: a)
+            }
+            return
+        }
+
+        // Edge zone → split the target leaf, inserting the moved panel beside it.
+        let axis: LayoutAxis = (target.zone == .left || target.zone == .right) ? .horizontal : .vertical
+        let movedFirst = (target.zone == .left || target.zone == .top)
+        let movedLeaf = LayoutNode.leaf(panel)
+
+        guard let dst = models[target.windowID],
+              let bPanel = dst.root.panel(withID: target.leafID) else { return }
+        let split = LayoutNode.split(id: UUID(), axis: axis,
+                                     children: movedFirst ? [movedLeaf, .leaf(bPanel)] : [.leaf(bPanel), movedLeaf],
+                                     fractions: [0.5, 0.5])
+
+        if sourceID == target.windowID {
+            // Remove the moved panel first, then re-insert beside the target.
+            guard let removed = dst.root.removingLeaf(id: panel.id) else { return }
+            dst.root = removed.replacingLeaf(id: target.leafID, with: split)
+        } else {
+            guard let src = models[sourceID] else { return }
+            dst.root = dst.root.replacingLeaf(id: target.leafID, with: split)
+            if let newSource = src.root.removingLeaf(id: panel.id) {
+                src.root = newSource
+            } else {
+                closeWindow(sourceID)   // source emptied by the move
+            }
+        }
+    }
+
+    func closeWindow(_ id: UUID) {
+        windows[id]?.close()   // triggers windowWillClose → cleanup
+    }
+
+    private func windowUnder(_ point: CGPoint) -> (UUID, NSWindow)? {
+        for (id, window) in windows where window.isVisible && window.frame.contains(point) {
+            return (id, window)
+        }
+        return nil
+    }
+
+    /// Screen point → SwiftUI global (top-left) space of the window's content view.
+    private func windowLocalPoint(_ screenPoint: CGPoint, window: NSWindow) -> CGPoint? {
+        guard let content = window.contentView else { return nil }
+        let inWindow = window.convertPoint(fromScreen: screenPoint)
+        let inContent = content.convert(inWindow, from: nil)
+        return content.isFlipped
+            ? inContent
+            : CGPoint(x: inContent.x, y: content.bounds.height - inContent.y)
+    }
+
+    private func zone(for p: CGPoint, in rect: CGRect) -> DropZone {
+        guard rect.width > 0, rect.height > 0 else { return .center }
+        let fx = (p.x - rect.minX) / rect.width
+        let fy = (p.y - rect.minY) / rect.height
+        let edge = 0.28
+        if fx > edge && fx < 1 - edge && fy > edge && fy < 1 - edge { return .center }
+        let distances: [(DropZone, CGFloat)] = [(.left, fx), (.right, 1 - fx), (.top, fy), (.bottom, 1 - fy)]
+        return distances.min(by: { $0.1 < $1.1 })?.0 ?? .center
+    }
+
     // MARK: - Persistence
 
     public func persist() {
@@ -198,6 +292,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
         window.delegate = nil
         windows[id] = nil
         models[id] = nil
+        dragSession.removeWindow(id)
         if primaryWindow == nil || primaryWindow == window {
             primaryWindow = windows.values.first
         }

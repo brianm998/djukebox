@@ -2,9 +2,10 @@
 //  PanelContainer.swift
 //  DJukeboxClient
 //
-//  Themed chrome around one panel leaf: a neon title bar (which is also the drag
-//  handle for tear-out) with a close button, over the panel content, wrapped in a
-//  neon-bordered card.
+//  Themed chrome around one panel leaf: a neon title bar (also the drag handle for
+//  dock / tear-out) with a close button, over the panel content, wrapped in a
+//  neon-bordered card. Reports its on-screen frame to the drag session so drops
+//  can be targeted.
 //
 
 #if os(macOS)
@@ -12,7 +13,7 @@ import SwiftUI
 import AppKit
 
 public struct PanelContainer<Content: View>: View {
-    @Environment(\.panelController) private var controller
+    @EnvironmentObject private var dragSession: PanelDragSession
 
     private let panel: Panel
     private let windowID: UUID
@@ -37,6 +38,7 @@ public struct PanelContainer<Content: View>: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .djCard(padding: 0)
+        .background(frameReporter)
     }
 
     private var titleBar: some View {
@@ -61,13 +63,32 @@ public struct PanelContainer<Content: View>: View {
         .padding(.vertical, 5)
         .background(DJTheme.panel.opacity(0.6))
         .contentShape(Rectangle())
-        // Drag the title bar onto the empty desktop → new window with this panel.
+        // Drag the title bar to dock this panel elsewhere (edge = split, center =
+        // swap, another window = move) or onto the empty desktop (= new window).
         .gesture(
-            DragGesture(minimumDistance: 8, coordinateSpace: .global)
+            DragGesture(minimumDistance: 6, coordinateSpace: .global)
+                .onChanged { _ in
+                    if dragSession.dragging == nil {
+                        dragSession.begin(panel: panel, sourceWindow: windowID)
+                    }
+                    dragSession.update(screenPoint: NSEvent.mouseLocation)
+                }
                 .onEnded { _ in
-                    controller?.tearOutPanel(panel, fromWindow: windowID, at: NSEvent.mouseLocation)
+                    dragSession.end(screenPoint: NSEvent.mouseLocation)
                 }
         )
+    }
+
+    private var frameReporter: some View {
+        GeometryReader { geo in
+            Color.clear
+                .onAppear { report(geo.frame(in: .global)) }
+                .onChange(of: geo.frame(in: .global)) { report($0) }
+        }
+    }
+
+    private func report(_ rect: CGRect) {
+        dragSession.reportLeafFrame(window: windowID, leaf: panel.id, rect: rect)
     }
 }
 #endif

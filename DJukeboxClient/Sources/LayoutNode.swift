@@ -99,6 +99,57 @@ public indirect enum LayoutNode: Identifiable, Sendable {
         }
     }
 
+    // MARK: - Docking helpers (Milestone 2)
+
+    /// The panel carried by the leaf with this id, if present.
+    public func panel(withID id: UUID) -> Panel? {
+        switch self {
+        case .leaf(let p):
+            return p.id == id ? p : nil
+        case .split(_, _, let children, _):
+            for child in children { if let found = child.panel(withID: id) { return found } }
+            return nil
+        }
+    }
+
+    /// Replace the Panel payload of the leaf with `id` (used for center-swap).
+    public func settingPanel(id: UUID, to newPanel: Panel) -> LayoutNode {
+        mapLeaves { $0.id == id ? newPanel : $0 }
+    }
+
+    /// Exchange the panels of two leaves in a single pass (same-window center-swap).
+    public func swappingPanels(_ aID: UUID, _ bID: UUID) -> LayoutNode {
+        guard let a = panel(withID: aID), let b = panel(withID: bID) else { return self }
+        return mapLeaves { p in
+            if p.id == aID { return b }
+            if p.id == bID { return a }
+            return p
+        }
+    }
+
+    /// Replace the leaf with `id` by an arbitrary subtree (used for edge-splits).
+    public func replacingLeaf(id: UUID, with node: LayoutNode) -> LayoutNode {
+        switch self {
+        case .leaf(let p):
+            return p.id == id ? node : self
+        case .split(let sid, let axis, let children, let fractions):
+            return .split(id: sid, axis: axis,
+                          children: children.map { $0.replacingLeaf(id: id, with: node) },
+                          fractions: fractions)
+        }
+    }
+
+    private func mapLeaves(_ transform: (Panel) -> Panel) -> LayoutNode {
+        switch self {
+        case .leaf(let p):
+            return .leaf(transform(p))
+        case .split(let sid, let axis, let children, let fractions):
+            return .split(id: sid, axis: axis,
+                          children: children.map { $0.mapLeaves(transform) },
+                          fractions: fractions)
+        }
+    }
+
     static func normalize(_ fractions: [Double]) -> [Double] {
         guard !fractions.isEmpty else { return [] }
         let clamped = fractions.map { max(0.0, $0) }

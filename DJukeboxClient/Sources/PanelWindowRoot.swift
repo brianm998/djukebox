@@ -33,6 +33,7 @@ struct PanelWindowRoot: View {
         .djScreenBackground()
         .preferredColorScheme(.dark)
         .environment(\.panelController, controller)
+        .environmentObject(controller.dragSession)
         // Rebuild this window's browse client if the server connection changes.
         .onChange(of: browser.currentClient?.serverConnection.url) { _ in
             browseClient = nil
@@ -42,13 +43,16 @@ struct PanelWindowRoot: View {
     @ViewBuilder
     private func connectedBody(_ sharedClient: Client) -> some View {
         if let browse = browseClient {
-            LayoutView(root: model.root,
-                       context: PanelContext(windowID: model.id,
-                                             browseClient: browse,
-                                             sharedClient: sharedClient,
-                                             makeView: makeView)) { newRoot in
-                model.root = newRoot
-                controller.persist()
+            ZStack {
+                LayoutView(root: model.root,
+                           context: PanelContext(windowID: model.id,
+                                                 browseClient: browse,
+                                                 sharedClient: sharedClient,
+                                                 makeView: makeView)) { newRoot in
+                    model.root = newRoot
+                    controller.persist()
+                }
+                DropIndicatorOverlay(windowID: model.id)
             }
         } else {
             Color.clear.onAppear { buildBrowseClient(from: sharedClient) }
