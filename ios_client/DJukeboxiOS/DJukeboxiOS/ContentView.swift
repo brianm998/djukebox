@@ -13,6 +13,7 @@ import DJukeboxClient
 struct ContentView: View {
     @ObservedObject var browser: ServerBrowser
     @State private var showScan = false
+    @State private var showSplash = true
 
     init(_ browser: ServerBrowser) { self.browser = browser }
 
@@ -27,6 +28,22 @@ struct ContentView: View {
             }
         }
         .modifier(ScanPresentation(browser: browser, isPresented: $showScan))
+        // Fill the screen so the splash overlay's geometry — and the icon's
+        // centered position — stay put when the underlying UI swaps in (e.g.
+        // ServerConnectionView → the tab view once a client is ready). Without
+        // this the overlay tracks the content's size and the icon slides.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Brief branded splash over everything at launch, then a cross-fade to
+        // the UI (which shows the "Looking for DJukebox…" status if still connecting).
+        .overlay {
+            if showSplash {
+                SplashView().transition(.opacity)
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(1.3))
+            withAnimation(.easeOut(duration: 0.45)) { showSplash = false }
+        }
     }
 
     private func tabs(_ client: Client) -> some View {
@@ -147,6 +164,30 @@ struct ServerScanView: View {
     }
 }
 
+
+// Launch splash: the app artwork centered on black. The icon's own corners are
+// black, so it reads as the artwork glowing on screen.
+//
+// The icon spans half the shorter *screen* edge (≈25% margin on each side of that
+// edge). `.ignoresSafeArea()` makes the GeometryReader report the full screen, so
+// the icon is centered on and sized to the whole screen — matching the LaunchScreen
+// storyboard, which uses the same half-of-shortest-edge rule against its full view.
+struct SplashView: View {
+    var body: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height) * 0.5
+            ZStack {
+                Color.black
+                Image("SplashIcon")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: side, height: side)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .ignoresSafeArea()
+    }
+}
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {

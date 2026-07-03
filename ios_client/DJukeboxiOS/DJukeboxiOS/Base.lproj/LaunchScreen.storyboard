@@ -13,7 +13,22 @@
                     <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <color key="backgroundColor" xcode11CocoaTouchSystemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="SplashIcon" translatesAutoresizingMaskIntoConstraints="NO" id="spl-ic-001">
+                                <rect key="frame" x="93.75" y="239.75" width="187.5" height="187.5"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" secondItem="spl-ic-001" secondAttribute="height" id="spl-aspect-001"/>
+                                </constraints>
+                            </imageView>
+                        </subviews>
+                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="spl-ic-001" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="spl-cx-001"/>
+                            <constraint firstItem="spl-ic-001" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="spl-cy-001"/>
+                            <constraint firstItem="spl-ic-001" firstAttribute="width" relation="lessThanOrEqual" secondItem="Ze5-6b-2t3" secondAttribute="width" multiplier="0.5" id="spl-capw-001"/>
+                            <constraint firstItem="spl-ic-001" firstAttribute="width" relation="lessThanOrEqual" secondItem="Ze5-6b-2t3" secondAttribute="height" multiplier="0.5" id="spl-caph-001"/>
+                            <constraint firstItem="spl-ic-001" firstAttribute="width" secondItem="Ze5-6b-2t3" secondAttribute="width" multiplier="0.5" priority="250" id="spl-grow-001"/>
+                        </constraints>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                     </view>
                 </viewController>
@@ -22,4 +37,7 @@
             <point key="canvasLocation" x="53" y="375"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="SplashIcon" width="1254" height="1254"/>
+    </resources>
 </document>

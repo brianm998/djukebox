@@ -10,6 +10,7 @@ import DJukeboxClient
 
 struct ContentView: View {
     @ObservedObject private var browser: ServerBrowser
+    @State private var showSplash = true
 
     init(_ browser: ServerBrowser) { self.browser = browser }
 
@@ -32,6 +33,39 @@ struct ContentView: View {
             }
             .id(client.serverConnection.url)
         }
+        // Fill the window so the splash overlay's geometry — and the centered icon —
+        // stay put when the underlying UI swaps in once a client is ready.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Brief branded splash over everything at launch, then a cross-fade to the UI.
+        .overlay {
+            if showSplash {
+                SplashView().transition(.opacity)
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(1.3))
+            withAnimation(.easeOut(duration: 0.45)) { showSplash = false }
+        }
+    }
+}
+
+// Launch splash: the app artwork centered on black. The icon's own corners are
+// black, so it reads as the artwork glowing on screen. It spans half the shorter
+// edge of the window, so it scales with the window instead of looking tiny.
+struct SplashView: View {
+    var body: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height) * 0.5
+            ZStack {
+                Color.black
+                Image("SplashIcon")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: side, height: side)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .ignoresSafeArea()
     }
 }
 
