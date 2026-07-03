@@ -1,9 +1,9 @@
 import SwiftUI
 import DJukeboxCommon
 
-struct BandList: View {
+public struct BandList: View {
     @ObservedObject var trackFetcher: TrackFetcher
-    @State private var searchQuery: String = "" 
+    @State private var searchQuery: String = ""
     var client: Client
 
     public init(_ client: Client) {
@@ -11,7 +11,7 @@ struct BandList: View {
         self.client = client
     }
 
-    var body: some View {
+    public var body: some View {
         VStack {
             Spacer()
             HStack() {
@@ -40,9 +40,12 @@ struct BandList: View {
             List(trackFetcher.bands(matching: self.searchQuery)) { band in
                 Text(band.Band)
                   .foregroundColor(DJTheme.textPrimary)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .contentShape(Rectangle())
                   .onTapGesture {
                       self.trackFetcher.showAlbums(forBand: band.Band)
                   }
+                  .artistTearOut(band: band.Band)
             }
             .djListChrome()
         }

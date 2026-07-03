@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AlbumList: View {
+public struct AlbumList: View {
     let client: Client
     @ObservedObject var trackFetcher: TrackFetcher
 
@@ -9,7 +9,7 @@ struct AlbumList: View {
         self.trackFetcher = client.trackFetcher
     }
 
-    var body: some View {
+    public var body: some View {
         VStack {
             Spacer()
             HStack {
@@ -34,9 +34,12 @@ struct AlbumList: View {
             List(trackFetcher.albums) { band in
                 Text(band.Album ?? "Singles") // XXX constant
                   .foregroundColor(band.Album == nil ? DJTheme.neonMagenta : DJTheme.textPrimary)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .contentShape(Rectangle())
                   .onTapGesture {
                       self.trackFetcher.showTracks(for: band)
                   }
+                  .albumTearOut(band: band.Band, album: band.Album)
             }
             .djListChrome()
         }

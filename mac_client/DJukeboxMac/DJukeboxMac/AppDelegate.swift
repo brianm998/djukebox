@@ -22,10 +22,15 @@ import DJukeboxClient
 // @main replaces the deprecated @NSApplicationMain (an error under Swift 6);
 // NSApplicationDelegate supplies the synthesized entry point.
 @main
-class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     var window: NSWindow!
-    
+
+    // Set false to fall back to the classic single fixed-layout ContentView.
+    private let useDockablePanels = true
+    private var panelController: PanelWindowController?
+
     func applicationDidFinishLaunching(_ aNotification: Notification) {
 
 #if DEBUG
@@ -50,23 +55,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                     autoFallbackToLocal: true,
                                     tryLoopbackFirst: true)
         browser.start()
-        let contentView = ContentView(browser)
 
-        // Create the window and set the content view.
-        window = NSWindow(
-          contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
-          styleMask: [.titled, .closable, .miniaturizable, .resizable],
-          backing: .buffered, defer: false)
-        window.title = "DJukebox"
-        window.center()
-        window.setFrameAutosaveName("Main Window")
-        window.contentView = NSHostingView(rootView: contentView)
-        window.makeKeyAndOrderFront(nil)
+        if useDockablePanels {
+            // Dockable, rearrangeable, multi-window workspace. The window layer
+            // lives in the shared library (PanelWindowController); it needs a
+            // factory that builds each panel kind's view — supplied here so the
+            // mac control bar (BigButtonView, app target) can be composed too.
+            let controller = PanelWindowController(browser: browser) { kind, client in
+                AppDelegate.panelView(kind, client: client, browser: browser)
+            }
+            panelController = controller
+            controller.restoreWindows()
+            theWindow = controller.primaryWindow
+            installMenuCommands()
+        } else {
+            // Classic single fixed-layout window (fallback).
+            window = NSWindow(
+              contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
+              styleMask: [.titled, .closable, .miniaturizable, .resizable],
+              backing: .buffered, defer: false)
+            window.title = "DJukebox"
+            window.center()
+            window.setFrameAutosaveName("Main Window")
+            window.contentView = NSHostingView(rootView: ContentView(browser))
+            window.makeKeyAndOrderFront(nil)
+            theWindow = window
+        }
 
-        theWindow = window
-        
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { keypress in
-            guard self.window.firstResponder == self.window else {
+            // Only intercept space when a window is key and nothing (e.g. a text
+            // field) has grabbed first responder.
+            guard let keyWindow = NSApp.keyWindow, keyWindow.firstResponder === keyWindow else {
                 return keypress
             }
             if keypress.characters == " ",
@@ -90,6 +109,101 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
+    }
+
+    // MARK: - Panel factory
+
+    /// Builds the view for a panel kind, bound to the given client. Lives in the
+    /// app target so it can compose the app's control bar (BigButtonView) with the
+    /// shared library panels.
+    static func panelView(_ kind: PanelKind, client: Client, browser: ServerBrowser) -> AnyView {
+        switch kind {
+        case .bands:  return AnyView(BandList(client))
+        case .albums: return AnyView(AlbumList(client))
+        case .songs:  return AnyView(TrackList(client))
+        case .playingControls:
+            return AnyView(
+                VStack(alignment: .leading, spacing: 0) {
+                    BigButtonView(trackFetcher: client.trackFetcher,
+                                  onScan: { browser.start() },
+                                  onGoOffline: browser.rememberCurrentPlayLocal)
+                    PlayingTrackView(trackFetcher: client.trackFetcher)
+                }
+            )
+        case .playingList:
+            return AnyView(PlayingQueueView(trackFetcher: client.trackFetcher))
+        case .allSearch:
+            return AnyView(SearchView(client))
+        case .history:
+            return AnyView(HistoryView(client))
+        }
+    }
+
+    // MARK: - Menu commands
+
+    private func installMenuCommands() {
+        guard let mainMenu = NSApp.mainMenu else { return }
+        let viewMenu: NSMenu
+        if let item = mainMenu.items.first(where: { $0.title == "View" }), let sub = item.submenu {
+            viewMenu = sub
+        } else {
+            let menu = NSMenu(title: "Panels")
+            let item = NSMenuItem(title: "Panels", action: nil, keyEquivalent: "")
+            item.submenu = menu
+            mainMenu.addItem(item)
+            viewMenu = menu
+        }
+
+        viewMenu.addItem(.separator())
+
+        let newPanelItem = NSMenuItem(title: "New Panel", action: nil, keyEquivalent: "")
+        let newPanelMenu = NSMenu(title: "New Panel")
+        for kind in PanelKind.allCases {
+            let item = NSMenuItem(title: kind.title, action: #selector(newPanel(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = kind.rawValue
+            item.image = NSImage(systemSymbolName: kind.systemImage, accessibilityDescription: nil)
+            newPanelMenu.addItem(item)
+        }
+        newPanelItem.submenu = newPanelMenu
+        viewMenu.addItem(newPanelItem)
+
+        let newWindowItem = NSMenuItem(title: "New Panel Window",
+                                       action: #selector(newPanelWindow(_:)), keyEquivalent: "n")
+        newWindowItem.keyEquivalentModifierMask = [.command, .option]
+        newWindowItem.target = self
+        viewMenu.addItem(newWindowItem)
+
+        let resetItem = NSMenuItem(title: "Reset Layout to Default",
+                                   action: #selector(resetLayout(_:)), keyEquivalent: "")
+        resetItem.target = self
+        viewMenu.addItem(resetItem)
+    }
+
+    @objc private func newPanel(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let kind = PanelKind(rawValue: raw) else { return }
+        panelController?.addPanel(kind)
+    }
+
+    @objc private func newPanelWindow(_ sender: Any?) {
+        panelController?.newWindow(root: .defaultLayout())
+    }
+
+    @objc private func resetLayout(_ sender: Any?) {
+        panelController?.resetToDefault()
+        theWindow = panelController?.primaryWindow
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        switch menuItem.action {
+        case #selector(newPanel(_:)), #selector(newPanelWindow(_:)):
+            return panelController?.isConnected ?? false
+        case #selector(resetLayout(_:)):
+            return panelController != nil
+        default:
+            return true
+        }
     }
 }
 
