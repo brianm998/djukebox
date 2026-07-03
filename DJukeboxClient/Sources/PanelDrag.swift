@@ -27,37 +27,39 @@ public extension EnvironmentValues {
     }
 }
 
-// A long-press-then-drag so ordinary taps and List scrolling keep working; only a
-// deliberate press-and-drag tears the row out to a new window.
-private struct RowTearOut: ViewModifier {
+// A plain click-drag on the row drives the shared drag session (like a panel
+// title-bar drag) so it gets the live drop indicator and can dock into a window
+// (edge/center) or, on the empty desktop, open a new window. macOS lists don't
+// drag-to-scroll, so a plain DragGesture is safe here; the small minimumDistance
+// keeps ordinary clicks (which still fire the row's onTapGesture) working.
+private struct RowDrag: ViewModifier {
     @Environment(\.panelController) private var controller
-    let action: (PanelWindowController, CGPoint) -> Void
+    /// The bound panel this row represents.
+    let makePanel: () -> Panel
 
     func body(content: Content) -> some View {
-        content.gesture(
-            LongPressGesture(minimumDuration: 0.3)
-                .sequenced(before: DragGesture(minimumDistance: 8, coordinateSpace: .global))
+        content.simultaneousGesture(
+            DragGesture(minimumDistance: 6, coordinateSpace: .global)
+                .onChanged { _ in
+                    guard let session = controller?.dragSession else { return }
+                    if !session.isDragging { session.beginCreate(panel: makePanel()) }
+                    session.update(screenPoint: NSEvent.mouseLocation)
+                }
                 .onEnded { _ in
-                    if let controller = controller {
-                        action(controller, NSEvent.mouseLocation)
-                    }
+                    controller?.dragSession.end(screenPoint: NSEvent.mouseLocation)
                 }
         )
     }
 }
 
 public extension View {
-    /// Drag an artist row out → a new window showing that artist's albums.
+    /// Drag an artist row → dock (or open) an albums panel scoped to that artist.
     func artistTearOut(band: String) -> some View {
-        modifier(RowTearOut { controller, point in
-            controller.tearOutArtist(band: band, at: point)
-        })
+        modifier(RowDrag { Panel(.albums, binding: .artist(band)) })
     }
-    /// Drag an album row out → a new window showing that album's songs.
+    /// Drag an album row → dock (or open) a songs panel scoped to that album.
     func albumTearOut(band: String, album: String?) -> some View {
-        modifier(RowTearOut { controller, point in
-            controller.tearOutAlbum(band: band, album: album, at: point)
-        })
+        modifier(RowDrag { Panel(.songs, binding: .album(band: band, album: album)) })
     }
 }
 #else

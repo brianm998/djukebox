@@ -20,12 +20,12 @@ public struct PanelContext {
     public let browseClient: Client
     /// The global connected client — live playback / history.
     public let sharedClient: Client
-    public let makeView: @MainActor (PanelKind, Client) -> AnyView
+    public let makeView: @MainActor (Panel, Client) -> AnyView
 
     public init(windowID: UUID,
                 browseClient: Client,
                 sharedClient: Client,
-                makeView: @escaping @MainActor (PanelKind, Client) -> AnyView) {
+                makeView: @escaping @MainActor (Panel, Client) -> AnyView) {
         self.windowID = windowID
         self.browseClient = browseClient
         self.sharedClient = sharedClient

@@ -61,8 +61,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             // lives in the shared library (PanelWindowController); it needs a
             // factory that builds each panel kind's view — supplied here so the
             // mac control bar (BigButtonView, app target) can be composed too.
-            let controller = PanelWindowController(browser: browser) { kind, client in
-                AppDelegate.panelView(kind, client: client, browser: browser)
+            let controller = PanelWindowController(browser: browser) { panel, client in
+                AppDelegate.panelView(panel, client: client, browser: browser)
             }
             panelController = controller
             controller.restoreWindows()
@@ -116,11 +116,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// Builds the view for a panel kind, bound to the given client. Lives in the
     /// app target so it can compose the app's control bar (BigButtonView) with the
     /// shared library panels.
-    static func panelView(_ kind: PanelKind, client: Client, browser: ServerBrowser) -> AnyView {
-        switch kind {
+    static func panelView(_ panel: Panel, client: Client, browser: ServerBrowser) -> AnyView {
+        switch panel.kind {
         case .bands:  return AnyView(BandList(client))
-        case .albums: return AnyView(AlbumList(client))
-        case .songs:  return AnyView(TrackList(client))
+        case .albums:
+            if case .artist(let band) = panel.binding {
+                return AnyView(BoundAlbumList(client, band: band))
+            }
+            return AnyView(AlbumList(client))
+        case .songs:
+            if case .album(let band, let album) = panel.binding {
+                return AnyView(BoundTrackList(client, band: band, album: album))
+            }
+            return AnyView(TrackList(client))
         case .playingControls:
             return AnyView(
                 VStack(alignment: .leading, spacing: 0) {

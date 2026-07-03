@@ -59,17 +59,19 @@ public struct PanelContainer<Content: View>: View {
             .buttonStyle(.plain)
             .help("Close panel")
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
         .background(DJTheme.panel.opacity(0.6))
         .contentShape(Rectangle())
         // Drag the title bar to dock this panel elsewhere (edge = split, center =
         // swap, another window = move) or onto the empty desktop (= new window).
-        .gesture(
+        // simultaneousGesture (matching the row drag) so it isn't swallowed.
+        .simultaneousGesture(
             DragGesture(minimumDistance: 6, coordinateSpace: .global)
                 .onChanged { _ in
-                    if dragSession.dragging == nil {
-                        dragSession.begin(panel: panel, sourceWindow: windowID)
+                    if !dragSession.isDragging {
+                        dragSession.beginMove(panel: panel, sourceWindow: windowID)
                     }
                     dragSession.update(screenPoint: NSEvent.mouseLocation)
                 }

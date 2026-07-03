@@ -27,10 +27,16 @@ public struct DropTarget: Equatable {
 public final class PanelDragSession: ObservableObject {
     weak var controller: PanelWindowController?
 
-    struct Dragging { let panel: Panel; let sourceWindowID: UUID }
+    enum DragPayload {
+        case move(panel: Panel, sourceWindowID: UUID)   // relocate an existing panel
+        case create(panel: Panel)                       // insert a new (bound) panel
+        case window(sourceWindowID: UUID)               // merge a whole window into another
+    }
 
-    @Published var dragging: Dragging?
+    @Published var payload: DragPayload?
     @Published var dropTarget: DropTarget?
+
+    var isDragging: Bool { payload != nil }
 
     /// leaf frames in SwiftUI global space, per window. Not @Published — it changes
     /// constantly during layout; the overlay reads it when `dropTarget` changes.
@@ -54,27 +60,65 @@ public final class PanelDragSession: ObservableObject {
 
     // MARK: drag lifecycle
 
-    func begin(panel: Panel, sourceWindow: UUID) {
-        dragging = Dragging(panel: panel, sourceWindowID: sourceWindow)
+    func beginMove(panel: Panel, sourceWindow: UUID) {
+        payload = .move(panel: panel, sourceWindowID: sourceWindow)
+    }
+
+    func beginCreate(panel: Panel) {
+        payload = .create(panel: panel)
+    }
+
+    func beginWindow(sourceWindow: UUID) {
+        payload = .window(sourceWindowID: sourceWindow)
     }
 
     func update(screenPoint: CGPoint) {
-        guard let dragging = dragging, let controller = controller else {
+        guard let payload = payload, let controller = controller else {
             dropTarget = nil
             return
         }
-        dropTarget = controller.computeDropTarget(screenPoint: screenPoint,
-                                                  draggingPanelID: dragging.panel.id,
-                                                  leafFrames: leafFrames)
+        switch payload {
+        case .move(let panel, _), .create(let panel):
+            dropTarget = controller.computeDropTarget(screenPoint: screenPoint,
+                                                      draggingPanelID: panel.id,
+                                                      excludeWindow: nil,
+                                                      leafFrames: leafFrames)
+        case .window(let sourceWindowID):
+            // Merging: can't drop onto the source window itself.
+            dropTarget = controller.computeDropTarget(screenPoint: screenPoint,
+                                                      draggingPanelID: nil,
+                                                      excludeWindow: sourceWindowID,
+                                                      leafFrames: leafFrames)
+        }
+        // Re-assert each tick (cursor-rect updates are suppressed mid-drag, so this
+        // holds): grabbing hand when it'll dock, copy cursor when it'll open a new
+        // window on the empty desktop.
+        (dropTarget != nil ? NSCursor.closedHand : NSCursor.dragCopy).set()
     }
 
     func end(screenPoint: CGPoint) {
-        defer { dragging = nil; dropTarget = nil }
-        guard let dragging = dragging, let controller = controller else { return }
-        if let target = dropTarget {
-            controller.handleDrop(panel: dragging.panel, from: dragging.sourceWindowID, target: target)
-        } else {
-            controller.tearOutPanel(dragging.panel, fromWindow: dragging.sourceWindowID, at: screenPoint)
+        NSCursor.arrow.set()
+        defer { payload = nil; dropTarget = nil }
+        guard let payload = payload, let controller = controller else { return }
+        switch payload {
+        case .move(let panel, let sourceWindowID):
+            if let target = dropTarget {
+                controller.handleDrop(panel: panel, from: sourceWindowID, target: target)
+            } else {
+                controller.tearOutPanel(panel, fromWindow: sourceWindowID, at: screenPoint)
+            }
+        case .create(let panel):
+            if let target = dropTarget {
+                controller.handleCreate(panel, target: target)
+            } else {
+                controller.newWindow(root: .leaf(panel), at: screenPoint,
+                                     size: NSSize(width: 340, height: 520))
+            }
+        case .window(let sourceWindowID):
+            if let target = dropTarget {
+                controller.handleMerge(sourceWindowID: sourceWindowID, target: target)
+            }
+            // dropped on the desktop or its own window → no-op
         }
     }
 }

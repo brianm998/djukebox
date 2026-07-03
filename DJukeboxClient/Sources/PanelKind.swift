@@ -44,16 +44,27 @@ public enum PanelKind: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// An optional fixed scope for a browse panel: an albums panel pinned to an
+/// artist, or a songs panel pinned to an album (nil album = the band's singles).
+/// Bound panels show their fixed content regardless of the window's live browse
+/// selection; unbound panels follow the window's cascade.
+public enum PanelBinding: Codable, Hashable, Sendable {
+    case artist(String)
+    case album(band: String, album: String?)
+}
+
 /// A single placed panel. Its `id` is stable across saves and drives SwiftUI
 /// identity, the layout tree, and close/drag targeting. Duplicates are allowed:
 /// two Panels with the same `kind` but different `id` are independent.
 public struct Panel: Codable, Identifiable, Hashable, Sendable {
     public let id: UUID
     public var kind: PanelKind
+    public var binding: PanelBinding?
 
-    public init(_ kind: PanelKind, id: UUID = UUID()) {
+    public init(_ kind: PanelKind, id: UUID = UUID(), binding: PanelBinding? = nil) {
         self.kind = kind
         self.id = id
+        self.binding = binding
     }
 }
 #endif

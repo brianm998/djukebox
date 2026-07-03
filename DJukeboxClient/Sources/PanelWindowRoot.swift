@@ -10,18 +10,34 @@
 
 #if os(macOS)
 import SwiftUI
+import AppKit
 
 struct PanelWindowRoot: View {
     @ObservedObject var model: PanelWindowModel
     @ObservedObject var browser: ServerBrowser
     let controller: PanelWindowController
-    let makeView: @MainActor (PanelKind, Client) -> AnyView
+    let makeView: @MainActor (Panel, Client) -> AnyView
 
     @State private var browseClient: Client?
 
     var body: some View {
         VStack(spacing: 0) {
             DJHeaderBar()
+                .contentShape(Rectangle())
+                .help("Drag onto another window to combine them")
+                // Drag the DJukebox header onto another window to merge this whole
+                // window's panels into it.
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 6, coordinateSpace: .global)
+                        .onChanged { _ in
+                            let session = controller.dragSession
+                            if !session.isDragging { session.beginWindow(sourceWindow: model.id) }
+                            session.update(screenPoint: NSEvent.mouseLocation)
+                        }
+                        .onEnded { _ in
+                            controller.dragSession.end(screenPoint: NSEvent.mouseLocation)
+                        }
+                )
             DJNeonDivider()
             ServerConnectionView(browser) { sharedClient in
                 connectedBody(sharedClient)

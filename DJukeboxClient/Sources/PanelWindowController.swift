@@ -35,7 +35,7 @@ public final class PanelWindowModel: ObservableObject, Identifiable {
 @MainActor
 public final class PanelWindowController: NSObject, NSWindowDelegate {
     private let browser: ServerBrowser
-    private let makeView: @MainActor (PanelKind, Client) -> AnyView
+    private let makeView: @MainActor (Panel, Client) -> AnyView
     private var models: [UUID: PanelWindowModel] = [:]
     private var windows: [UUID: NSWindow] = [:]
     private var saveWork: DispatchWorkItem?
@@ -44,7 +44,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
     public private(set) weak var primaryWindow: NSWindow?
 
     public init(browser: ServerBrowser,
-                makeView: @escaping @MainActor (PanelKind, Client) -> AnyView) {
+                makeView: @escaping @MainActor (Panel, Client) -> AnyView) {
         self.browser = browser
         self.makeView = makeView
         super.init()
@@ -157,40 +157,74 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
                   size: NSSize(width: 380, height: 500))
     }
 
-    /// New window showing an artist's albums.
-    public func tearOutArtist(band: String, at screenPoint: CGPoint) {
-        guard !isInsideAnyWindow(screenPoint) else { return }
-        newWindow(root: .leaf(Panel(.albums)), at: screenPoint,
-                  size: NSSize(width: 320, height: 520)) { fetcher in
-            fetcher.shownAlbumsBand = band
-            fetcher.albumTitle = band
+    /// Insert a NEW (bound) panel — from dragging an artist/album — into a window
+    /// at the drop target. Edge zones split the target leaf; center just adds it
+    /// beside (a brand-new panel has nothing to swap with).
+    public func handleCreate(_ panel: Panel, target: DropTarget) {
+        defer {
+            windows[target.windowID]?.makeKeyAndOrderFront(nil)
+            persist()
         }
-    }
-
-    /// New window showing an album's songs (album may be nil for a band's singles).
-    public func tearOutAlbum(band: String, album: String?, at screenPoint: CGPoint) {
-        guard !isInsideAnyWindow(screenPoint) else { return }
-        newWindow(root: .leaf(Panel(.songs)), at: screenPoint,
-                  size: NSSize(width: 380, height: 520)) { fetcher in
-            fetcher.desiredBand = band
-            fetcher.desiredAlbum = album
-            fetcher.trackTitle = album ?? "\(band) singles"
+        guard let dst = models[target.windowID],
+              let bPanel = dst.root.panel(withID: target.leafID) else { return }
+        let newLeaf = LayoutNode.leaf(panel)
+        let bLeaf = LayoutNode.leaf(bPanel)
+        let splitAxis: LayoutAxis
+        let children: [LayoutNode]
+        switch target.zone {
+        case .center: splitAxis = .horizontal; children = [bLeaf, newLeaf]
+        case .left:   splitAxis = .horizontal; children = [newLeaf, bLeaf]
+        case .right:  splitAxis = .horizontal; children = [bLeaf, newLeaf]
+        case .top:    splitAxis = .vertical;   children = [newLeaf, bLeaf]
+        case .bottom: splitAxis = .vertical;   children = [bLeaf, newLeaf]
         }
+        dst.root = dst.root.replacingLeaf(id: target.leafID,
+                                          with: .split(id: UUID(), axis: splitAxis,
+                                                       children: children, fractions: [0.5, 0.5]))
     }
 
     // MARK: - Docking (Milestone 2: drop onto a window)
 
     /// Which window/leaf/zone the given screen point is over (nil = empty desktop).
+    /// `draggingPanelID` (a moving panel) and `excludeWindow` (window-merge source)
+    /// suppress a target so you can't drop onto yourself.
     func computeDropTarget(screenPoint: CGPoint,
-                           draggingPanelID: UUID,
+                           draggingPanelID: UUID?,
+                           excludeWindow: UUID?,
                            leafFrames: [UUID: [UUID: CGRect]]) -> DropTarget? {
-        guard let (winID, window) = windowUnder(screenPoint),
-              let local = windowLocalPoint(screenPoint, window: window),
+        guard let (winID, window) = windowUnder(screenPoint) else { return nil }
+        if let excludeWindow = excludeWindow, winID == excludeWindow { return nil }
+        guard let local = windowLocalPoint(screenPoint, window: window),
               let frames = leafFrames[winID] else { return nil }
         guard let (leafID, rect) = frames.first(where: { $0.value.contains(local) }) else { return nil }
-        // No indicator over the panel being dragged itself.
-        if leafID == draggingPanelID { return nil }
+        if let draggingPanelID = draggingPanelID, leafID == draggingPanelID { return nil }
         return DropTarget(windowID: winID, leafID: leafID, zone: zone(for: local, in: rect))
+    }
+
+    /// Merge an entire window's panel tree into a target window at the drop point,
+    /// then close the source window.
+    public func handleMerge(sourceWindowID: UUID, target: DropTarget) {
+        guard sourceWindowID != target.windowID,
+              let source = models[sourceWindowID],
+              let dst = models[target.windowID],
+              let bPanel = dst.root.panel(withID: target.leafID) else { return }
+        let sourceRoot = source.root
+        let bLeaf = LayoutNode.leaf(bPanel)
+        let splitAxis: LayoutAxis
+        let children: [LayoutNode]
+        switch target.zone {
+        case .center: splitAxis = .horizontal; children = [bLeaf, sourceRoot]
+        case .left:   splitAxis = .horizontal; children = [sourceRoot, bLeaf]
+        case .right:  splitAxis = .horizontal; children = [bLeaf, sourceRoot]
+        case .top:    splitAxis = .vertical;   children = [sourceRoot, bLeaf]
+        case .bottom: splitAxis = .vertical;   children = [bLeaf, sourceRoot]
+        }
+        dst.root = dst.root.replacingLeaf(id: target.leafID,
+                                          with: .split(id: UUID(), axis: splitAxis,
+                                                       children: children, fractions: [0.5, 0.5]))
+        closeWindow(sourceWindowID)
+        windows[target.windowID]?.makeKeyAndOrderFront(nil)
+        persist()
     }
 
     /// Apply a drop: edge zones split the target leaf; center swaps the two panels.

@@ -403,6 +403,12 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         return ret
     }
 
+    // Pure filter (no side effects) for a bound songs panel: a band's tracks on a
+    // specific album (nil album = the band's singles).
+    public func tracks(forBand band: String, album: String?) -> [AudioTrack] {
+        allTracks.filter { $0.Band == band && $0.Album == album }.sorted()
+    }
+
     public func clearPlayingQueue() {
         self.audioPlayer.player?.clearPlayingQueue() { audioTrack, error in
             if let error = error {

@@ -47,7 +47,7 @@ struct NodeView: View {
         switch node {
         case .leaf(let panel):
             PanelContainer(panel: panel, windowID: context.windowID, onClose: { onClose(panel.id) }) {
-                context.makeView(panel.kind, context.client(for: panel.kind))
+                context.makeView(panel, context.client(for: panel.kind))
             }
         case let .split(sid, axis, children, fractions):
             SplitView(splitID: sid, axis: axis, children: children, fractions: fractions,
