@@ -28,6 +28,7 @@ public struct PlayButton: View {
             Text("\u{25B6}").font(.largeTitle)
             #endif
         }.buttonStyle(PlainButtonStyle())
+        .foregroundStyle(DJTheme.neonCyan)
     }
 }
 
@@ -56,6 +57,7 @@ public struct PauseButton: View {
             Text("\u{23F8}").font(.largeTitle)
             #endif
         }.buttonStyle(PlainButtonStyle())
+        .foregroundStyle(DJTheme.neonCyan)
     }
 }
 
@@ -86,6 +88,7 @@ public struct SkipCurrentTrackButton: View {
             Text("\u{23F9}").font(.largeTitle) // stop
             #endif
         }.buttonStyle(PlainButtonStyle())
+        .foregroundStyle(DJTheme.neonMagenta)
     }
 }
 
@@ -147,7 +150,7 @@ public struct ClearQueueButton: View {
     public var body: some View {
         Button(action: { self.trackFetcher.clearPlayingQueue() }) {
             Text("Clear Q")
-              .foregroundColor(Color.red)
+              .foregroundColor(DJTheme.neonMagenta)
         }
     }
 }
@@ -210,7 +213,7 @@ public struct PlayUntilSheet: View {
 
     public var body: some View {
         VStack(spacing: 24) {
-            Text("Play Until").font(.headline)
+            Text("Play Until").font(.headline).foregroundColor(DJTheme.textPrimary)
             #if os(iOS)
             DatePicker("", selection: $selectedTime, in: Date()..., displayedComponents: [.date, .hourAndMinute])
                 .labelsHidden()
@@ -223,15 +226,20 @@ public struct PlayUntilSheet: View {
             #endif
             HStack {
                 Button("Cancel") { isPresented = false }
+                    .buttonStyle(.bordered).tint(DJTheme.neonMagenta)
                 Spacer()
                 Button("Confirm") {
                     trackFetcher.playUntil(date: selectedTime)
                     isPresented = false
                 }
-                .bold()
+                .buttonStyle(.borderedProminent).tint(DJTheme.neonViolet)
             }
         }
         .padding()
+        .frame(minWidth: 320)
+        .background(DJTheme.screenGradient)
+        .tint(DJTheme.neonCyan)
+        .preferredColorScheme(.dark)
         .onAppear { selectedTime = Date().addingTimeInterval(3600) }
     }
 }
@@ -267,7 +275,7 @@ public struct PlayForSheet: View {
 
     public var body: some View {
         VStack(spacing: 24) {
-            Text("Play For").font(.headline)
+            Text("Play For").font(.headline).foregroundColor(DJTheme.textPrimary)
             #if os(iOS)
             HStack(spacing: 0) {
                 Picker("Hours", selection: $hours) {
@@ -290,16 +298,21 @@ public struct PlayForSheet: View {
             #endif
             HStack {
                 Button("Cancel") { isPresented = false }
+                    .buttonStyle(.bordered).tint(DJTheme.neonMagenta)
                 Spacer()
                 Button("Confirm") {
                     let duration = TimeInterval(hours * 3600 + minutes * 60)
                     trackFetcher.playUntil(date: Date().addingTimeInterval(duration))
                     isPresented = false
                 }
-                .bold()
+                .buttonStyle(.borderedProminent).tint(DJTheme.neonViolet)
             }
         }
         .padding()
+        .frame(minWidth: 320)
+        .background(DJTheme.screenGradient)
+        .tint(DJTheme.neonCyan)
+        .preferredColorScheme(.dark)
     }
 }
 
@@ -332,8 +345,8 @@ public struct TrackVolumeSheet: View {
     public var body: some View {
         VStack(spacing: 20) {
             if let track = trackFetcher.currentTrack {
-                Text("Boost Volume").font(.headline)
-                Text(track.Title).font(.subheadline).foregroundColor(.gray)
+                Text("Boost Volume").font(.headline).foregroundColor(DJTheme.textPrimary)
+                Text(track.Title).font(.subheadline).foregroundColor(DJTheme.textSecondary)
 
                 VStack(spacing: 6) {
                     // a -/+ pair above each end to narrow or widen that end of the range
@@ -345,20 +358,21 @@ public struct TrackVolumeSheet: View {
                                       plus:  { adjustUpper(by:  rangeStep) })
                     }
                     HStack {
-                        Image(systemName: "speaker.fill")
+                        Image(systemName: "speaker.fill").foregroundColor(DJTheme.textSecondary)
                         // reduction as well as boost, over the user-adjustable range
                         Slider(value: $decibels, in: lowerBound...upperBound, step: 0.5,
                                onEditingChanged: { editing in userInteracting = editing })
                           .frame(minWidth: 200)
-                        Image(systemName: "speaker.wave.3.fill")
+                          .tint(DJTheme.neonCyan)
+                        Image(systemName: "speaker.wave.3.fill").foregroundColor(DJTheme.textSecondary)
                         // total range at the end of the bar, updating as the ends move
                         Text(String(format: "%+g…%+g dB", lowerBound, upperBound))
-                          .font(.caption).monospacedDigit().foregroundColor(.gray)
+                          .font(.caption).monospacedDigit().foregroundColor(DJTheme.textSecondary)
                     }
                 }
-                Text(String(format: "%+.1f dB", decibels)).monospacedDigit()
+                Text(String(format: "%+.1f dB", decibels)).monospacedDigit().foregroundColor(DJTheme.textPrimary)
 
-                Text("Apply to:").font(.subheadline)
+                Text("Apply to:").font(.subheadline).foregroundColor(DJTheme.textSecondary)
                 VStack(alignment: .leading, spacing: 8) {
                     scopeRow("This Track:", track.Title, .track, track)
                     if let album = track.Album {
@@ -368,13 +382,18 @@ public struct TrackVolumeSheet: View {
                 }
 
                 Button("Cancel") { isPresented = false }
+                    .buttonStyle(.bordered).tint(DJTheme.neonMagenta)
             } else {
-                Text("Nothing playing")
+                Text("Nothing playing").foregroundColor(DJTheme.textSecondary)
                 Button("Cancel") { isPresented = false }
+                    .buttonStyle(.bordered).tint(DJTheme.neonMagenta)
             }
         }
         .padding()
         .frame(minWidth: 300)
+        .background(DJTheme.screenGradient)
+        .tint(DJTheme.neonCyan)
+        .preferredColorScheme(.dark)
         .onChange(of: decibels) { newValue in
             // live-audition on every step so the user hears the change while
             // dragging — but only for real drags, not the programmatic prefill
@@ -492,8 +511,8 @@ public struct MasterVolumeControl: View {
 
     public var body: some View {
         HStack(spacing: 6) {
-            Text("Master").font(.caption)
-            Image(systemName: "speaker.fill")
+            Text("Master").font(.caption).foregroundColor(DJTheme.textSecondary)
+            Image(systemName: "speaker.fill").foregroundColor(DJTheme.textSecondary)
             // full volume sits at the right end (0 dB); dragging left attenuates.
             // The binding auditions on every step; onEditingChanged persists on release.
             Slider(value: Binding(get: { trackFetcher.masterGainDB },
@@ -503,11 +522,16 @@ public struct MasterVolumeControl: View {
                        if !editing { trackFetcher.commitMasterGain() }
                    })
               .frame(minWidth: 120)
-            Image(systemName: "speaker.wave.3.fill")
+              .tint(DJTheme.neonCyan)
+            Image(systemName: "speaker.wave.3.fill").foregroundColor(DJTheme.textSecondary)
             Text(masterVolumeLabel(trackFetcher.masterGainDB))
-              .font(.caption).monospacedDigit()
+              .font(.caption).monospacedDigit().foregroundColor(DJTheme.textPrimary)
               .frame(width: 52, alignment: .leading)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(DJTheme.panel.opacity(0.5)))
+        .overlay(Capsule().strokeBorder(DJTheme.neonGradient, lineWidth: 1))
         .onAppear { trackFetcher.refreshMasterGain() }
     }
 }

@@ -55,13 +55,19 @@ struct ContentView: View {
         // they can be allowed/denied here (no-op when running offline/local).
         PairingApprovalHost(server: client.serverConnection) {
             // iPad gets the pinned branding bar in the upper-left; iPhone doesn't
-            // (its screen is too small to spend the vertical space).
+            // (its screen is too small to spend the vertical space). Attach it via
+            // safeAreaInset rather than wrapping the TabView in a VStack — keeping
+            // the TabView as the root view stops iPadOS 26 from rendering a second,
+            // duplicate tab bar.
             if layoutIsLarge() {
-                VStack(spacing: 0) {
-                    DJHeaderBar()
-                    DJNeonDivider()
-                    tabView(client)
-                }
+                tabView(client)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        VStack(spacing: 0) {
+                            DJHeaderBar()
+                            DJNeonDivider()
+                        }
+                        .background(DJTheme.screenGradient)
+                    }
             } else {
                 tabView(client)
             }
