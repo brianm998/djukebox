@@ -58,6 +58,23 @@ public enum DJTheme {
     public static let screenGradient = LinearGradient(
         colors: [Color(djHex: 0x140838), background, deepBackground],
         startPoint: .top, endPoint: .bottom)
+
+    // MARK: - Corner rounding
+
+    /// Resolve the corner radius that a UI element should actually use.
+    ///
+    /// On macOS the *only* rounded corners in the UI are the window's own corners
+    /// (drawn/clipped by the OS), so every in-window element is squared off — an
+    /// element flush in a window corner still reads as rounded because the window
+    /// itself clips it. iOS keeps its rounded treatment, so the requested radius
+    /// passes through untouched there.
+    public static func cornerRadius(_ requested: CGFloat) -> CGFloat {
+        #if os(macOS)
+        return 0
+        #else
+        return requested
+        #endif
+    }
 }
 
 // MARK: - Hex color initializer
@@ -82,15 +99,16 @@ public extension View {
 
     /// Wrap the content in a dark panel with a neon gradient border.
     func djPanel(cornerRadius: CGFloat = 14, lineWidth: CGFloat = 1.5) -> some View {
-        background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let radius = DJTheme.cornerRadius(cornerRadius)
+        return background(RoundedRectangle(cornerRadius: radius, style: .continuous)
             .fill(DJTheme.panel))
-        .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
             .strokeBorder(DJTheme.neonGradient, lineWidth: lineWidth))
     }
 
     /// Add just the neon gradient border (no fill).
     func djNeonBorder(cornerRadius: CGFloat = 14, lineWidth: CGFloat = 1.5) -> some View {
-        overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        overlay(RoundedRectangle(cornerRadius: DJTheme.cornerRadius(cornerRadius), style: .continuous)
             .strokeBorder(DJTheme.neonGradient, lineWidth: lineWidth))
     }
 
@@ -105,22 +123,24 @@ public extension View {
     /// gradient border, and a soft magenta glow. The fill is semi-transparent so
     /// the screen gradient shows through.
     func djCard(cornerRadius: CGFloat = 16, lineWidth: CGFloat = 1.5, padding: CGFloat = 10) -> some View {
-        self
+        let radius = DJTheme.cornerRadius(cornerRadius)
+        return self
             .padding(padding)
-            .background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .fill(DJTheme.panel.opacity(0.5)))
-            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .strokeBorder(DJTheme.neonGradient, lineWidth: lineWidth))
             .shadow(color: DJTheme.neonMagenta.opacity(0.18), radius: 8)
     }
 
     /// Neon-bordered text-field chrome. Use with `.textFieldStyle(.plain)`.
     func djField(cornerRadius: CGFloat = 10) -> some View {
-        padding(.horizontal, 10)
+        let radius = DJTheme.cornerRadius(cornerRadius)
+        return padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .fill(DJTheme.panel.opacity(0.7)))
-            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .strokeBorder(DJTheme.neonViolet.opacity(0.8), lineWidth: 1))
             .foregroundColor(DJTheme.textPrimary)
             .tint(DJTheme.neonCyan)
@@ -174,12 +194,13 @@ public struct DJIconBadge: View {
     private let size: CGFloat
     public init(size: CGFloat = 40) { self.size = size }
     public var body: some View {
-        Image("SplashIcon")
+        let radius = DJTheme.cornerRadius(size * 0.22)
+        return Image("SplashIcon")
             .resizable()
             .aspectRatio(contentMode: .fit)
             .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .strokeBorder(DJTheme.neonGradient, lineWidth: 1))
             .shadow(color: DJTheme.neonMagenta.opacity(0.5), radius: 5)
     }

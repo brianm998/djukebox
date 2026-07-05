@@ -134,9 +134,9 @@ struct DropIndicatorOverlay: View {
                target.windowID == windowID,
                let rect = session.frame(window: windowID, leaf: target.leafID) {
                 let ind = indicatorRect(rect, target.zone)
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                Rectangle()
                     .fill(DJTheme.neonCyan.opacity(0.22))
-                    .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .overlay(Rectangle()
                         .strokeBorder(DJTheme.neonCyan, lineWidth: 2))
                     .frame(width: max(1, ind.width), height: max(1, ind.height))
                     .position(x: ind.midX, y: ind.midY)

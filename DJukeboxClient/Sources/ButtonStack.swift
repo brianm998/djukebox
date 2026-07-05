@@ -530,8 +530,15 @@ public struct MasterVolumeControl: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        // macOS squares everything off (only the window itself is rounded); iOS
+        // keeps the pill-shaped capsule.
+        #if os(macOS)
+        .background(Rectangle().fill(DJTheme.panel.opacity(0.5)))
+        .overlay(Rectangle().strokeBorder(DJTheme.neonGradient, lineWidth: 1))
+        #else
         .background(Capsule().fill(DJTheme.panel.opacity(0.5)))
         .overlay(Capsule().strokeBorder(DJTheme.neonGradient, lineWidth: 1))
+        #endif
         .onAppear { trackFetcher.refreshMasterGain() }
     }
 }
