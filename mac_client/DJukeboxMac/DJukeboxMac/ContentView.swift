@@ -42,6 +42,13 @@ struct ContentView: View {
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Vacuum-tube VU meter in the upper-right corner.
+                    .overlay(alignment: .topTrailing) {
+                        VacuumTubeMeter(monitor: client.levelMonitor, scale: 1.05)
+                            .padding(.top, 8)
+                            .padding(.trailing, 12)
+                            .allowsHitTesting(false)
+                    }
                 }
                 .id(client.serverConnection.url)
             }

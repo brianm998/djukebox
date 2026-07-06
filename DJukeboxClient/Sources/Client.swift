@@ -6,6 +6,10 @@ public class Client {
     public var historyFetcher: HistoryFetcher
     public let serverConnection: ServerType
 
+    // Drives the vacuum-tube VU meter (per-channel output levels). Shared across a
+    // window's browse-client copies so every window's meter shows the same thing.
+    public let levelMonitor: AudioLevelMonitor
+
     // the 1s state-save / refresh loop; held so it can be torn down with the client
     private var refreshTimer: Timer?
 
@@ -16,16 +20,19 @@ public class Client {
     public func copy() -> Client {
         return Client(trackFetcher: self.trackFetcher,
                       historyFetcher: self.historyFetcher,
-                      serverConnection: self.serverConnection)
+                      serverConnection: self.serverConnection,
+                      levelMonitor: self.levelMonitor)
     }
 
     fileprivate init(trackFetcher: TrackFetcher,
                      historyFetcher: HistoryFetcher,
-                     serverConnection: ServerType)
+                     serverConnection: ServerType,
+                     levelMonitor: AudioLevelMonitor)
     {
         self.trackFetcher = trackFetcher
         self.historyFetcher = historyFetcher
         self.serverConnection = serverConnection
+        self.levelMonitor = levelMonitor
     }
     
 
@@ -52,6 +59,10 @@ public class Client {
         // Client; `fetcher` weakly so it isn't retained either. Local playback gets
         // the per-track saved gain PLUS the global master attenuation, matching what
         // the server applies to its own playback.
+        // Shared VU-meter sink: the local player's gain taps write per-channel
+        // output levels here, and the monitor below reads them.
+        let levelMeter = AudioLevelMeter()
+
         let server = serverConnection
         let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher,
                                            historyWriter: ServerHistoryWriter(server: serverConnection),
@@ -59,7 +70,8 @@ public class Client {
                                                server.savedGain(forHash: hash) { db, _ in
                                                    done((db ?? 0) + (fetcher?.masterGainDB ?? 0))
                                                }
-                                           })
+                                           },
+                                           levelMeter: levelMeter)
         trackFetcher.add(queueType: .local,
                          withPlayer: AsyncAudioPlayer(player: player,
                                                       fetcher: trackFetcher,
@@ -69,6 +81,13 @@ public class Client {
          */
         trackFetcher.add(queueType: .remote,
                          withPlayer: ServerAudioPlayer(toUrl: serverURL, withToken: token))
+
+        // Drives the VU meter: reads the local tap's meter for local playback, or
+        // polls the server's /levels for remote playback (it consults trackFetcher
+        // for the active queue and paused state).
+        self.levelMonitor = AudioLevelMonitor(localMeter: levelMeter,
+                                              server: serverConnection,
+                                              trackFetcher: trackFetcher)
 
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
 

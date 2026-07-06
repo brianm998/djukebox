@@ -24,7 +24,16 @@ public final class PlaybackGain: @unchecked Sendable {
     }
     private let state = OSAllocatedUnfairLock(initialState: State())
 
-    public init() {}
+    // The shared sink the tap writes per-channel output peaks to (for the VU
+    // meter). Optional so a gain tap can exist without metering; immutable after
+    // init, so it is safe to read from the realtime audio thread. All taps for a
+    // player point at the same meter — only one track plays at a time, so whichever
+    // tap is live owns the current levels.
+    let levelMeter: AudioLevelMeter?
+
+    public init(levelMeter: AudioLevelMeter? = nil) {
+        self.levelMeter = levelMeter
+    }
 
     // Same units as the server: decibels in, linear multiplier stored. Boost is
     // capped at the per-track +24 dB, but the value passed here is the COMBINED
@@ -117,6 +126,21 @@ private let gainTapPrepare: MTAudioProcessingTapPrepareCallback = { tap, _, proc
 
 private let gainTapUnprepare: MTAudioProcessingTapUnprepareCallback = { _ in }
 
+// Largest |sample| over a channel, walking every `stride`-th float from `start`.
+// stride 1 = non-interleaved (one buffer per channel); stride N = interleaved.
+@inline(__always)
+private func peakAbs(_ p: UnsafeMutablePointer<Float>, count: Int,
+                     stride: Int = 1, start: Int = 0) -> Float {
+    var peak: Float = 0
+    var i = start
+    while i < count {
+        let a = abs(p[i])
+        if a > peak { peak = a }
+        i += stride
+    }
+    return peak
+}
+
 private let gainTapProcess: MTAudioProcessingTapProcessCallback = {
     tap, numberFrames, _, bufferListInOut, numberFramesOut, flagsOut in
 
@@ -124,17 +148,50 @@ private let gainTapProcess: MTAudioProcessingTapProcessCallback = {
                                                     flagsOut, nil, numberFramesOut)
     guard status == noErr else { return }
 
-    let (gain, isFloat) = Unmanaged<PlaybackGain>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue().snapshot
-    // passthrough when there's nothing to do or the format isn't 32-bit float
-    guard isFloat, gain != 1.0 else { return }
+    let playbackGain = Unmanaged<PlaybackGain>.fromOpaque(MTAudioProcessingTapGetStorage(tap)).takeUnretainedValue()
+    let (gain, isFloat) = playbackGain.snapshot
+    // we can only touch 32-bit float PCM; leave anything else untouched (and
+    // unmeasured — the meter simply reads zero and the tube rests)
+    guard isFloat else { return }
 
     let buffers = UnsafeMutableAudioBufferListPointer(bufferListInOut)
-    for buffer in buffers {
-        guard let raw = buffer.mData else { continue }
-        let samples = raw.assumingMemoryBound(to: Float.self)
-        let count = Int(buffer.mDataByteSize) / MemoryLayout<Float>.stride
-        for i in 0 ..< count {
-            samples[i] *= gain
+
+    // apply the boost/attenuation (skip the multiply entirely at unity)
+    if gain != 1.0 {
+        for buffer in buffers {
+            guard let raw = buffer.mData else { continue }
+            let samples = raw.assumingMemoryBound(to: Float.self)
+            let count = Int(buffer.mDataByteSize) / MemoryLayout<Float>.stride
+            for i in 0 ..< count { samples[i] *= gain }
         }
     }
+
+    // measure the post-gain per-channel peak for the VU meter. Handle both the
+    // non-interleaved layout (one buffer per channel) and the interleaved one
+    // (a single buffer of L,R,L,R…); mono mirrors its one channel to both tubes.
+    guard let meter = playbackGain.levelMeter else { return }
+    var leftPeak: Float = 0
+    var rightPeak: Float = 0
+    if buffers.count >= 2 {
+        if let l = buffers[0].mData {
+            leftPeak = peakAbs(l.assumingMemoryBound(to: Float.self),
+                               count: Int(buffers[0].mDataByteSize) / MemoryLayout<Float>.stride)
+        }
+        if let r = buffers[1].mData {
+            rightPeak = peakAbs(r.assumingMemoryBound(to: Float.self),
+                                count: Int(buffers[1].mDataByteSize) / MemoryLayout<Float>.stride)
+        }
+    } else if let only = buffers.first, let raw = only.mData {
+        let p = raw.assumingMemoryBound(to: Float.self)
+        let count = Int(only.mDataByteSize) / MemoryLayout<Float>.stride
+        let channels = Int(only.mNumberChannels)
+        if channels >= 2 {
+            leftPeak = peakAbs(p, count: count, stride: channels, start: 0)
+            rightPeak = peakAbs(p, count: count, stride: channels, start: 1)
+        } else {
+            leftPeak = peakAbs(p, count: count)
+            rightPeak = leftPeak
+        }
+    }
+    meter.record(left: leftPeak, right: rightPeak)
 }

@@ -38,6 +38,17 @@ struct PanelWindowRoot: View {
                             controller.dragSession.end(screenPoint: NSEvent.mouseLocation)
                         }
                 )
+                // Small vacuum-tube VU meter tucked into the trailing end of the top
+                // bar. Bound to the connected (shared) client's monitor, so every
+                // window's bar shows the same live levels; non-interactive so it
+                // doesn't intercept the header's window-merge drag.
+                .overlay(alignment: .trailing) {
+                    if let monitor = browser.currentClient?.levelMonitor {
+                        VacuumTubeMeter(monitor: monitor, scale: 0.5)
+                            .padding(.trailing, 14)
+                            .allowsHitTesting(false)
+                    }
+                }
             DJNeonDivider()
             ServerConnectionView(browser) { sharedClient in
                 connectedBody(sharedClient)

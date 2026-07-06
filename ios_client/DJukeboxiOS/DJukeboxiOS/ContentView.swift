@@ -120,6 +120,15 @@ struct ContentView: View {
                   Text("history")
               }
         }
+        // Vacuum-tube VU meter pinned to the upper-right corner, above every tab.
+        // Smaller on iPhone, where the corner is tight; non-interactive so it never
+        // intercepts taps on the content or nav bar beneath it.
+        .overlay(alignment: .topTrailing) {
+            VacuumTubeMeter(monitor: client.levelMonitor, scale: layoutIsLarge() ? 1.0 : 0.72)
+                .padding(.top, layoutIsLarge() ? 6 : 2)
+                .padding(.trailing, 10)
+                .allowsHitTesting(false)
+        }
     }
 
     // kick off a fresh search and bring up the full-screen scan window

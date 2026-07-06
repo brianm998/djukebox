@@ -113,6 +113,11 @@ public struct MasterVolume: Content {
     public let decibels: Double
 }
 
+// AudioLevels is the shared (DJukeboxCommon) wire type for the VU-meter levels;
+// teach it to serialize as a Vapor response. It is already Codable, so Content's
+// defaults do the rest.
+extension AudioLevels: @retroactive Content {}
+
 func trackServingRoutes(_ app: Application) throws {
 
     // Json list of all known tracks
@@ -438,6 +443,19 @@ func playerRoutes(_ app: Application) throws {
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
         return try authControl.headerAuth(request: req) {
             return listQueue()
+        }
+    }
+
+    // Current per-channel output loudness (0...1) of the server's own playback,
+    // for the clients' vacuum-tube VU meter. Cheap and stateless; a client polls
+    // it a few times a second while the server is the one playing. On a Linux
+    // server (ffplay subprocess) this reports `available: false` and the meter
+    // rests, since the audio never passes through this process to be measured.
+    // curl localhost:8080/levels
+    app.get("levels") { req -> AudioLevels in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        return try authControl.headerAuth(request: req) {
+            return audioPlayer.outputLevels
         }
     }
 

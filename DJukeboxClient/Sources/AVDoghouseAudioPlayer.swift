@@ -100,6 +100,11 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     // play(). nil => everything at unity.
     let savedGainForHash: ((String, @escaping (Double) -> Void) -> Void)?
 
+    // Shared VU-meter sink handed to every item's gain tap, so the tap that's
+    // currently rendering publishes per-channel output levels. Injected by Client
+    // so the same meter feeds the AudioLevelMonitor driving the tubes.
+    public let levelMeter: AudioLevelMeter
+
     let player = AVQueuePlayer(items: [])
 
     fileprivate func logPlayerStatus() {
@@ -117,11 +122,13 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     
     public init(trackFinder: TrackFinderType,
                 historyWriter: HistoryWriterType,
-                savedGainForHash: ((String, @escaping (Double) -> Void) -> Void)? = nil)
+                savedGainForHash: ((String, @escaping (Double) -> Void) -> Void)? = nil,
+                levelMeter: AudioLevelMeter = AudioLevelMeter())
     {
         self.trackFinder = trackFinder
         self.historyWriter = historyWriter
         self.savedGainForHash = savedGainForHash
+        self.levelMeter = levelMeter
 
         super.init()
         
@@ -159,6 +166,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         player.removeAllItems()
         trackQueue = []
         forgetAllGains()
+        levelMeter.reset()
     }
 
     public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {
@@ -217,7 +225,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
                 let item = AVPlayerItem(asset: asset)
                 player.insert(item, after: nil)
                 trackMap[item] = sha1Hash
-                let gain = PlaybackGain()   // fresh => unity until the saved value arrives
+                let gain = PlaybackGain(levelMeter: levelMeter)   // fresh => unity until the saved value arrives
                 setGain(gain, for: item)
                 attachGain(to: item, asset: asset, gain: gain)
                 applySavedGain(gain, forHash: sha1Hash)

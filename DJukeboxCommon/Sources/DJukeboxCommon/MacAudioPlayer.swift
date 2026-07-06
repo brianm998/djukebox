@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import Dispatch
+import os
 
 // @unchecked Sendable: a process-wide singleton audio player. Its queue mutations
 // are guarded by `trackQueueSemaphore`; the remaining playback state is only
@@ -64,6 +65,27 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
 
     // The file currently scheduled on the player node (nil when nothing plays).
     private var audioFile: AVAudioFile?
+
+    // MARK: - output metering (VU meter)
+
+    // Per-channel output loudness (linear, 0...1), updated by a read-only tap on
+    // the main mixer and read by the /levels route. An exponential moving average
+    // (see `measure`) keeps a ~150 ms window so a client polling a few times a
+    // second still sees a representative recent level. Behind an unfair lock: the
+    // tap writes it on the realtime audio thread, the Vapor thread pool reads it.
+    private let meterLevels = OSAllocatedUnfairLock(initialState: (left: Float(0), right: Float(0)))
+
+    // The tap is installed lazily the first time the engine starts, when the mixer
+    // has negotiated a real output format (installing against a 0-channel format
+    // at init time would fail).
+    private var didInstallMeterTap = false
+
+    // Current per-channel output loudness for the VU meter. macOS taps its own
+    // mixer, so metering is always available here (0 = nothing playing).
+    public var outputLevels: AudioLevels {
+        let (l, r) = meterLevels.withLock { $0 }
+        return AudioLevels(left: l, right: r, available: true)
+    }
 
     // Bumped on every track start; the scheduled-file completion callback captures
     // its generation and only advances the queue if it still matches, so a skip()
@@ -217,6 +239,9 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
                     try engine.start()
                 }
 
+                // now that the mixer has a real output format, attach the VU tap
+                installMeterTapIfNeeded()
+
                 self.audioFile = file
                 self.isPaused = false
 
@@ -250,6 +275,49 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
 
     public func shuffleQueue() {
         trackQueue.shuffle()
+    }
+
+    // Install the read-only metering tap on the main mixer once. The mixer output
+    // is post-EQ, so the measured level reflects the per-track + master gain the
+    // listener actually hears. The tap runs on the realtime audio thread; it only
+    // touches `meterLevels` (behind its lock), never the engine graph.
+    private func installMeterTapIfNeeded() {
+        guard !didInstallMeterTap else { return }
+        let mixer = engine.mainMixerNode
+        let format = mixer.outputFormat(forBus: 0)
+        guard format.channelCount > 0 else { return }   // retry on a later track
+        didInstallMeterTap = true
+        mixer.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+            self?.measure(buffer)
+        }
+    }
+
+    // Compute per-channel RMS for one buffer and fold it into the moving average.
+    // When the node is paused/idle the engine keeps delivering silent buffers, so
+    // the average decays to zero on its own — the meter goes dark without any
+    // explicit reset. Runs on the realtime audio thread: no allocations, no locks
+    // beyond the single guarded write.
+    private func measure(_ buffer: AVAudioPCMBuffer) {
+        guard let channels = buffer.floatChannelData else { return }
+        let frames = Int(buffer.frameLength)
+        guard frames > 0 else { return }
+        let channelCount = Int(buffer.format.channelCount)
+
+        func rms(_ ch: Int) -> Float {
+            let p = channels[ch]
+            var sum: Float = 0
+            var i = 0
+            while i < frames { let s = p[i]; sum += s * s; i += 1 }
+            return (sum / Float(frames)).squareRoot()
+        }
+
+        let l = rms(0)
+        let r = channelCount > 1 ? rms(1) : l
+        let a: Float = 0.3   // ~150 ms window at this buffer size / sample rate
+        meterLevels.withLock {
+            $0.left  = $0.left  * (1 - a) + l * a
+            $0.right = $0.right * (1 - a) + r * a
+        }
     }
 
     // Live "audition": change the currently-playing track's gain right now. The

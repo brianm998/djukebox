@@ -26,9 +26,18 @@ public protocol AudioPlayerType {
     // subprocess (Linux) and AVQueuePlayer (client-local) players use the no-op
     // default below.
     func setLivePlaybackGain(decibels: Double)
+
+    // The player's current per-channel output loudness (0...1), for the clients'
+    // vacuum-tube VU meter. Best-effort: only the AVAudioEngine-based MacAudioPlayer
+    // can tap and measure its own output. The Linux subprocess player reports
+    // `.unavailable` via the default below (its audio never passes through this
+    // process); the client-local players meter their playback tap directly instead
+    // of going through this property.
+    var outputLevels: AudioLevels { get }
 }
 
 public extension AudioPlayerType {
     func setLivePlaybackGain(decibels: Double) { }
+    var outputLevels: AudioLevels { .unavailable }
 }
 
