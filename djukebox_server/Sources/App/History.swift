@@ -22,6 +22,9 @@ public final class History: HistoryType, @unchecked Sendable {
 
     private var _plays: [String: [Double]] = [:]
     private var _skips: [String: [Double]] = [:]
+    // Bumped on every recorded play/skip so the /stream push can detect that the
+    // history changed and broadcast it, instead of clients polling /history.
+    private var _version = 0
     private let lock = NSLock()
 
     private func withLock<T>(_ body: () -> T) -> T {
@@ -31,6 +34,9 @@ public final class History: HistoryType, @unchecked Sendable {
 
     public var plays: [String: [Double]] { withLock { _plays } }
     public var skips: [String: [Double]] { withLock { _skips } }
+
+    /// Monotonic counter that increments whenever a play/skip is recorded.
+    public var version: Int { withLock { _version } }
 
     var all: PlayingHistory { withLock { PlayingHistory(plays: _plays, skips: _skips) } }
 
@@ -62,7 +68,7 @@ public final class History: HistoryType, @unchecked Sendable {
     public func hasSkip(for hash: String) -> Bool { withLock { _skips[hash] != nil } }
 
     public func recordSkip(of hash: String, at time: Double) {
-        withLock { _skips[hash, default: []].append(time) }
+        withLock { _skips[hash, default: []].append(time); _version += 1 }
     }
 
     public func recordSkip(of hash: String, at time: Date) {
@@ -70,7 +76,7 @@ public final class History: HistoryType, @unchecked Sendable {
     }
 
     public func recordPlay(of hash: String, at time: Double) {
-        withLock { _plays[hash, default: []].append(time) }
+        withLock { _plays[hash, default: []].append(time); _version += 1 }
     }
 
     public func recordPlay(of hash: String, at time: Date) {

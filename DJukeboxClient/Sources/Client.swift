@@ -10,11 +10,18 @@ public class Client {
     // window's browse-client copies so every window's meter shows the same thing.
     public let levelMonitor: AudioLevelMonitor
 
+    // The single push connection (/stream) that feeds levels/queue/position/history,
+    // replacing the polling that used to run every second. Owned by the connected
+    // client only (like refreshTimer); copies share the fetchers it routes to but
+    // do NOT own the socket, so a closing browse window can't tear down the stream.
+    private let streamSocket: ServerStreamSocket?
+
     // the 1s state-save / refresh loop; held so it can be torn down with the client
     private var refreshTimer: Timer?
 
     deinit {
         refreshTimer?.invalidate()
+        streamSocket?.disconnect()
     }
 
     public func copy() -> Client {
@@ -33,6 +40,7 @@ public class Client {
         self.historyFetcher = historyFetcher
         self.serverConnection = serverConnection
         self.levelMonitor = levelMonitor
+        self.streamSocket = nil   // copies don't own the stream
     }
     
 
@@ -83,11 +91,31 @@ public class Client {
                          withPlayer: ServerAudioPlayer(toUrl: serverURL, withToken: token))
 
         // Drives the VU meter: reads the local tap's meter for local playback, or
-        // polls the server's /levels for remote playback (it consults trackFetcher
-        // for the active queue and paused state).
-        self.levelMonitor = AudioLevelMonitor(localMeter: levelMeter,
-                                              server: serverConnection,
-                                              trackFetcher: trackFetcher)
+        // the levels pushed over /stream for remote playback (it consults
+        // trackFetcher for the active queue and paused state).
+        let monitor = AudioLevelMonitor(localMeter: levelMeter, trackFetcher: trackFetcher)
+        self.levelMonitor = monitor
+
+        // Open the single push connection and route each frame type. The server
+        // pushes only on change (or while playing), so this replaces the per-second
+        // polling of /levels, /queue and /history. Consumers are captured weakly;
+        // the socket is owned here.
+        let history = historyFetcher
+        let socket = ServerStreamSocket(baseURL: serverURL, token: token)
+        self.streamSocket = socket
+        socket?.onLevels = { [weak monitor] levels in monitor?.ingestRemoteLevels(levels) }
+        socket?.onQueue = { [weak fetcher] queue in
+            // The server's queue is only what we display in REMOTE mode; in local
+            // mode the on-device player owns the queue, so ignore server pushes.
+            guard let fetcher = fetcher, fetcher.queueType == .remote else { return }
+            fetcher.update(playingQueue: queue)
+        }
+        socket?.onPosition = { [weak fetcher] position, duration in
+            guard let fetcher = fetcher, fetcher.queueType == .remote else { return }
+            fetcher.updateProgress(position: position, duration: duration)
+        }
+        socket?.onHistory = { [weak history] pushed in history?.ingest(pushed) }
+        socket?.connect()
 
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
 
@@ -102,19 +130,23 @@ public class Client {
         trackFetcher.initialize(with: runtimeState)
 
         // (no historyFetcher.refresh() here: its init already fetched the full
-        // history, and the 1s timer below keeps it current incrementally)
+        // history once, and the /stream push keeps it current thereafter)
         trackFetcher.refreshQueue()
         trackFetcher.refreshMasterGain()
 
         // Create the SwiftUI view that provides the window contents.
-        
+
         // weak self so the timer doesn't keep this client alive forever; deinit
-        // invalidates it, so replacing the client (e.g. on a scan/reconnect) stops it
+        // invalidates it, so replacing the client (e.g. on a scan/reconnect) stops it.
+        // The remote queue and the history now arrive over /stream (pushed), so this
+        // only saves runtime state and refreshes the LOCAL queue — a purely on-device
+        // computation (no network) that advances the local-playback progress bar.
         self.refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             self.trackFetcher.runtimeState.save()
-            self.trackFetcher.refreshQueue()
-            self.historyFetcher.refresh()
+            if self.trackFetcher.queueType == .local {
+                self.trackFetcher.refreshQueue()
+            }
         }
     }
 }

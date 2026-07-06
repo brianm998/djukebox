@@ -123,6 +123,18 @@ public class HistoryFetcher: ObservableObject, @unchecked Sendable {
         self.recent = history
     }
 
+    // Apply an incremental history slice pushed over the /stream socket (the server
+    // sends the new events whenever a play/skip is recorded), replacing the polling
+    // that used to run every second. Merge (not replace): the socket only carries
+    // recent deltas; the full history was loaded once by refresh() at init.
+    public func ingest(_ history: PlayingHistory) {
+        DispatchQueue.main.async {
+            self.all = self.all.merge(with: history)
+            self.lastUpdateTime = Date()
+            self.updateRecent()
+        }
+    }
+
     public func refresh() {
         if let lastUpdateTime = self.lastUpdateTime {
             let historyOverlapDuration: Double = 300
@@ -138,7 +150,9 @@ public class HistoryFetcher: ObservableObject, @unchecked Sendable {
             server.listHistory() { history, error in
                 DispatchQueue.main.async {
                     if let history = history {
-                        self.all = history
+                        // merge (not replace): a socket delta may have already
+                        // landed before this initial full fetch completes
+                        self.all = self.all.merge(with: history)
                         self.updateRecent()
                     }
                 }

@@ -20,10 +20,6 @@ public protocol ServerType {
     func masterGain(closure: @escaping (Double?, Error?) -> Void)
     func setMasterGain(_ decibels: Double, closure: @escaping (Bool, Error?) -> Void)
 
-    // current per-channel output levels of the server's OWN playback (0...1), for
-    // the VU meter when the server is the one playing (remote queue)
-    func currentLevels(closure: @escaping (AudioLevels?, Error?) -> Void)
-
     var authHeaderValue: String { get }
     var url: String { get }
 }
@@ -226,10 +222,6 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         } catch {
             closure(false, error)
         }
-    }
-
-    public func currentLevels(closure: @escaping (AudioLevels?, Error?) -> Void) {
-        self.requestJson(atPath: "levels", closure: closure)
     }
 }
 

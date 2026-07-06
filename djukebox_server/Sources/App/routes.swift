@@ -118,6 +118,29 @@ public struct MasterVolume: Content {
 // defaults do the rest.
 extension AudioLevels: @retroactive Content {}
 
+// A lightweight playback-position update, pushed a couple of times a second while
+// playing so the client's progress bar advances between (rarer) full queue frames.
+public struct PlaybackPosition: Content {
+    public let position: TimeInterval?
+    public let duration: TimeInterval?
+}
+
+// One frame on the /stream WebSocket. Exactly one payload field is set, picked by
+// `type`, so the client can push levels, queue changes, position ticks, and
+// history changes over a single connection instead of polling those endpoints.
+public struct StreamFrame: Content {
+    public let type: String   // "levels" | "queue" | "position" | "history"
+    public var levels: AudioLevels? = nil
+    public var queue: PlayingQueue? = nil
+    public var position: PlaybackPosition? = nil
+    public var history: PlayingHistory? = nil
+
+    static func levels(_ l: AudioLevels) -> StreamFrame { StreamFrame(type: "levels", levels: l) }
+    static func queue(_ q: PlayingQueue) -> StreamFrame { StreamFrame(type: "queue", queue: q) }
+    static func position(_ p: PlaybackPosition) -> StreamFrame { StreamFrame(type: "position", position: p) }
+    static func history(_ h: PlayingHistory) -> StreamFrame { StreamFrame(type: "history", history: h) }
+}
+
 func trackServingRoutes(_ app: Application) throws {
 
     // Json list of all known tracks
@@ -459,6 +482,24 @@ func playerRoutes(_ app: Application) throws {
         }
     }
 
+    // Single push channel replacing the /levels, /queue and /history polling: a
+    // client opens this WebSocket and the server pushes VU levels (~20 Hz while
+    // playing), the playing queue (on change) with position ticks (~2 Hz while
+    // playing), and the play history (on change). Nothing is sent while idle, so
+    // an idle connection is silent. See StreamSession. Auth mirrors the REST
+    // routes (loopback or token).
+    app.webSocket("stream") { req, ws in
+        let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
+        guard authControl.authorizes(req) else {
+            _ = ws.close(code: .policyViolation)
+            return
+        }
+        let session = StreamSession(ws: ws)
+        session.start()
+        // retains `session` until the socket closes, then tears down its timer
+        ws.onClose.whenComplete { _ in session.stop() }
+    }
+
     // Fill the queue with random tracks up to (but not exceeding) the given Unix timestamp.
     // curl localhost:8080/playuntil/1750000000
     app.get("playuntil", ":timestamp") { req -> PlayingQueue in
@@ -519,25 +560,27 @@ func playerRoutes(_ app: Application) throws {
         for queueHash in audioPlayer.trackQueue {
             if queueHash == hash { return true }
         }
-        
+
         return false
     }
-    
-    @Sendable func listQueue() -> PlayingQueue {
-        var tracks: [AudioTrack] = []
-        if let playingTrack = audioPlayer.playingTrack as? AudioTrack {
-            tracks.append(playingTrack)
-        }
-        for trackHash in audioPlayer.trackQueue {
-            if let track = trackFinder.audioTrack(forHash: trackHash) as? AudioTrack {
-                tracks.append(track)
-            }
-        }
-        return PlayingQueue(isPaused: audioPlayer.isPaused, // XXX centralize paused state
-                            tracks: tracks,
-                            playingTrackDuration: audioPlayer.playingTrackDuration,
-                            playingTrackPosition: audioPlayer.playingTrackPosition)
+}
+
+// Snapshot of the server's current playing queue. File-scope so the /queue route
+// and the /stream push (StreamSession) build it the same way.
+@Sendable func listQueue() -> PlayingQueue {
+    var tracks: [AudioTrack] = []
+    if let playingTrack = audioPlayer.playingTrack as? AudioTrack {
+        tracks.append(playingTrack)
     }
+    for trackHash in audioPlayer.trackQueue {
+        if let track = trackFinder.audioTrack(forHash: trackHash) as? AudioTrack {
+            tracks.append(track)
+        }
+    }
+    return PlayingQueue(isPaused: audioPlayer.isPaused, // XXX centralize paused state
+                        tracks: tracks,
+                        playingTrackDuration: audioPlayer.playingTrackDuration,
+                        playingTrackPosition: audioPlayer.playingTrackPosition)
 }
 
 // server-side clamp so a client can't request an extreme (clipping / silencing)

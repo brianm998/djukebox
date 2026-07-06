@@ -315,6 +315,20 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         }
     }
 
+    // Advance just the progress bar from a pushed position tick (the server sends
+    // these a couple of times a second while playing, between full queue frames),
+    // so the bar moves without resending the whole queue. A nil duration/position
+    // means "nothing playing" → clear the bar.
+    public func updateProgress(position: TimeInterval?, duration: TimeInterval?) {
+        DispatchQueue.main.async {
+            if let duration = duration, let position = position, duration > 0 {
+                self.progressBarLevel = ProgressBar.State(level: position, max: duration)
+            } else {
+                self.progressBarLevel = nil
+            }
+        }
+    }
+
     public func tracks(for audioTrack: AudioTrack) -> [AudioTrack] {
         var tracks: [AudioTrack] = []
 

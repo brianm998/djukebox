@@ -43,6 +43,13 @@ class AuthController {
         throw Abort(.unauthorized)
     }
 
+    // Non-throwing header auth for the WebSocket upgrade, which can't use the
+    // closure form (it either accepts the socket or closes it). Same rule as
+    // headerAuth: loopback, or a paired device's token in the Authorization header.
+    func authorizes(_ req: Request) -> Bool {
+        isAuthorized(req, credential: req.headers.first(name: "Authorization"))
+    }
+
     // curl http://localhost:8080/stream/<token>/<sha1>
     func pathAuth<T>(request req: Request, closure: () async throws -> T) async throws -> T {
         if isAuthorized(req, credential: req.parameters.get("auth")) {
