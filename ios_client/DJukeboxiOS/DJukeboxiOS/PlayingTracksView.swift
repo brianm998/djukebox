@@ -183,28 +183,25 @@ public struct SmallButtonView: View {
                     Text("Actions")
                       .underline().foregroundColor(DJTheme.neonCyan)
                       .onTapGesture { self.showingActionSheet = true }
-                      .actionSheet(isPresented: $showingActionSheet) {
-                          ActionSheet(title: Text(""),
-                                      buttons: [
-                                        .default(Text("Play New Random Track")) { self.trackFetcher.playNewRandomTrack() },
-                                        .default(Text("Play Random Track")) { self.trackFetcher.playRandomTrack() },
-                                        .default(Text("Play Until…")) {
-                                            self.playUntilTime = Date().addingTimeInterval(3600)
-                                            self.showingPlayUntilPicker = true
-                                        },
-                                        .default(Text("Play For…")) {
-                                            self.playForHours = 1
-                                            self.playForMinutes = 0
-                                            self.showingPlayForPicker = true
-                                        },
-                                        .default(Text(volumeLabel)) { self.showingVolumePicker = true },
-                                        .default(Text("Refresh Queue")) { self.trackFetcher.refreshQueue() },
-                                        .default(Text("Refresh Tracks")) { self.trackFetcher.refreshTracks() },
-                                        .default(Text("Cache Current Queue")) { self.trackFetcher.cacheQueue() },
-                                        .destructive(Text("Clear Cache")) { self.trackFetcher.clearCache() },
-                                        .destructive(Text("Clear Queue")) { self.trackFetcher.clearPlayingQueue() },
-                                        .cancel()
-                                      ])
+                      .confirmationDialog("", isPresented: $showingActionSheet, titleVisibility: .hidden) {
+                          Button("Play New Random Track") { self.trackFetcher.playNewRandomTrack() }
+                          Button("Play Random Track") { self.trackFetcher.playRandomTrack() }
+                          Button("Play Until…") {
+                              self.playUntilTime = Date().addingTimeInterval(3600)
+                              self.showingPlayUntilPicker = true
+                          }
+                          Button("Play For…") {
+                              self.playForHours = 1
+                              self.playForMinutes = 0
+                              self.showingPlayForPicker = true
+                          }
+                          Button(volumeLabel) { self.showingVolumePicker = true }
+                          Button("Refresh Queue") { self.trackFetcher.refreshQueue() }
+                          Button("Refresh Tracks") { self.trackFetcher.refreshTracks() }
+                          Button("Cache Current Queue") { self.trackFetcher.cacheQueue() }
+                          Button("Clear Cache", role: .destructive) { self.trackFetcher.clearCache() }
+                          Button("Clear Queue", role: .destructive) { self.trackFetcher.clearPlayingQueue() }
+                          Button("Cancel", role: .cancel) { }
                       }
                     OfflineScanButton(trackFetcher: trackFetcher, onScan: onScan, onGoOffline: onGoOffline)
                 }
