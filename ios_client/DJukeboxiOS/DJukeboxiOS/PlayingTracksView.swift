@@ -21,7 +21,7 @@ public struct OfflineScanButton: View {
     public var body: some View {
         if trackFetcher.useLocalContentOnly {
             Button(action: onScan) {
-                Text("Scan").underline().foregroundColor(DJTheme.neonCyan)
+                Text("Scan").underline().foregroundStyle(DJTheme.neonCyan)
             }
         } else {
             Button(action: {
@@ -31,7 +31,7 @@ public struct OfflineScanButton: View {
                 try? self.trackFetcher.watch(queue: .local)
                 self.trackFetcher.useLocalContentOnly = true
             }) {
-                Text("Local").underline().foregroundColor(DJTheme.neonCyan)
+                Text("Local").underline().foregroundStyle(DJTheme.neonCyan)
             }
         }
     }
@@ -115,7 +115,7 @@ public struct BigButtonView: View {
                        self.trackFetcher.cacheQueue()
                    }) {
                       Text("Cache Q")
-                        .underline().foregroundColor(DJTheme.neonCyan)
+                        .underline().foregroundStyle(DJTheme.neonCyan)
                   }
                   ClearQueueButton(trackFetcher: trackFetcher)
               }
@@ -181,7 +181,7 @@ public struct SmallButtonView: View {
 
                 HStack {
                     Text("Actions")
-                      .underline().foregroundColor(DJTheme.neonCyan)
+                      .underline().foregroundStyle(DJTheme.neonCyan)
                       .onTapGesture { self.showingActionSheet = true }
                       .confirmationDialog("", isPresented: $showingActionSheet, titleVisibility: .hidden) {
                           Button("Play New Random Track") { self.trackFetcher.playNewRandomTrack() }

@@ -25,7 +25,7 @@ public struct NaviTrackList: View {
         let tracks = trackFetcher.tracks(for: album).sorted()
         return List(tracks) { track in
             Text(track.Title)
-              .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
+              .foregroundStyle((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
               .onTapGesture {
                   Task {
                       do {
@@ -97,7 +97,7 @@ struct Toast<Presenting, Content>: View where Presenting: View, Content: View {
                         .shadow(color: DJTheme.neonMagenta.opacity(0.5), radius: 6)
 
                     self.content()
-                        .foregroundColor(DJTheme.textPrimary)
+                        .foregroundStyle(DJTheme.textPrimary)
                 } //ZStack (inner)
                 .frame(width: geometry.size.width / 1.25, height: geometry.size.height / 10)
                 .opacity(self.isPresented ? 1 : 0)
