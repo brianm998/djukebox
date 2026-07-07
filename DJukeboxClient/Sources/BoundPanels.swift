@@ -12,6 +12,16 @@
 import SwiftUI
 import DJukeboxCommon
 
+// A track's SHA1, draggable via the SwiftUI-native Transferable API instead of
+// hand-building an NSItemProvider. Shared by every drag source in the client.
+public struct TrackDragItem: Transferable {
+    public let sha1: String
+
+    public static var transferRepresentation: some TransferRepresentation {
+        ProxyRepresentation(exporting: \.sha1)
+    }
+}
+
 public struct BoundAlbumList: View {
     let client: Client
     @ObservedObject var trackFetcher: TrackFetcher
@@ -89,11 +99,7 @@ public struct BoundTrackList: View {
                           self.trackFetcher.refreshQueue()
                       }
                   }
-                  .onDrag {
-                      let provider = NSItemProvider(object: track.SHA1 as NSString)
-                      provider.suggestedName = track.Title
-                      return provider
-                  }
+                  .draggable(TrackDragItem(sha1: track.SHA1))
             }
             .djListChrome()
         }
