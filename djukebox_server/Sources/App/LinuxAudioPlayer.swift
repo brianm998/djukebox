@@ -1,6 +1,10 @@
 import Foundation
 import DJukeboxCommon
 
+enum LinuxAudioPlayerError: Error {
+    case ffplayFailed(status: Int32)
+}
+
 // @unchecked Sendable: a process-wide singleton audio player whose playback work
 // is serialized on its private `dispatchQueue`. Held by the server in a global
 // `any AudioPlayerType & Sendable`.
@@ -145,14 +149,23 @@ public final class LinuxAudioPlayer: AudioPlayerType, @unchecked Sendable {
         // ffplay decodes mp3 (which aplay cannot) and its ffmpeg "volume" filter
         // accepts a decibel gain directly, so it doubles as our boost mechanism.
         // Requires ffmpeg's ffplay on the server's PATH.
-        var arguments = ["-nodisp", "-autoexit", "-loglevel", "quiet"]
+        var arguments = ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet"]
         if gainDecibels != 0 {
             arguments += ["-af", "volume=\(gainDecibels)dB"]
         }
-        arguments.append("\"\(filename)\"")
-        try shellOut(to: "ffplay",
-                     arguments: arguments,
-                     process: newProcess)
+        // argv, no shell: the filename (which comes from a disk scan, so it isn't
+        // trusted) is passed as one literal argument and never goes through bash,
+        // so there's nothing for a quote/backtick/$/; in a path to break out of.
+        arguments.append(filename)
+
+        newProcess.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        newProcess.arguments = arguments
+        try newProcess.run()
+        newProcess.waitUntilExit()
+
+        guard newProcess.terminationStatus == 0 else {
+            throw LinuxAudioPlayerError.ffplayFailed(status: newProcess.terminationStatus)
+        }
     }
 
     public func shuffleQueue() {
