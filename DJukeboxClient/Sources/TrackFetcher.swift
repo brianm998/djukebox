@@ -692,7 +692,7 @@ extension TrackFetcher: TrackFinderType {
 
     fileprivate func recursivelyCache(tracks: [AudioTrack]) {
         guard tracks.count > 0 else {
-            Log.w("cache done")
+            Log.i("cache done")
             return
         }
 
