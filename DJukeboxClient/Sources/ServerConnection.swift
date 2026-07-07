@@ -75,65 +75,69 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
     }
 
     internal func request(path: String, closure: @escaping (Bool, Error?) -> Void) {
-        if let url = URL(string: "\(serverUrl)/\(path)") {
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
-            request.timeoutInterval = 60.0
-            
-            URLSession.shared.dataTask(with: request) { data, response, error in
-                if let error = error {
-                    closure(false, error)
-                } else {
-                    closure(true, nil)
-                }
-            }.resume()
-        } else {
+        guard let url = URL(string: "\(serverUrl)/\(path)") else {
             closure(false, nil)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
+        request.timeoutInterval = 60.0
+
+        let closureBox = UncheckedSendableBox(closure)
+        Task {
+            do {
+                _ = try await URLSession.shared.data(for: request)
+                closureBox.value(true, nil)
+            } catch {
+                closureBox.value(false, error)
+            }
         }
     }
 
     internal func post(body: Data, toPath path: String, closure: @escaping (Bool, Error?) -> Void) {
-        if let url = URL(string: "\(serverUrl)/\(path)") {
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "content-type")
-
-            request.timeoutInterval = 60.0
-            request.httpBody = body
-            URLSession.shared.dataTask(with: request) { data, response, error in
-                if let error = error {
-                    closure(false, error)
-                } else {
-                    closure(true, nil)
-                }
-            }.resume()
-        } else {
+        guard let url = URL(string: "\(serverUrl)/\(path)") else {
             closure(false, nil)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.timeoutInterval = 60.0
+        request.httpBody = body
+
+        let closureBox = UncheckedSendableBox(closure)
+        Task {
+            do {
+                _ = try await URLSession.shared.data(for: request)
+                closureBox.value(true, nil)
+            } catch {
+                closureBox.value(false, error)
+            }
         }
     }
 
     internal func requestJson<T>(atPath path: String, closure: @escaping (T?, Error?) -> Void) where T: Decodable {
         let urlPath = path.replacingOccurrences(of: " ", with: "%20")
-        if let url = URL(string: "\(serverUrl)/\(urlPath)") {
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.setValue(authHeaderValue, forHTTPHeaderField:"Authorization")
-            request.timeoutInterval = 60.0
-            
-            URLSession.shared.dataTask(with: request) { data, response, error in
-                if let data = data {
-                    do {
-                        let json = try JSONDecoder().decode(T.self, from: data)
-                        closure(json, nil)
-                    } catch {
-                        closure(nil, error)
-                    }
-                }
-            }.resume()
-        } else {
+        guard let url = URL(string: "\(serverUrl)/\(urlPath)") else {
             closure(nil, nil)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(authHeaderValue, forHTTPHeaderField:"Authorization")
+        request.timeoutInterval = 60.0
+
+        let closureBox = UncheckedSendableBox(closure)
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(for: request)
+                let json = try JSONDecoder().decode(T.self, from: data)
+                closureBox.value(json, nil)
+            } catch {
+                closureBox.value(nil, error)
+            }
         }
     }
 
