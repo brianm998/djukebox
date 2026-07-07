@@ -11,22 +11,24 @@ import AVFoundation
 import DJukeboxCommon
 import DJukeboxClient
 
-// @main replaces the deprecated @UIApplicationMain (an error under Swift 6);
-// UIApplicationDelegate supplies the synthesized entry point.
-@main
+// The app's entry point is now DJukeboxApp (SwiftUI App lifecycle). This
+// AppDelegate survives only as an @UIApplicationDelegateAdaptor target (see
+// DJukeboxApp.swift) for the two pieces of real UIKit setup that don't have a
+// SwiftUI-native equivalent: the audio session category/mode and the
+// UINavigationBar appearance theming.
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
 #if DEBUG
-        Log.handlers = 
+        Log.handlers =
           [
             .console: ConsoleLogHandler(at: .debug),
             .file   : FileLogHandler(at: .debug),
             .alert  : AlertLogHandler(at: .warn),
           ]
 #else
-        Log.handlers = 
+        Log.handlers =
           [
             .console: ConsoleLogHandler(at: .warn),
           ]
@@ -73,22 +75,4 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         UINavigationBar.appearance().compactAppearance = nav
         UINavigationBar.appearance().tintColor = cyan
     }
-
-    // MARK: UISceneSession Lifecycle
-
-    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        // Called when a new scene session is being created.
-        // Use this method to select a configuration to create the new scene with.
-        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
-    }
-
-    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
-        // Called when the user discards a scene session.
-        // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
-        // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
-    }
-}
-
-func resignFirstResponders() {
-
 }

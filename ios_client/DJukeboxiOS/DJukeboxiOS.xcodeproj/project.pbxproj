@@ -12,8 +12,8 @@
 		D39AB1CE246B523C00D79F11 /* NaviArtistList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39AB1CB246B523C00D79F11 /* NaviArtistList.swift */; };
 		D39AB1D024706CAE00D79F11 /* PlayingTracksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39AB1CF24706CAE00D79F11 /* PlayingTracksView.swift */; };
 		D3FD29E224648927009C41A2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FD29E124648927009C41A2 /* AppDelegate.swift */; };
-		D3FD29E424648927009C41A2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FD29E324648927009C41A2 /* SceneDelegate.swift */; };
 		D3FD29E624648927009C41A2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FD29E524648927009C41A2 /* ContentView.swift */; };
+		D3FD29F624648929009C41A2 /* DJukeboxApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FD29F524648929009C41A2 /* DJukeboxApp.swift */; };
 		D3FD29E824648928009C41A2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D3FD29E724648928009C41A2 /* Assets.xcassets */; };
 		D3FD29EB24648928009C41A2 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D3FD29EA24648928009C41A2 /* Preview Assets.xcassets */; };
 		D3FD29EE24648928009C41A2 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D3FD29EC24648928009C41A2 /* LaunchScreen.storyboard */; };
@@ -28,8 +28,8 @@
 		D39AB1CF24706CAE00D79F11 /* PlayingTracksView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PlayingTracksView.swift; sourceTree = "<group>"; };
 		D3FD29DE24648927009C41A2 /* DJukebox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DJukebox.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3FD29E124648927009C41A2 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		D3FD29E324648927009C41A2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		D3FD29E524648927009C41A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D3FD29F524648929009C41A2 /* DJukeboxApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DJukeboxApp.swift; sourceTree = "<group>"; };
 		D3FD29E724648928009C41A2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D3FD29EA24648928009C41A2 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		D3FD29ED24648928009C41A2 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -72,8 +72,8 @@
 				D39AB1CA246B523C00D79F11 /* NaviAlbumList.swift */,
 				D39AB1CB246B523C00D79F11 /* NaviArtistList.swift */,
 				D39AB1C9246B523C00D79F11 /* NaviTrackList.swift */,
+				D3FD29F524648929009C41A2 /* DJukeboxApp.swift */,
 				D3FD29E124648927009C41A2 /* AppDelegate.swift */,
-				D3FD29E324648927009C41A2 /* SceneDelegate.swift */,
 				D3FD29E524648927009C41A2 /* ContentView.swift */,
 				D3FD29E724648928009C41A2 /* Assets.xcassets */,
 				D3FD29EC24648928009C41A2 /* LaunchScreen.storyboard */,
@@ -171,11 +171,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				D3FD29E224648927009C41A2 /* AppDelegate.swift in Sources */,
+				D3FD29F624648929009C41A2 /* DJukeboxApp.swift in Sources */,
 				D39AB1CC246B523C00D79F11 /* NaviTrackList.swift in Sources */,
 				D39AB1CE246B523C00D79F11 /* NaviArtistList.swift in Sources */,
 				D39AB1CD246B523C00D79F11 /* NaviAlbumList.swift in Sources */,
 				D39AB1D024706CAE00D79F11 /* PlayingTracksView.swift in Sources */,
-				D3FD29E424648927009C41A2 /* SceneDelegate.swift in Sources */,
 				D3FD29E624648927009C41A2 /* ContentView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
