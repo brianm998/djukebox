@@ -21,10 +21,7 @@ public struct PlayingTrackView: View {
                             if amount < 60 {
                                 return "\(Int(amount)) seconds left"
                             } else {
-                                let duration = Int(amount)
-                                let seconds = String(format: "%02d", duration % 60)
-                                let minutes = duration / 60
-                                return "\(minutes):\(seconds) left"
+                                return Duration.seconds(Int(amount)).formatted(.time(pattern: .minuteSecond)) + " left"
                             }
                         }
                         //                  .layoutPriority(0.1)
