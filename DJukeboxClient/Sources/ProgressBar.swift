@@ -31,7 +31,7 @@ public struct ProgressBar: View {
                                                  geometry.size.width),
                                       height: geometry.size.height)
                       .foregroundStyle(DJTheme.neonGradientHorizontal)
-                      .animation(.linear)
+                      .animation(.linear, value: state.level)
 
                 }
                 if self.labelClosure != nil && self.state.level > 0 {
