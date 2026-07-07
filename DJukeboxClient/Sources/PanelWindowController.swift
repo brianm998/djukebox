@@ -316,7 +316,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
         saveTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
-            LayoutStore(windows: snapshot).save()
+            await LayoutStore(windows: snapshot).save()
         }
     }
 

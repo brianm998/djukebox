@@ -34,8 +34,11 @@ public struct LayoutStore: Codable, Sendable {
         return store
     }
 
-    public func save() {
-        if let data = try? JSONEncoder().encode(self) { LayoutStorage.save(data) }
+    // Encoding + the disk write happen off the main actor: self is a Sendable
+    // value type, so a Task.detached can carry the snapshot there safely.
+    public func save() async {
+        guard let data = try? JSONEncoder().encode(self) else { return }
+        await Task.detached { LayoutStorage.save(data) }.value
     }
 
     /// A fresh single-window workspace with the default panel arrangement.
