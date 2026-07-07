@@ -720,35 +720,21 @@ extension TrackFetcher: TrackFinderType {
     }
 
     public func cache(tracks: [AudioTrack]) {
-        self.recursivelyCache(tracks: tracks)
-        /*
-        for track in tracks {
-            localTracks?.keepLocal(sha1Hash: track.SHA1) { success in
-                Log.d("success \(success)")
-            }
+        Task {
+            await self.cacheSequentially(tracks: tracks)
         }
-*/
     }
 
-    fileprivate func recursivelyCache(tracks: [AudioTrack]) {
-        guard tracks.count > 0 else {
-            Log.i("cache done")
-            return
+    private func cacheSequentially(tracks: [AudioTrack]) async {
+        for track in tracks {
+            Log.d("caching track \(track.SHA1)")
+            _ = await withCheckedContinuation { continuation in
+                localTracks?.keepLocal(sha1Hash: track.SHA1) { success in
+                    continuation.resume(returning: success)
+                }
+            }
         }
-
-        var rest = tracks
-
-        let nextTrack = rest.removeFirst()
-
-        Log.d("caching track \(nextTrack.SHA1)")
-
-        // capture an immutable copy: the @Sendable keepLocal completion can't
-        // reference the mutable `rest` binding
-        let remaining = rest
-        localTracks?.keepLocal(sha1Hash: nextTrack.SHA1) { success in
-            //Log.d("cache download success: \(success)")
-            self.recursivelyCache(tracks: remaining)
-        }
+        Log.i("cache done")
     }
     
     public func cacheQueue() {
