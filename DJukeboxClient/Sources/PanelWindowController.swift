@@ -38,7 +38,7 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
     private let makeView: @MainActor (Panel, Client) -> AnyView
     private var models: [UUID: PanelWindowModel] = [:]
     private var windows: [UUID: NSWindow] = [:]
-    private var saveWork: DispatchWorkItem?
+    private var saveTask: Task<Void, Never>?
 
     public let dragSession = PanelDragSession()
     public private(set) weak var primaryWindow: NSWindow?
@@ -307,15 +307,17 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
     // MARK: - Persistence
 
     public func persist() {
-        saveWork?.cancel()
+        saveTask?.cancel()
         let snapshot = models.values.map { model in
             WindowLayout(id: model.id,
                          frame: windows[model.id]?.frame ?? model.frame,
                          root: model.root)
         }
-        let work = DispatchWorkItem { LayoutStore(windows: snapshot).save() }
-        saveWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: work)
+        saveTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            LayoutStore(windows: snapshot).save()
+        }
     }
 
     // MARK: - NSWindowDelegate
