@@ -45,9 +45,13 @@ public final class FileLogHandler: LogHandler, @unchecked Sendable {
             let logURL = documentDirectory.appendingPathComponent(logfilename)
             if FileManager.default.fileExists(atPath: logURL.path) {
                 guard let fileHandle = try? FileHandle.init(forWritingTo: logURL) else { return }
-                fileHandle.seekToEndOfFile()
-                fileHandle.write(messageData)
-                fileHandle.closeFile()
+                do {
+                    try fileHandle.seekToEnd()
+                    try fileHandle.write(contentsOf: messageData)
+                    try fileHandle.close()
+                } catch {
+                    // best-effort logging; nowhere to report a write failure from here
+                }
             } else {
                 FileManager.default.createFile(atPath: logURL.path, contents: messageData, attributes: nil)
             }
