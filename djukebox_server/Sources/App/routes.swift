@@ -1,5 +1,27 @@
 import Vapor
 import DJukeboxCommon
+import Foundation
+
+// F32: many route handlers call straight into JukeboxDatabase (synchronous
+// SQLite via a private serial DispatchQueue, see JukeboxDatabase.swift) or do
+// FileManager enumeration (e.g. /discover's directory ingest). Left inline,
+// that work blocks the calling NIO event-loop thread for its duration. This
+// helper runs the blocking work on a background queue and bridges the result
+// back with a checked continuation, so the `async` handler actually suspends
+// while it runs instead of just being marked `async` for show. It deliberately
+// does NOT change JukeboxDatabase itself (that's the actor-conversion, the
+// "real" fix, and is out of scope here — see the F32 commit message).
+func offload<T>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
+    try await withCheckedThrowingContinuation { continuation in
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                continuation.resume(returning: try work())
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+}
 
 public struct HistoryEntry: Content {
     public let hash: String
@@ -145,6 +167,10 @@ func trackServingRoutes(_ app: Application) throws {
 
     // Json list of all known tracks
     // curl localhost:8080/tracks
+    // NOTE (F32 scoping): despite being named in the audit's callout list, this
+    // only copies TrackFinder's in-RAM, NSLock-guarded dictionary (see
+    // TrackFinder.swift) — no JukeboxDatabase or filesystem call — so there's no
+    // blocking work here worth suspending for; left as a plain sync handler.
     app.get("tracks") { req -> [AudioTrack] in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
         return try authControl.headerAuth(request: req) {
@@ -175,28 +201,35 @@ func trackServingRoutes(_ app: Application) throws {
     }
 
     // curl -H 'Authorization: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425' -H 'Path: /Volumes/Temp/mp3' http://127.0.0.1:8080/discover
-    app.get("discover") { req -> Response in
+    // F32: the worst offender — a full recursive directory walk (FileManager
+    // enumerator), a JSON decode of every sidecar, and a DB transaction. Auth is
+    // checked synchronously up front (cheap: loopback/token check only), then the
+    // actual ingest is offloaded so the event-loop thread is free while it runs.
+    app.get("discover") { req async throws -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            var path: String?
-            for header in req.headers {
-                if header.name == "Path" {
-                    path = header.value
-                }
-            }
-            if let path = path {
-                Log.d("finding at path \(path)")
-                jukeboxDatabase.ingest(directory: path, into: trackFinder)
-                return Response(status: .ok)
-            } else {
-                throw Abort(.badRequest)
+        guard authControl.authorizes(req) else { throw Abort(.unauthorized) }
+
+        var path: String?
+        for header in req.headers {
+            if header.name == "Path" {
+                path = header.value
             }
         }
+        guard let path = path else { throw Abort(.badRequest) }
+
+        Log.d("finding at path \(path)")
+        try await offload {
+            jukeboxDatabase.ingest(directory: path, into: trackFinder)
+        }
+        return Response(status: .ok)
     }
 }
 
 func historyRoutes(_ app: Application) throws {
     // json content of played tracks
+    // NOTE (F32 scoping): history.all/.since only read the in-RAM, NSLock-guarded
+    // `History` mirror (see History.swift) — no DB or filesystem I/O — so these
+    // two GETs are left as plain synchronous handlers, same as /queue.
     app.get("history") { req -> PlayingHistory in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
         return try authControl.headerAuth(request: req) {
@@ -220,11 +253,15 @@ func historyRoutes(_ app: Application) throws {
 
     // curl -H 'Authorization: foo' -H 'content-type: application/json' -d '{"hash":"foo","time":41220,"fullyPlayed":true}' http://127.0.0.1:8080/history
     // this writes to a history entry
-    app.post("history") { req -> Response in
+    // F32: historyWriter.writePlay/writeSkip write through to JukeboxDatabase
+    // (real, synchronous SQLite I/O via queue.sync) before updating the RAM
+    // mirror, so this one genuinely blocks and is offloaded.
+    app.post("history") { req async throws -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            let entry = try req.content.decode(HistoryEntry.self)
+        guard authControl.authorizes(req) else { throw Abort(.unauthorized) }
+        let entry = try req.content.decode(HistoryEntry.self)
 
+        try await offload {
             if entry.fullyPlayed {
                 try historyWriter.writePlay(of: entry.hash,
                                             at: Date(timeIntervalSince1970: Double(entry.time)))
@@ -232,10 +269,10 @@ func historyRoutes(_ app: Application) throws {
                 try historyWriter.writeSkip(of: entry.hash,
                                             at: Date(timeIntervalSince1970: Double(entry.time)))
             }
-            return Response(status: .ok)
         }
+        return Response(status: .ok)
     }
-    
+
 }
 
 func playerRoutes(_ app: Application) throws {
@@ -502,6 +539,10 @@ func playerRoutes(_ app: Application) throws {
 
     // Fill the queue with random tracks up to (but not exceeding) the given Unix timestamp.
     // curl localhost:8080/playuntil/1750000000
+    // NOTE (F32 scoping): despite being named in the audit's callout list, this
+    // handler only touches in-RAM audioPlayer/trackFinder state (no JukeboxDatabase
+    // or filesystem calls) — same category as /queue, /move, /shuffle — so there is
+    // no blocking work here worth suspending for; left as a plain sync handler.
     app.get("playuntil", ":timestamp") { req -> PlayingQueue in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
         return try authControl.headerAuth(request: req) {
@@ -594,9 +635,12 @@ func volumeRoutes(_ app: Application) throws {
 
     // list every stored volume adjustment
     // curl localhost:8080/volume
-    app.get("volume") { req -> [VolumeAdjustment] in
+    // F32: jukeboxDatabase.allVolumeAdjustments() is a real synchronous SQLite
+    // read (via queue.sync); offloaded so the event loop isn't blocked for it.
+    app.get("volume") { req async throws -> [VolumeAdjustment] in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
+        guard authControl.authorizes(req) else { throw Abort(.unauthorized) }
+        return try await offload {
             jukeboxDatabase.allVolumeAdjustments().map {
                 VolumeAdjustment(scope: $0.scope, sha1: $0.sha1,
                                  artist: $0.artist, album: $0.album, decibels: $0.decibels)
@@ -609,13 +653,13 @@ func volumeRoutes(_ app: Application) throws {
     // Keyed by the track's own sha1 (not "what's playing") so it is correct even
     // when the client plays locally or the sheet is about a queued/other track.
     // curl localhost:8080/volume/for/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
-    app.get("volume", "for", ":sha1") { req -> VolumeAdjustment in
+    // F32: effectiveGainDecibels does a real synchronous SQLite read; offloaded.
+    app.get("volume", "for", ":sha1") { req async throws -> VolumeAdjustment in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            guard let sha1 = req.parameters.get("sha1") else { throw Abort(.badRequest) }
-            let db = jukeboxDatabase.effectiveGainDecibels(forHash: sha1)
-            return VolumeAdjustment(scope: "track", sha1: sha1, artist: nil, album: nil, decibels: db)
-        }
+        guard authControl.authorizes(req) else { throw Abort(.unauthorized) }
+        guard let sha1 = req.parameters.get("sha1") else { throw Abort(.badRequest) }
+        let db = try await offload { jukeboxDatabase.effectiveGainDecibels(forHash: sha1) }
+        return VolumeAdjustment(scope: "track", sha1: sha1, artist: nil, album: nil, decibels: db)
     }
 
     // live audition: set the currently-playing track's gain right now, WITHOUT
@@ -624,6 +668,7 @@ func volumeRoutes(_ app: Application) throws {
     // dip well below the ±24 dB per-scope limit, so the low end is only bounded by
     // the audio pipeline's -96 dB floor; boost is still capped.
     // curl localhost:8080/volume/live/6.5
+    // NOTE (F32 scoping): only touches in-RAM audioPlayer state, no DB — left sync.
     app.get("volume", "live", ":decibels") { req -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
         return try authControl.headerAuth(request: req) {
@@ -637,52 +682,60 @@ func volumeRoutes(_ app: Application) throws {
 
     // set (upsert) one adjustment
     // curl -H 'content-type: application/json' -d '{"scope":"track","sha1":"…","decibels":6}' localhost:8080/volume
-    app.post("volume") { req -> Response in
+    // F32: setVolumeAdjustment is a real synchronous SQLite write; offloaded.
+    app.post("volume") { req async throws -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            let adj = try req.content.decode(VolumeAdjustment.self)
-            let clamped = max(-volumeDecibelLimit, min(volumeDecibelLimit, adj.decibels))
+        guard authControl.authorizes(req) else { throw Abort(.unauthorized) }
+        let adj = try req.content.decode(VolumeAdjustment.self)
+        let clamped = max(-volumeDecibelLimit, min(volumeDecibelLimit, adj.decibels))
+        try await offload {
             try jukeboxDatabase.setVolumeAdjustment(scope: adj.scope, sha1: adj.sha1,
                                                     artist: adj.artist, album: adj.album,
                                                     decibels: clamped,
                                                     at: Date().timeIntervalSince1970)
-            return Response(status: .ok)
         }
+        return Response(status: .ok)
     }
 
     // clear one adjustment (reset to 0 dB). Same body shape; decibels ignored.
     // curl -H 'content-type: application/json' -d '{"scope":"track","sha1":"…","decibels":0}' localhost:8080/volume/clear
-    app.post("volume", "clear") { req -> Response in
+    // F32: clearVolumeAdjustment is a real synchronous SQLite write; offloaded.
+    app.post("volume", "clear") { req async throws -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            let adj = try req.content.decode(VolumeAdjustment.self)
+        guard authControl.authorizes(req) else { throw Abort(.unauthorized) }
+        let adj = try req.content.decode(VolumeAdjustment.self)
+        try await offload {
             try jukeboxDatabase.clearVolumeAdjustment(scope: adj.scope, sha1: adj.sha1,
                                                       artist: adj.artist, album: adj.album)
-            return Response(status: .ok)
         }
+        return Response(status: .ok)
     }
 
     // the global master gain (dB, <= 0). Applied on top of every per-track gain, so
     // clients read it to fill the top-level master control. 0 dB = full volume.
     // curl localhost:8080/volume/master
-    app.get("volume", "master") { req -> MasterVolume in
+    // F32: masterGainDecibels reads through the database's `meta` table
+    // synchronously; offloaded.
+    app.get("volume", "master") { req async throws -> MasterVolume in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            MasterVolume(decibels: jukeboxDatabase.masterGainDecibels())
-        }
+        guard authControl.authorizes(req) else { throw Abort(.unauthorized) }
+        let db = try await offload { jukeboxDatabase.masterGainDecibels() }
+        return MasterVolume(decibels: db)
     }
 
     // set the global master gain. Clamped reduction-only: -30 dB … 0 dB (full), so
     // the master can only cut from full volume, never boost.
     // curl -H 'content-type: application/json' -d '{"decibels":-6}' localhost:8080/volume/master
-    app.post("volume", "master") { req -> Response in
+    // F32: setMasterGainDecibels is a real synchronous SQLite write; offloaded.
+    app.post("volume", "master") { req async throws -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try authControl.headerAuth(request: req) {
-            let mv = try req.content.decode(MasterVolume.self)
-            let clamped = max(-masterReductionLimit, min(0, mv.decibels))
+        guard authControl.authorizes(req) else { throw Abort(.unauthorized) }
+        let mv = try req.content.decode(MasterVolume.self)
+        let clamped = max(-masterReductionLimit, min(0, mv.decibels))
+        try await offload {
             try jukeboxDatabase.setMasterGainDecibels(clamped)
-            return Response(status: .ok)
         }
+        return Response(status: .ok)
     }
 }
 
