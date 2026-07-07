@@ -1,5 +1,4 @@
 import Vapor
-import NIOCore
 import DJukeboxCommon
 
 // Pushes state to one connected /stream WebSocket client, replacing the old
@@ -13,12 +12,13 @@ import DJukeboxCommon
 // idle connection generates no traffic. Builds that can't meter their output
 // (Linux subprocess) just never send levels.
 //
-// @unchecked Sendable: all state is only touched from the socket's own event
-// loop — scheduleRepeatedTask runs there, and start/stop are called from the
-// upgrade handler / onClose on that same loop.
+// @unchecked Sendable: all state is only touched from the tick Task and from
+// start/stop, which the upgrade handler / onClose call on the same event loop
+// that spawned the Task; nothing here is actor-isolated, just single-threaded
+// by construction (tick() also reads shared globals like audioPlayer/history).
 final class StreamSession: @unchecked Sendable {
     private let ws: WebSocket
-    private var task: RepeatedTask?
+    private var task: Task<Void, Never>?
     private let encoder = JSONEncoder()
 
     private var tickCount = 0
@@ -45,8 +45,12 @@ final class StreamSession: @unchecked Sendable {
         lastHistoryVersion = history.version
         lastHistoryPushTime = Date()
 
-        task = ws.eventLoop.scheduleRepeatedTask(initialDelay: .zero, delay: .milliseconds(50)) { [weak self] _ in
-            self?.tick()
+        task = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(50))
+                guard !Task.isCancelled else { return }
+                self?.tick()
+            }
         }
     }
 
