@@ -108,9 +108,7 @@ public class PairingClient: ObservableObject {
 
     private let onPaired: (String) -> Void
     private var requestId: String?
-    // nonisolated(unsafe): only touched on the main thread, but the nonisolated
-    // deinit must be able to invalidate it (Timer isn't Sendable).
-    nonisolated(unsafe) private var pollTimer: Timer?
+    private var pollTask: Task<Void, Never>?
     private let session = URLSession.shared
 
     public init(serverURL: String,
@@ -122,7 +120,7 @@ public class PairingClient: ObservableObject {
         self.onPaired = onPaired
     }
 
-    deinit { pollTimer?.invalidate() }
+    deinit { pollTask?.cancel() }
 
     /// Announce the intent to pair and begin polling for approval.
     public func start() {
@@ -225,15 +223,18 @@ public class PairingClient: ObservableObject {
 
     private func startPolling() {
         stopPolling()
-        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.pollStatus() }
+        pollTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { break }
+                self?.pollStatus()
+            }
         }
-        pollTimer = timer
     }
 
     private func stopPolling() {
-        pollTimer?.invalidate()
-        pollTimer = nil
+        pollTask?.cancel()
+        pollTask = nil
     }
 
     private func pollStatus() {
@@ -285,9 +286,7 @@ public class PairingMonitor: ObservableObject {
 
     private let serverURL: String
     private let authHeaderValue: String
-    // nonisolated(unsafe): only touched on the main thread, but the nonisolated
-    // deinit must be able to invalidate it (Timer isn't Sendable).
-    nonisolated(unsafe) private var pollTimer: Timer?
+    private var pollTask: Task<Void, Never>?
     private let session = URLSession.shared
     // requests this device chose to ignore ("Not now") — hidden locally without
     // denying them for everyone else.
@@ -298,24 +297,28 @@ public class PairingMonitor: ObservableObject {
         self.authHeaderValue = server.authHeaderValue
     }
 
-    // deinit is nonisolated, so it can't call the @MainActor stop(); invalidate the
-    // timer directly (matching PairingClient's deinit).
-    deinit { pollTimer?.invalidate() }
+    // deinit is nonisolated, so it can't call the @MainActor stop(); cancel the
+    // task directly (matching PairingClient's deinit). Task is Sendable, unlike
+    // Timer, so this needs no nonisolated(unsafe) escape hatch.
+    deinit { pollTask?.cancel() }
 
     public func start() {
         // no point polling an offline/local client (it has no server)
         guard !serverURL.isEmpty else { return }
         stop()
         poll()
-        let timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.poll() }
+        pollTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { break }
+                self?.poll()
+            }
         }
-        pollTimer = timer
     }
 
     public func stop() {
-        pollTimer?.invalidate()
-        pollTimer = nil
+        pollTask?.cancel()
+        pollTask = nil
     }
 
     public func approve(_ request: PendingPairRequest) {
