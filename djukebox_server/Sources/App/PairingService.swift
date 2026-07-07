@@ -219,11 +219,12 @@ public final class PairingService: @unchecked Sendable {
     private static func randomHex(bytes count: Int) -> String {
         var bytes = [UInt8](repeating: 0, count: count)
         for i in bytes.indices { bytes[i] = UInt8.random(in: 0...255) }
-        return bytes.map { String(format: "%02x", $0) }.joined()
+        return bytes.hexEncodedString()
     }
 
     /// A zero-padded 6-digit code, shown to the user grouped as "NNN NNN".
     private static func randomCode() -> String {
-        String(format: "%06u", UInt32.random(in: 0...999_999))
+        let digits = String(UInt32.random(in: 0...999_999))
+        return String(repeating: "0", count: 6 - digits.count) + digits
     }
 }
