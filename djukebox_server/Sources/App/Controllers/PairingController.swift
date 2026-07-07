@@ -30,52 +30,56 @@ func pairingRoutes(_ app: Application) throws {
 
     // Step 1 (new device): announce an intent to pair.
     // curl -d '{"name":"Brian iPhone"}' -H 'content-type: application/json' localhost:8080/pair/request
-    app.post("pair", "request") { req -> PairRequestResponse in
+    app.post("pair", "request") { req async throws -> PairRequestResponse in
         let body = try req.content.decode(PairRequestBody.self)
-        return PairRequestResponse(requestId: pairingService.createRequest(name: body.name))
+        return PairRequestResponse(requestId: await pairingService.createRequest(name: body.name))
     }
 
     // New device polls this to know when to prompt for the code (or that it was denied).
     // curl localhost:8080/pair/status/<requestId>
-    app.get("pair", "status", ":requestId") { req -> PairStatusResponse in
+    app.get("pair", "status", ":requestId") { req async throws -> PairStatusResponse in
         guard let id = req.parameters.get("requestId"),
-              let state = pairingService.status(id: id)
+              let state = await pairingService.status(id: id)
         else { throw Abort(.notFound) }
         return PairStatusResponse(state: state.rawValue)
     }
 
     // Step 5 (trusted client): the requests waiting for approval.
-    app.get("pair", "pending") { req -> [PairingService.PendingInfo] in
+    // headerAuth's closure form is synchronous (see AuthController), so the auth
+    // check happens inside it and the actor-isolated call happens after, gated
+    // on that check having passed without throwing.
+    app.get("pair", "pending") { req async throws -> [PairingService.PendingInfo] in
         let auth = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try auth.headerAuth(request: req) { pairingService.pending() }
+        try auth.headerAuth(request: req) { () }
+        return await pairingService.pending()
     }
 
     // Step 6/7 (trusted client): approve a request and get the code to read aloud.
-    app.post("pair", "approve") { req -> PairApproveResponse in
+    app.post("pair", "approve") { req async throws -> PairApproveResponse in
         let auth = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try auth.headerAuth(request: req) {
-            let body = try req.content.decode(PairIdBody.self)
-            guard let code = pairingService.approve(id: body.requestId) else {
-                throw Abort(.notFound)
-            }
-            return PairApproveResponse(code: code)
+        let body = try auth.headerAuth(request: req) {
+            try req.content.decode(PairIdBody.self)
         }
+        guard let code = await pairingService.approve(id: body.requestId) else {
+            throw Abort(.notFound)
+        }
+        return PairApproveResponse(code: code)
     }
 
     // Step 6 (trusted client): reject a request.
-    app.post("pair", "deny") { req -> Response in
+    app.post("pair", "deny") { req async throws -> Response in
         let auth = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        return try auth.headerAuth(request: req) {
-            let body = try req.content.decode(PairIdBody.self)
-            return pairingService.deny(id: body.requestId) ? Response(status: .ok)
-                                                            : Response(status: .notFound)
+        let body = try auth.headerAuth(request: req) {
+            try req.content.decode(PairIdBody.self)
         }
+        return await pairingService.deny(id: body.requestId) ? Response(status: .ok)
+                                                              : Response(status: .notFound)
     }
 
     // Step 8/9 (new device): exchange the approved code for a permanent token.
-    app.post("pair", "claim") { req -> PairClaimResponse in
+    app.post("pair", "claim") { req async throws -> PairClaimResponse in
         let body = try req.content.decode(PairClaimBody.self)
-        switch pairingService.claim(id: body.requestId, code: body.code) {
+        switch await pairingService.claim(id: body.requestId, code: body.code) {
         case .paired(let token): return PairClaimResponse(outcome: "paired", token: token)
         case .wrongCode:         return PairClaimResponse(outcome: "wrongCode", token: nil)
         case .notApproved:       return PairClaimResponse(outcome: "notApproved", token: nil)

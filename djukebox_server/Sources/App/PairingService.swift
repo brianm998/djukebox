@@ -17,11 +17,28 @@ import DJukeboxCommon
     /pair/pending, approves it (which mints a 6-digit code), reads the code aloud,
     and the new device claims a permanent token with that code.
 
- All state is guarded by one serial queue so it is safe to touch from any
- event-loop thread.
+ These two responsibilities are split across two different synchronization
+ mechanisms, because they have different callers:
+
+  - `accepts(token:)` is called from AuthController's `isAuthorized`, which is in
+    turn called from three SYNCHRONOUS, non-async helpers (`headerAuth`, used by
+    ~28 routes; `authorizes`, used by the synchronous WebSocket upgrade closure;
+    and `track`). None of those can easily become `async`, so `accepts(token:)`
+    must stay a plain synchronous method. Its state (`validTokenHashes`) is
+    guarded by a plain lock (`NSLock`, the idiom already used for this kind of
+    small in-RAM guarded state elsewhere in this directory — see
+    TrackFinder.swift and History.swift).
+
+  - The pending-request table (`requests`) is only touched from PairingController's
+    route closures, which are already `async throws`. That table is modeled as a
+    private nested `actor` so its methods can be `await`ed cleanly instead of
+    going through a DispatchQueue.
+
+ `PairingService` itself stays a plain (non-actor) class so `accepts(token:)` can
+ remain synchronous; it forwards the pairing-flow methods to the nested actor.
  */
-// @unchecked Sendable: every access to the mutable token set and request table
-// is funnelled through the serial `queue` (see the type doc above).
+// @unchecked Sendable: `validTokenHashes` is guarded by `tokenLock`; the pending
+// request table lives in `RequestTable`, an actor, which is safe to share as-is.
 public final class PairingService: @unchecked Sendable {
 
     // how long a pending request (and its code) stays valid
@@ -46,6 +63,16 @@ public final class PairingService: @unchecked Sendable {
         case unknownRequest     // never existed, already consumed, or expired
     }
 
+    /// Internal variant of `ClaimResult` that also carries the new token's hash,
+    /// so the caller can add it to `validTokenHashes` without re-hashing.
+    private enum InternalClaimResult {
+        case paired(token: String, hash: String)
+        case wrongCode
+        case notApproved
+        case denied
+        case unknownRequest
+    }
+
     /// What /pair/pending exposes to trusted clients.
     public struct PendingInfo: Content {
         public let requestId: String
@@ -53,58 +80,66 @@ public final class PairingService: @unchecked Sendable {
         public let createdAt: Double
     }
 
-    private final class Request {
-        let id: String
-        let name: String
-        let createdAt: Double
-        var state: State
-        var code: String?
-        var attempts: Int
-
-        init(id: String, name: String, createdAt: Double) {
-            self.id = id
-            self.name = name
-            self.createdAt = createdAt
-            self.state = .requested
-            self.code = nil
-            self.attempts = 0
-        }
-    }
-
-    private let queue = DispatchQueue(label: "djukebox-pairing")
     private let database: JukeboxDatabase
+
+    // MARK: - token check (sync hot path)
+
+    // Guards the set of accepted token hashes. Plain NSLock (not an actor) so
+    // `accepts(token:)` stays synchronous and callable from AuthController's
+    // existing non-async call sites with zero changes to their signatures.
+    private let tokenLock = NSLock()
     private var validTokenHashes: Set<String>
-    private var requests: [String: Request] = [:]
 
-    public init(database: JukeboxDatabase, tokenHashes: Set<String>) {
-        self.database = database
-        self.validTokenHashes = tokenHashes
+    private func withTokenLock<T>(_ body: () -> T) -> T {
+        tokenLock.lock(); defer { tokenLock.unlock() }
+        return body()
     }
-
-    // MARK: - auth
 
     /// Whether the token presented by a client matches a paired device. The caller
     /// passes the raw token; we hash it here and compare against the stored hashes.
     public func accepts(token: String) -> Bool {
         let hash = Self.hash(token)
-        return queue.sync { validTokenHashes.contains(hash) }
+        return withTokenLock { validTokenHashes.contains(hash) }
     }
 
-    // MARK: - pairing flow
+    // MARK: - pending-request table (async pairing flow)
 
-    /// Step 1 (new device): register an intent to pair. Returns the request id the
-    /// device polls and later claims with. Drops the oldest expired entries first.
-    public func createRequest(name: String) -> String {
-        queue.sync {
+    /// Owns the pending-request table. Isolated as an actor because every caller
+    /// (PairingController's route closures) is already async and can `await` it.
+    private actor RequestTable {
+        private final class Request {
+            let id: String
+            let name: String
+            let createdAt: Double
+            var state: State
+            var code: String?
+            var attempts: Int
+
+            init(id: String, name: String, createdAt: Double) {
+                self.id = id
+                self.name = name
+                self.createdAt = createdAt
+                self.state = .requested
+                self.code = nil
+                self.attempts = 0
+            }
+        }
+
+        private var requests: [String: Request] = [:]
+
+        /// Step 1 (new device): register an intent to pair. Returns the request id
+        /// the device polls and later claims with. Drops the oldest expired
+        /// entries first.
+        func createRequest(name: String) -> String {
             pruneExpired()
             // if we're somehow flooded with live requests, refuse rather than grow
-            if requests.count >= Self.maxPendingRequests {
+            if requests.count >= PairingService.maxPendingRequests {
                 Log.w("pairing: too many pending requests, dropping the oldest")
                 if let oldest = requests.values.min(by: { $0.createdAt < $1.createdAt }) {
                     requests[oldest.id] = nil
                 }
             }
-            let id = Self.randomHex(bytes: 16)
+            let id = PairingService.randomHex(bytes: 16)
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             requests[id] = Request(id: id,
                                    name: trimmed.isEmpty ? "Unknown device" : trimmed,
@@ -112,38 +147,32 @@ public final class PairingService: @unchecked Sendable {
             Log.i("pairing: new request \(id) from \(trimmed)")
             return id
         }
-    }
 
-    /// Step 5 (trusted client): the list of requests still waiting to be approved.
-    public func pending() -> [PendingInfo] {
-        queue.sync {
+        /// Step 5 (trusted client): the list of requests still waiting to be approved.
+        func pending() -> [PendingInfo] {
             pruneExpired()
             return requests.values
               .filter { $0.state == .requested }
               .sorted { $0.createdAt < $1.createdAt }
               .map { PendingInfo(requestId: $0.id, name: $0.name, createdAt: $0.createdAt) }
         }
-    }
 
-    /// Step 6/7 (trusted client): approve a request and mint the 6-digit code that
-    /// the user reads off this device and types into the new one.
-    public func approve(id: String) -> String? {
-        queue.sync {
+        /// Step 6/7 (trusted client): approve a request and mint the 6-digit code
+        /// that the user reads off this device and types into the new one.
+        func approve(id: String) -> String? {
             pruneExpired()
             guard let request = requests[id] else { return nil }
             // re-approving returns the same code so a double-tap doesn't rotate it
             if request.state == .approved, let code = request.code { return code }
-            let code = Self.randomCode()
+            let code = PairingService.randomCode()
             request.state = .approved
             request.code = code
             Log.i("pairing: approved \(id)")
             return code
         }
-    }
 
-    /// Step 6 (trusted client): reject a request.
-    public func deny(id: String) -> Bool {
-        queue.sync {
+        /// Step 6 (trusted client): reject a request.
+        func deny(id: String) -> Bool {
             pruneExpired()
             guard let request = requests[id] else { return false }
             request.state = .denied
@@ -151,21 +180,19 @@ public final class PairingService: @unchecked Sendable {
             Log.i("pairing: denied \(id)")
             return true
         }
-    }
 
-    /// What the new device polls so it can show "waiting / enter the code / rejected".
-    public func status(id: String) -> State? {
-        queue.sync {
+        /// What the new device polls so it can show "waiting / enter the code / rejected".
+        func status(id: String) -> State? {
             pruneExpired()
             return requests[id]?.state
         }
-    }
 
-    /// Step 8/9 (new device): exchange the approved code for a permanent token. On
-    /// success the token hash is persisted and added to the live set; the request
-    /// is consumed. The raw token is returned exactly once here and never stored.
-    public func claim(id: String, code: String) -> ClaimResult {
-        queue.sync {
+        /// Step 8/9 (new device): exchange the approved code for a permanent
+        /// token. On success the token hash is persisted; the pairing service
+        /// caller adds it to the live `validTokenHashes` set (this actor does not
+        /// touch that lock-guarded state itself). The request is consumed. The
+        /// raw token is returned exactly once here and never stored.
+        func claim(id: String, code: String, database: JukeboxDatabase) -> PairingService.InternalClaimResult {
             pruneExpired()
             guard let request = requests[id] else { return .unknownRequest }
             switch request.state {
@@ -178,14 +205,14 @@ public final class PairingService: @unchecked Sendable {
                 let entered = code.filter(\.isNumber)
                 guard let expected = request.code, entered == expected else {
                     request.attempts += 1
-                    if request.attempts >= Self.maxClaimAttempts {
+                    if request.attempts >= PairingService.maxClaimAttempts {
                         Log.w("pairing: \(id) burned after \(request.attempts) bad codes")
                         requests[id] = nil
                     }
                     return .wrongCode
                 }
-                let token = Self.randomHex(bytes: 32)
-                let hash = Self.hash(token)
+                let token = PairingService.randomHex(bytes: 32)
+                let hash = PairingService.hash(token)
                 do {
                     try database.addPairedClient(name: request.name, tokenHash: hash,
                                                  at: Date().timeIntervalSince1970)
@@ -194,23 +221,66 @@ public final class PairingService: @unchecked Sendable {
                     // don't hand out a token we failed to remember
                     return .unknownRequest
                 }
-                validTokenHashes.insert(hash)
                 requests[id] = nil
                 Log.i("pairing: \(id) (\(request.name)) paired")
-                return .paired(token: token)
+                return .paired(token: token, hash: hash)
+            }
+        }
+
+        /// Drops requests older than the TTL.
+        private func pruneExpired() {
+            let cutoff = Date().timeIntervalSince1970 - PairingService.requestTTL
+            for (id, request) in requests where request.createdAt < cutoff {
+                requests[id] = nil
             }
         }
     }
 
-    // MARK: - helpers (assume already on the queue where noted)
+    private let requestTable = RequestTable()
 
-    /// Drops requests older than the TTL. Must run on `queue`.
-    private func pruneExpired() {
-        let cutoff = Date().timeIntervalSince1970 - Self.requestTTL
-        for (id, request) in requests where request.createdAt < cutoff {
-            requests[id] = nil
+    public init(database: JukeboxDatabase, tokenHashes: Set<String>) {
+        self.database = database
+        self.validTokenHashes = tokenHashes
+    }
+
+    // MARK: - pairing flow (forwards to the actor-isolated request table)
+
+    public func createRequest(name: String) async -> String {
+        await requestTable.createRequest(name: name)
+    }
+
+    public func pending() async -> [PendingInfo] {
+        await requestTable.pending()
+    }
+
+    public func approve(id: String) async -> String? {
+        await requestTable.approve(id: id)
+    }
+
+    public func deny(id: String) async -> Bool {
+        await requestTable.deny(id: id)
+    }
+
+    public func status(id: String) async -> State? {
+        await requestTable.status(id: id)
+    }
+
+    /// Step 8/9 (new device): exchange the approved code for a permanent token.
+    /// On success the token hash is added to the live, lock-guarded set that
+    /// `accepts(token:)` reads synchronously.
+    public func claim(id: String, code: String) async -> ClaimResult {
+        switch await requestTable.claim(id: id, code: code, database: database) {
+        case .paired(let token, let hash):
+            withTokenLock { _ = validTokenHashes.insert(hash) }
+            return .paired(token: token)
+        case .wrongCode:      return .wrongCode
+        case .notApproved:    return .notApproved
+        case .denied:         return .denied
+        case .unknownRequest: return .unknownRequest
         }
     }
+
+    // MARK: - helpers
 
     private static func hash(_ token: String) -> String {
         SHA256.hash(data: Data(token.utf8)).hexEncodedString()
