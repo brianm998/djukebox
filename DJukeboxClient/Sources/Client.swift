@@ -44,6 +44,7 @@ public class Client {
     }
     
 
+    @MainActor
     public init(serverURL: String, token: String, initialQueueType initialQueue: PlayingQueueType = .local) {
         // the server connection for tracks and history
         self.serverConnection = ServerConnection(toUrl: serverURL, withToken: token)
@@ -123,7 +124,9 @@ public class Client {
             guard let fetcher = fetcher, fetcher.queueType == .remote else { return }
             fetcher.updateProgress(position: position, duration: duration)
         }
-        socket?.onHistory = { [weak history] pushed in history?.ingest(pushed) }
+        socket?.onHistory = { [weak history] pushed in
+            Task { @MainActor in history?.ingest(pushed) }
+        }
         socket?.connect()
 
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)

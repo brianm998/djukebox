@@ -134,8 +134,8 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType, @unchecked Sendable {
             max -= 1
             let random = Int.random(in: 0..<fetcher.allTracks.count)
             let track = fetcher.allTracks[random]
-            if !history.hasPlay(for: track.SHA1),
-               !history.hasSkip(for: track.SHA1),
+            if !(await history.hasPlay(for: track.SHA1)),
+               !(await history.hasSkip(for: track.SHA1)),
                !isInQueue(track.SHA1)
             {
                 randomTrack = track
@@ -171,8 +171,8 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType, @unchecked Sendable {
         {
             max -= 1
             let track = tracksForThisArtist[Int.random(in: 0..<tracksForThisArtist.count)]
-            if !history.hasPlay(for: track.SHA1),
-               !history.hasSkip(for: track.SHA1),
+            if !(await history.hasPlay(for: track.SHA1)),
+               !(await history.hasSkip(for: track.SHA1)),
                !isInQueue(track.SHA1)
             {
                 randomTrack = track

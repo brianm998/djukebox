@@ -31,11 +31,12 @@ public class HistoryEntry: Comparable, Identifiable, ObservableObject, Hashable 
     }
 }
 
-// @unchecked Sendable: a SwiftUI view model whose hasPlay/hasSkip lookups are
-// called synchronously by the (non-isolated) AsyncAudioPlayer, so it can't be
-// @MainActor. @Published mutations are routed to the main thread. See the client
-// concurrency note in AsyncAudioPlayer.
-public class HistoryFetcher: ObservableObject, @unchecked Sendable {
+// @MainActor: a SwiftUI view model. AsyncAudioPlayer's hasPlay/hasSkip lookups
+// are now `await`ed (both call sites are already async throws), so there's no
+// non-isolated synchronous call-in left that would block this from being
+// main-actor-isolated. See the client concurrency note in AsyncAudioPlayer.
+@MainActor
+public class HistoryFetcher: ObservableObject {
     @Published var all = PlayingHistory()
     @Published var recent: [HistoryEntry] = []
 
@@ -129,11 +130,9 @@ public class HistoryFetcher: ObservableObject, @unchecked Sendable {
     // that used to run every second. Merge (not replace): the socket only carries
     // recent deltas; the full history was loaded once by refresh() at init.
     public func ingest(_ history: PlayingHistory) {
-        DispatchQueue.main.async {
-            self.all = self.all.merge(with: history)
-            self.lastUpdateTime = Date()
-            self.updateRecent()
-        }
+        self.all = self.all.merge(with: history)
+        self.lastUpdateTime = Date()
+        self.updateRecent()
     }
 
     public func refresh() {
@@ -143,10 +142,8 @@ public class HistoryFetcher: ObservableObject, @unchecked Sendable {
             Task {
                 do {
                     let history = try await server.listHistory(since: since)
-                    DispatchQueue.main.async {
-                        self.all = self.all.merge(with: history)
-                        self.updateRecent()
-                    }
+                    self.all = self.all.merge(with: history)
+                    self.updateRecent()
                 } catch {
                     Log.e("could not refresh history: \(error)")
                 }
@@ -155,12 +152,10 @@ public class HistoryFetcher: ObservableObject, @unchecked Sendable {
             Task {
                 do {
                     let history = try await server.listHistory()
-                    DispatchQueue.main.async {
-                        // merge (not replace): a socket delta may have already
-                        // landed before this initial full fetch completes
-                        self.all = self.all.merge(with: history)
-                        self.updateRecent()
-                    }
+                    // merge (not replace): a socket delta may have already
+                    // landed before this initial full fetch completes
+                    self.all = self.all.merge(with: history)
+                    self.updateRecent()
                 } catch {
                     Log.e("could not refresh history: \(error)")
                 }
