@@ -8,34 +8,23 @@ public extension UIViewController {
     nonisolated static let alertDispatchQueue = DispatchQueue(label: "alerts")
 
     @discardableResult
+    @MainActor
     func show(alert: UIAlertController,
               animated: Bool = true,
               tryNumber: Int = 0,
               maxTries: Int = 10,
-              completion: (() -> Void)? = nil) -> Bool
+              completion: (() -> Void)? = nil) async -> Bool
     {
         guard tryNumber < maxTries else { return false }
 
-        if let _ = self.presentedViewController {
-            UIViewController.alertDispatchQueue.asyncAfter(deadline: .now() + 0.5) {
-                UIViewController.alertDispatchQueue.suspend()
-                Task { @MainActor in
-                    if !self.show(alert: alert, //on: selfviewController,
-                                  animated: animated, tryNumber: tryNumber + 1)
-                    {
-                        UIViewController.alertDispatchQueue.resume()
-                    }
-                }
-            }
-            return false
+        if self.presentedViewController != nil {
+            try? await Task.sleep(for: .milliseconds(500))
+            return await self.show(alert: alert,
+                                   animated: animated,
+                                   tryNumber: tryNumber + 1,
+                                   completion: completion)
         } else {
-            if Thread.isMainThread {
-                self.present(alert, animated: animated, completion: completion)
-            } else {
-                DispatchQueue.main.async {
-                    self.present(alert, animated: animated, completion: completion)
-                }
-            }
+            self.present(alert, animated: animated, completion: completion)
             return true
         }
     }
@@ -91,7 +80,7 @@ public final class AlertLogHandler: LogHandler, @unchecked Sendable {
                     .first(where: { $0.activationState == .foregroundActive })?
                     .keyWindow?.rootViewController {
                     // we have a view controller to show it on
-                    if !vc.show(alert: alert) {
+                    if !(await vc.show(alert: alert)) {
                         // if now alert was shown, resume the dispatch queue
                         self.dispatchQueue.resume()
                     }
