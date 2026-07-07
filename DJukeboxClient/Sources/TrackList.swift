@@ -54,11 +54,7 @@ public struct TrackList: View {
                           self.trackFetcher.refreshQueue()
                       }
                   }
-                  .onDrag {
-                      let provider = NSItemProvider(object: track.SHA1 as NSString)
-                      provider.suggestedName = track.Title
-                      return provider
-                  }
+                  .draggable(TrackDragItem(sha1: track.SHA1))
             }
             .djListChrome()
         }
@@ -121,11 +117,7 @@ public struct TrackList: View {
                           self.trackFetcher.refreshQueue()
                       }
                   }
-                  .onDrag {
-                      let provider = NSItemProvider(object: track.SHA1 as NSString)
-                      provider.suggestedName = track.Title
-                      return provider
-                  }
+                  .draggable(TrackDragItem(sha1: track.SHA1))
             }
             .djListChrome()
         }
