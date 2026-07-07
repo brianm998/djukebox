@@ -73,10 +73,10 @@ public class RuntimeState: LocalCache, Encodable, Decodable {
                 try jsonData.write(to: url)
             } catch {
                 Log.i(self)
-                Log.e("error: \(error)")
+                Log.e("error:", error)
             }
         } else {
-            Log.e()
+            Log.e(nil as String?)
         }
     }
 

@@ -3,8 +3,9 @@ import SwiftUI
 import CryptoKit
 import DJukeboxCommon
 
-// This allows any String, including literals, to be thrown as an Error
-extension String: Error {}
+enum TrackFetcherError: Error {
+    case noPlayer(PlayingQueueType)
+}
 
 public enum PlayingQueueType: String, Decodable, Encodable {
     case local
@@ -207,7 +208,7 @@ public class TrackFetcher: ObservableObject {
             self.updatePlayingQueue(to: player)
             self.queueType = queue
         } else {
-            throw "no player for queue type \(queue)"
+            throw TrackFetcherError.noPlayer(queue)
         }
     }
     
