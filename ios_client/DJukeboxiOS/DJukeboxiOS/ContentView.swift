@@ -97,10 +97,10 @@ struct ContentView: View {
                 } else {
                     // iPhone browses via a navigation stack; its bars are themed
                     // globally (see AppDelegate) so it sits on the neon gradient.
-                    // The tube backdrop goes *inside* the NavigationView (on the
-                    // list content) — a background behind the NavigationView itself
+                    // The tube backdrop goes *inside* the NavigationStack (on the
+                    // list content) — a background behind the NavigationStack itself
                     // is hidden by its opaque UIKit backdrop, same as the TabView.
-                    NavigationView {
+                    NavigationStack {
                         NaviArtistList(client)
                             .tubeBackdrop(client.levelMonitor)
                             .navigationBarTitle("Artists", displayMode: .inline)
