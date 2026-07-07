@@ -26,13 +26,13 @@ public struct TrackDetail: View {
                            self.trackFetcher.showAlbums(forArtist: self.track.Credit)
                        }) {
                     Text(track.Credit).underline().foregroundStyle(DJTheme.neonCyan)
-                }.buttonStyle(PlainButtonStyle())
+                }.buttonStyle(.plain)
                 if self.hasAlbum(track) {
                     Button(action: {
                                self.trackFetcher.showTracks(for: self.track)
                            }) {
                         Text(track.Album!).underline().foregroundStyle(DJTheme.neonCyan)
-                    }.buttonStyle(PlainButtonStyle())
+                    }.buttonStyle(.plain)
                 }
                 Text(track.Title)
                 if showDuration && track.Duration != nil {
@@ -44,13 +44,13 @@ public struct TrackDetail: View {
                                self.trackFetcher.showAlbums(forArtist: self.track.Credit)
                            }) {
                         Text(track.Credit).foregroundStyle(DJTheme.neonCyan)
-                    }.buttonStyle(PlainButtonStyle())
+                    }.buttonStyle(.plain)
                     if self.hasAlbum(track) {
                         Button(action: {
                                    self.trackFetcher.showTracks(for: self.track)
                                }) {
                             Text(track.Album!).underline().foregroundStyle(DJTheme.neonCyan)
-                        }.buttonStyle(PlainButtonStyle())
+                        }.buttonStyle(.plain)
                     }
                     Text(track.Title)
                     if false && showDuration && track.Duration != nil {

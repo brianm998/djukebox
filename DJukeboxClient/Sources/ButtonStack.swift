@@ -28,7 +28,7 @@ public struct PlayButton: View {
             #else
             Text("\u{25B6}").font(.largeTitle)
             #endif
-        }.buttonStyle(PlainButtonStyle())
+        }.buttonStyle(.plain)
         .foregroundStyle(DJTheme.neonCyan)
     }
 }
@@ -58,7 +58,7 @@ public struct PauseButton: View {
             #else
             Text("\u{23F8}").font(.largeTitle)
             #endif
-        }.buttonStyle(PlainButtonStyle())
+        }.buttonStyle(.plain)
         .foregroundStyle(DJTheme.neonCyan)
     }
 }
@@ -91,7 +91,7 @@ public struct SkipCurrentTrackButton: View {
             #else
             Text("\u{23F9}").font(.largeTitle) // stop
             #endif
-        }.buttonStyle(PlainButtonStyle())
+        }.buttonStyle(.plain)
         .foregroundStyle(DJTheme.neonMagenta)
     }
 }
