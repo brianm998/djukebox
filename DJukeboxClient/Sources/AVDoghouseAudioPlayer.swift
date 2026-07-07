@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import Dispatch
+import os
 import DJukeboxCommon
 
 // this class uses AVQueuePlayer to play remote audio urls locally, keeping it in a doghouse.
@@ -79,20 +80,19 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     // Guarded by a lock because it is touched from the main thread (play / live
     // preview) and the end-of-item notification thread. Local streaming playback
     // is boosted above unity here (AVPlayer.volume can't).
-    private var itemGains: [AVPlayerItem: PlaybackGain] = [:]
-    private let itemGainsLock = NSLock()
+    private let itemGains = OSAllocatedUnfairLock(initialState: [AVPlayerItem: PlaybackGain]())
 
     private func setGain(_ gain: PlaybackGain, for item: AVPlayerItem) {
-        itemGainsLock.lock(); itemGains[item] = gain; itemGainsLock.unlock()
+        itemGains.withLock { $0[item] = gain }
     }
     private func gain(for item: AVPlayerItem) -> PlaybackGain? {
-        itemGainsLock.lock(); defer { itemGainsLock.unlock() }; return itemGains[item]
+        itemGains.withLock { $0[item] }
     }
     private func forgetGain(for item: AVPlayerItem) {
-        itemGainsLock.lock(); itemGains[item] = nil; itemGainsLock.unlock()
+        itemGains.withLock { $0[item] = nil }
     }
     private func forgetAllGains() {
-        itemGainsLock.lock(); itemGains.removeAll(); itemGainsLock.unlock()
+        itemGains.withLock { $0.removeAll() }
     }
 
     // Looks up a track's saved gain (dB) from the server; injected so this player
