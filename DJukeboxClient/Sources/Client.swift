@@ -82,20 +82,13 @@ public class Client {
         let server = serverConnection
         let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher.catalog,
                                            historyWriter: ServerHistoryWriter(server: serverConnection),
-                                           savedGainForHash: { [weak fetcher] hash, done in
-                                               // `done` isn't @Sendable, so it can't be captured
-                                               // directly by the Task below; box it the same way
-                                               // ServerConnection's pre-F07 helpers did. This closure
-                                               // is called synchronously from the (non-isolated)
-                                               // AVDoghouseAudioPlayer, so reading fetcher.masterGainDB
-                                               // (now @MainActor, F30) needs an explicit hop rather
-                                               // than a direct read.
-                                               let doneBox = UncheckedSendableBox(done)
-                                               Task { @MainActor in
-                                                   let currentMasterGainDB = fetcher?.masterGainDB ?? 0
-                                                   let db = try? await server.savedGain(forHash: hash)
-                                                   doneBox.value((db ?? 0) + currentMasterGainDB)
-                                               }
+                                           savedGainForHash: { [weak fetcher] hash in
+                                               // Called from AVDoghouseAudioPlayer's own Task (it's
+                                               // non-isolated, so it awaits us rather than reading
+                                               // fetcher.masterGainDB, which is @MainActor, F30).
+                                               let currentMasterGainDB = await MainActor.run { fetcher?.masterGainDB ?? 0 }
+                                               let db = try? await server.savedGain(forHash: hash)
+                                               return (db ?? 0) + currentMasterGainDB
                                            },
                                            levelMeter: levelMeter)
         trackFetcher.add(queueType: .local,

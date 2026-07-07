@@ -96,9 +96,15 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     }
 
     // Looks up a track's saved gain (dB) from the server; injected so this player
-    // stays decoupled from the networking layer. Invoked on the main thread from
-    // play(). nil => everything at unity.
-    let savedGainForHash: ((String, @escaping (Double) -> Void) -> Void)?
+    // stays decoupled from the networking layer. play() (part of the synchronous,
+    // non-isolated AudioPlayerType shared with the server) can't itself await this,
+    // so applySavedGain() below fires it in its own Task; nil => everything at unity.
+    let savedGainForHash: (@Sendable (String) async -> Double)?
+
+    // Consumes AVPlayerItemDidPlayToEndTime via `for await` instead of an @objc
+    // selector; cancelled in deinit (Task is Sendable, unlike a Notification
+    // observer token, so this needs no nonisolated(unsafe) escape hatch).
+    private var endOfItemTask: Task<Void, Never>?
 
     // Shared VU-meter sink handed to every item's gain tap, so the tap that's
     // currently rendering publishes per-channel output levels. Injected by Client
@@ -122,7 +128,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     
     public init(trackFinder: TrackCatalog,
                 historyWriter: HistoryWriterType,
-                savedGainForHash: ((String, @escaping (Double) -> Void) -> Void)? = nil,
+                savedGainForHash: (@Sendable (String) async -> Double)? = nil,
                 levelMeter: AudioLevelMeter = AudioLevelMeter())
     {
         self.trackFinder = trackFinder
@@ -131,12 +137,15 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         self.levelMeter = levelMeter
 
         super.init()
-        
+
         player.automaticallyWaitsToMinimizeStalling = true
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(playerDidFinishPlaying),
-                                               name: .AVPlayerItemDidPlayToEndTime,
-                                               object: nil)
+        let notifications = NotificationCenter.default.notifications(named: .AVPlayerItemDidPlayToEndTime)
+        self.endOfItemTask = Task { [weak self] in
+            for await note in notifications {
+                guard let self else { return }
+                await self.playerDidFinishPlaying(note: note)
+            }
+        }
 
         /*
         // XXX testing
@@ -159,7 +168,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        endOfItemTask?.cancel()
     }
     
     public func clearQueue() {
@@ -253,7 +262,9 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     // apply this track's saved gain to ITS OWN gain object when the server
     // responds (a few ms on the LAN). Setting it is thread-safe (locked).
     private func applySavedGain(_ gain: PlaybackGain, forHash sha1Hash: String) {
-        savedGainForHash?(sha1Hash) { db in
+        guard let savedGainForHash else { return }
+        Task {
+            let db = await savedGainForHash(sha1Hash)
             gain.setDecibels(db)
         }
     }
@@ -325,15 +336,13 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         }
     }
     
-    @objc func playerDidFinishPlaying(note: NSNotification) {
-        // AVFoundation posts this on its own thread, but everything the handler
-        // touches is main-thread state: trackQueue/trackMap, AVPlayerItem
-        // creation in play() (main-actor isolated, see trackMap's comment), and
-        // the local track catalog behind trackFinder — hop over before touching
-        // any of it.
+    // AVFoundation posts this on its own thread, but everything the handler
+    // touches is main-thread state: trackQueue/trackMap, AVPlayerItem creation in
+    // play() (main-actor isolated, see trackMap's comment), and the local track
+    // catalog behind trackFinder — hop over before touching any of it.
+    private func playerDidFinishPlaying(note: Notification) async {
         let finishedBox = UncheckedSendableBox(note.object as? AVPlayerItem)
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
+        await MainActor.run {
             Log.d("playerDidFinishPlaying")
 
             // resolve the played track from the finished item itself: by the
