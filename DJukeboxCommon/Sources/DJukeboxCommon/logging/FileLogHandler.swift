@@ -5,16 +5,24 @@ import Foundation
 // inside the private serial `dispatchQueue`, so the class synchronizes its own state.
 public final class FileLogHandler: LogHandler, @unchecked Sendable {
 
+    // for log lines (H:mm:ss.SSSS); kept as DateFormatter since Date.FormatStyle
+    // has no direct equivalent for fixed 4-digit fractional seconds.
     let dateFormatter = DateFormatter()
     public let dispatchQueue: DispatchQueue
     public let level: Log.Level?
     private let logfilename: String
 
+    // A fixed, non-localized "yyyy-MM-dd-HH-mm-ss" stamp for the filename, built
+    // with the value-type (Sendable) VerbatimFormatStyle instead of a DateFormatter.
+    private static let filenameFormat = Date.VerbatimFormatStyle(
+        format: "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)-\(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased))-\(minute: .twoDigits)-\(second: .twoDigits)",
+        timeZone: .current,
+        calendar: Calendar(identifier: .gregorian))
+
     public init(at level: Log.Level) {
         self.level = level
         // this is for the logfile name
-        dateFormatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
-        let dateString = dateFormatter.string(from: Date())
+        let dateString = Date().formatted(FileLogHandler.filenameFormat)
         self.logfilename = "log-\(dateString).txt"
         self.dispatchQueue = DispatchQueue(label: "consoleLogging")
 
