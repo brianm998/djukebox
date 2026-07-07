@@ -35,13 +35,9 @@ public final class AudioLevelMonitor: ObservableObject {
     private var rightRing: [Double]
     private var ringIndex = 0
 
-    // nonisolated(unsafe): Timer isn't Sendable, so a plain @MainActor-isolated
-    // stored property can't be touched from deinit (always nonisolated). Only
-    // ever written from start()/stop() (both @MainActor) and read here in deinit
-    // for a one-time invalidate() — Timer.invalidate() is documented safe to call
-    // from any thread, so this is a narrow, safe escape hatch (same spirit as
-    // ServerStreamSocket's nonisolated deinit teardown).
-    private nonisolated(unsafe) var timer: Timer?
+    // Task, unlike Timer, is Sendable, so deinit can cancel it directly with no
+    // nonisolated(unsafe) escape hatch needed.
+    private var tickTask: Task<Void, Never>?
 
     public init(localMeter: AudioLevelMeter, trackFetcher: TrackFetcher?) {
         self.localMeter = localMeter
@@ -51,7 +47,7 @@ public final class AudioLevelMonitor: ObservableObject {
         start()
     }
 
-    deinit { timer?.invalidate() }
+    deinit { tickTask?.cancel() }
 
     // Called from the stream socket (any thread) with the latest pushed levels.
     public func ingestRemoteLevels(_ levels: AudioLevels) {
@@ -59,24 +55,20 @@ public final class AudioLevelMonitor: ObservableObject {
     }
 
     public func start() {
-        timer?.invalidate()
-        // Scheduled on the main run loop; the block runs on the main thread in
-        // practice (so this hop is an immediate same-thread resumption, not a real
-        // dispatch), but Timer's closure is nonisolated/@Sendable, and tick() is
-        // @MainActor now (F30, since it reads TrackFetcher directly) — so hop
-        // explicitly rather than rely on the (untracked) thread the timer fires on.
-        let t = Timer(timeInterval: 1.0 / sampleHz, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        tickTask?.cancel()
+        let intervalMillis = Int(1000 / sampleHz)
+        tickTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(intervalMillis))
+                guard !Task.isCancelled else { return }
                 self?.tick()
             }
         }
-        RunLoop.main.add(t, forMode: .common)
-        timer = t
     }
 
     public func stop() {
-        timer?.invalidate()
-        timer = nil
+        tickTask?.cancel()
+        tickTask = nil
     }
 
     private func tick() {
