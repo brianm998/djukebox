@@ -86,7 +86,10 @@ public final class AlertLogHandler: LogHandler, @unchecked Sendable {
                 // pause the alert dispatch queue
                 self.dispatchQueue.suspend()
 
-                if let vc = UIApplication.shared.keyWindow?.rootViewController {
+                if let vc = UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .first(where: { $0.activationState == .foregroundActive })?
+                    .keyWindow?.rootViewController {
                     // we have a view controller to show it on
                     if !vc.show(alert: alert) {
                         // if now alert was shown, resume the dispatch queue
