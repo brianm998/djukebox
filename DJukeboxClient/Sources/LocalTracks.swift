@@ -83,7 +83,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     private func reconcileWithDownloadedFiles() {
         let snapshot = self.downloadedTracks
         Task.detached(priority: .utility) { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             var presentCount = 0
             var drop: [String] = []
             for track in snapshot {
@@ -202,7 +202,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                         // an error page gets saved as <sha1>.mp3 and recorded as a real
                         // downloaded track (junk that can't play).
                         let status = (urlResponse as? HTTPURLResponse)?.statusCode ?? 0
-                        if let localURL = localURL, error == nil, (200..<300).contains(status) {
+                        if let localURL, error == nil, (200..<300).contains(status) {
                             Log.i("moving from \(localURL) to \(destURL)")
                             do {
                                 try FileManager.default.moveItem(atPath: localURL.path, toPath: destURL.path)

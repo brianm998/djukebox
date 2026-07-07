@@ -22,7 +22,7 @@ public final class ConsoleLogHandler: LogHandler, @unchecked Sendable {
         dispatchQueue.async {
             let dateString = self.dateFormatter.string(from: Date())
             
-            if let data = data {
+            if let data {
                 print("\(dateString) | \(logLevel.emo) \(logLevel) | \(fileLocation): \(message) | \(data.description)")
             } else {
                 print("\(dateString) | \(logLevel.emo) \(logLevel) | \(fileLocation): \(message)")

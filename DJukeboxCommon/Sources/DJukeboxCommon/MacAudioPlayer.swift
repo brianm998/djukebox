@@ -31,7 +31,7 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
 
     // The total duration, in seconds, of the sound associated with the audio player.
     public var playingTrackDuration: TimeInterval? {
-        guard let audioFile = audioFile else { return nil }
+        guard let audioFile else { return nil }
         return Double(audioFile.length) / audioFile.processingFormat.sampleRate
     }
 
@@ -170,7 +170,7 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
     // skips the currently playing song, removing it from the playlist
     public func skip() {
         dispatchQueue.async { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             if let track = self.playingTrack {
                 do {
                     try self.historyWriter.writeSkip(of: track.SHA1, at: Date())
@@ -196,7 +196,7 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
     public func resume() {
         isPaused = false
         dispatchQueue.async { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             if !self.engine.isRunning { try? self.engine.start() }
             self.playerNode.play()
         }
@@ -243,7 +243,7 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
 
                 let generation = self.playGeneration
                 playerNode.scheduleFile(file, at: nil, completionCallbackType: .dataPlayedBack) { [weak self] _ in
-                    guard let self = self else { return }
+                    guard let self else { return }
                     self.dispatchQueue.async {
                         // .dataPlayedBack only fires on genuine end-of-track (pause
                         // suspends rendering, it does not "play back" the data), so

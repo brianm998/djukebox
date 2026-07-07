@@ -30,7 +30,7 @@ public final class FileLogHandler: LogHandler, @unchecked Sendable {
         dispatchQueue.async {
             let dateString = self.dateFormatter.string(from: Date())
             
-            if let data = data {
+            if let data {
                 self.writeToLogFile("\(dateString) | \(logLevel) | \(fileLocation): \(message) | \(data.description)\n")
             } else {
                 self.writeToLogFile("\(dateString) | \(logLevel) | \(fileLocation): \(message)\n")

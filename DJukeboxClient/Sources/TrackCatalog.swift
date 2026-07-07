@@ -71,7 +71,7 @@ public final class TrackCatalog: TrackFinderType, @unchecked Sendable {
         let (localTracksBox, trackMap) = state.withLock { ($0.localTracks, $0.trackMap) }
         let localTracks = localTracksBox.value
 
-        if let localTracks = localTracks,
+        if let localTracks,
            let (track, url) = localTracks.track(forHash: sha1Hash)
         {
             return (track, url)
@@ -89,7 +89,7 @@ public final class TrackCatalog: TrackFinderType, @unchecked Sendable {
         let (localTracksBox, trackMap) = state.withLock { ($0.localTracks, $0.trackMap) }
         let localTracks = localTracksBox.value
 
-        if let localTracks = localTracks,
+        if let localTracks,
            let track = localTracks.audioTrack(forHash: sha1Hash)
         {
             return track

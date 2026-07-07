@@ -184,7 +184,7 @@ public class Client {
         // Timer's closure is @Sendable/non-isolated, but trackFetcher is @MainActor
         // (F30) now, so hop over explicitly rather than touching it directly.
         self.refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
+            guard let self else { return }
             Task { @MainActor in
                 self.trackFetcher.runtimeState.save()
                 if self.trackFetcher.queueType == .local {

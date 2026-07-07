@@ -31,7 +31,7 @@ class AuthController {
 
     private func isAuthorized(_ req: Request, credential: String?) -> Bool {
         if isLoopback(req) { return true }
-        if let credential = credential, pairing.accepts(token: credential) { return true }
+        if let credential, pairing.accepts(token: credential) { return true }
         return false
     }
 

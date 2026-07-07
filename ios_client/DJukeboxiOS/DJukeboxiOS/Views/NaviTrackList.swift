@@ -30,7 +30,7 @@ public struct NaviTrackList: View {
                   Task {
                       do {
                           let playedTrack = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1)
-                          if let playedTrack = playedTrack {
+                          if let playedTrack {
                               self.fuck = "\(playedTrack.Title) playing"
                               withAnimation { self.showOneTrackToast = true }
                           }

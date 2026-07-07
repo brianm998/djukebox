@@ -710,7 +710,7 @@ fileprivate extension Log {
         // @Sendable closure handed to the logging queue. (The generic, possibly
         // non-Sendable `data` never crosses the concurrency boundary.)
         let string: String
-        if let message = message {
+        if let message {
             string = message
         } else if data != nil {
             string = logLevel.description
@@ -721,7 +721,7 @@ fileprivate extension Log {
         let fileLocation = "\(parseFileName(file)).\(function)@\(line)"
 
         let extraData: LogData?
-        if let data = data {
+        if let data {
             if let encodableData = data as? Encodable,
                let encodableLogData = EncodableLogData(with: encodableData)
             {

@@ -55,7 +55,7 @@ public final class JukeboxDatabase: @unchecked Sendable {
     }
 
     deinit {
-        if let db = db { sqlite3_close_v2(db) }
+        if let db { sqlite3_close_v2(db) }
     }
 
     // MARK: - schema
@@ -561,17 +561,17 @@ public final class JukeboxDatabase: @unchecked Sendable {
     private func volumeKey(scope: String, sha1: String?, artist: String?, album: String?) throws -> String {
         switch scope {
         case "track":
-            guard let sha1 = sha1, !sha1.isEmpty else {
+            guard let sha1, !sha1.isEmpty else {
                 throw JukeboxDatabaseError.step("track volume adjustment requires a sha1")
             }
             return sha1
         case "album":
-            guard let artist = artist, !artist.isEmpty, let album = album, !album.isEmpty else {
+            guard let artist, !artist.isEmpty, let album = album, !album.isEmpty else {
                 throw JukeboxDatabaseError.step("album volume adjustment requires artist and album")
             }
             return artist + Self.volumeKeySeparator + album
         case "artist":
-            guard let artist = artist, !artist.isEmpty else {
+            guard let artist, !artist.isEmpty else {
                 throw JukeboxDatabaseError.step("artist volume adjustment requires an artist")
             }
             return artist
@@ -744,7 +744,7 @@ public final class JukeboxDatabase: @unchecked Sendable {
     }
 
     private func bind(_ stmt: OpaquePointer?, _ index: Int32, _ value: String?) {
-        if let value = value {
+        if let value {
             sqlite3_bind_text(stmt, index, value, -1, SQLITE_TRANSIENT)
         } else {
             sqlite3_bind_null(stmt, index)

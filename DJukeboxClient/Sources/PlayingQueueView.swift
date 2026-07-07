@@ -45,7 +45,7 @@ public struct PlayingQueueView: View {
                         withHash: trackToMove.SHA1,
                         fromIndex: startIndex,
                         toIndex: startIndex + positionsAhead)
-                    if let queue = queue {
+                    if let queue {
                         self.trackFetcher.update(playingQueue: queue)
                     }
                 } catch {
@@ -61,7 +61,7 @@ public struct PlayingQueueView: View {
                         withHash: trackToMove.SHA1,
                         fromIndex: startIndex,
                         toIndex: startIndex - positionsBehind)
-                    if let queue = queue {
+                    if let queue {
                         self.trackFetcher.update(playingQueue: queue)
                     }
                 } catch {

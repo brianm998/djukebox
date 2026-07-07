@@ -170,7 +170,7 @@ public class ServerBrowser: ObservableObject {
         var request = URLRequest(url: url)
         request.timeoutInterval = 2.0   // keep the fall-through to WiFi snappy
         Task { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             var response: URLResponse?
             do {
                 (_, response) = try await URLSession.shared.data(for: request)
@@ -202,7 +202,7 @@ public class ServerBrowser: ObservableObject {
         // requires an explicit hop back to the main actor (see the class doc comment).
         browser.stateUpdateHandler = { [weak self] browserState in
             Task { @MainActor in
-                guard let self = self, gen == self.generation else { return }
+                guard let self, gen == self.generation else { return }
                 if case .failed(let error) = browserState {
                     self.fail("Couldn't search the local network: \(error.localizedDescription)", gen: gen)
                 }
@@ -211,7 +211,7 @@ public class ServerBrowser: ObservableObject {
 
         browser.browseResultsChangedHandler = { [weak self] results, _ in
             Task { @MainActor in
-                guard let self = self, gen == self.generation, !self.hasResolved else { return }
+                guard let self, gen == self.generation, !self.hasResolved else { return }
                 guard let result = results.first else { return }
                 self.hasResolved = true
                 self.resolve(result.endpoint, gen: gen)
@@ -224,7 +224,7 @@ public class ServerBrowser: ObservableObject {
         let timeout = searchTimeout
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(timeout))
-            guard let self = self, gen == self.generation else { return }
+            guard let self, gen == self.generation else { return }
             if case .searching = self.state {
                 self.fail("Couldn't find a DJukebox server on your WiFi network. "
                           + "Make sure the server is running on the same network.", gen: gen)
@@ -251,7 +251,7 @@ public class ServerBrowser: ObservableObject {
         // an explicit hop back to the main actor (see the class doc comment).
         connection.stateUpdateHandler = { [weak self] connectionState in
             Task { @MainActor in
-                guard let self = self, gen == self.generation else { return }
+                guard let self, gen == self.generation else { return }
                 switch connectionState {
                 case .ready:
                     if let remote = connection.currentPath?.remoteEndpoint,
@@ -284,7 +284,7 @@ public class ServerBrowser: ObservableObject {
         let timeout = searchTimeout
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(timeout))
-            guard let self = self, gen == self.generation, self.probe === connection else { return }
+            guard let self, gen == self.generation, self.probe === connection else { return }
             connection.cancel()
             self.probe = nil
             self.fail("Found a DJukebox server but couldn't connect to it.", gen: gen)
@@ -337,12 +337,12 @@ public class ServerBrowser: ObservableObject {
         let token = PairingStore.load()
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        if let token = token {
+        if let token {
             request.setValue(token, forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 8.0
         Task { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             var response: URLResponse?
             do {
                 (_, response) = try await URLSession.shared.data(for: request)
@@ -370,7 +370,7 @@ public class ServerBrowser: ObservableObject {
         guard gen == self.generation else { return }
         Log.i("not paired with \(urlString); starting pairing flow")
         let pairing = PairingClient(serverURL: urlString) { [weak self] token in
-            guard let self = self, gen == self.generation else { return }
+            guard let self, gen == self.generation else { return }
             self.connect(toURL: urlString, token: token, gen: gen)
         }
         self.pairingClient = pairing

@@ -19,12 +19,12 @@ public enum LayoutStorage {
     }
 
     public static func loadData() -> Data? {
-        guard let url = url else { return nil }
+        guard let url else { return nil }
         return try? Data(contentsOf: url)
     }
 
     public static func save(_ data: Data) {
-        guard let url = url else { return }
+        guard let url else { return }
         do {
             try data.write(to: url)
         } catch {
@@ -33,6 +33,6 @@ public enum LayoutStorage {
     }
 
     public static func clear() {
-        if let url = url { try? FileManager.default.removeItem(at: url) }
+        if let url { try? FileManager.default.removeItem(at: url) }
     }
 }

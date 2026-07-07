@@ -94,7 +94,7 @@ public final class ServiceAdvertiser: NSObject, @unchecked Sendable {
         // doesn't guarantee RunLoop.main is serviced, so we still give
         // NetService its own thread + run loop rather than gamble on that.
         let thread = Thread { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             let service = NetService(domain: "local.",
                                      type: self.serviceType,
                                      name: self.serviceName,

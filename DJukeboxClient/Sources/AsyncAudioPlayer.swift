@@ -142,7 +142,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
                 randomTrack = track
             }
         }
-        guard let randomTrack = randomTrack else {
+        guard let randomTrack else {
             throw AudioPlayerError.noTrackAvailable
         }
         player.play(sha1Hash: randomTrack.SHA1)
@@ -179,7 +179,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
                 randomTrack = track
             }
         }
-        guard let randomTrack = randomTrack else {
+        guard let randomTrack else {
             throw AudioPlayerError.noTrackAvailable
         }
         player.play(sha1Hash: randomTrack.SHA1)

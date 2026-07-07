@@ -215,7 +215,7 @@ func trackServingRoutes(_ app: Application) throws {
                 path = header.value
             }
         }
-        guard let path = path else { throw Abort(.badRequest) }
+        guard let path else { throw Abort(.badRequest) }
 
         Log.d("finding at path \(path)")
         try await offload {
@@ -377,7 +377,7 @@ func playerRoutes(_ app: Application) throws {
                         sha1Hash = hash
                     }
                 }
-                if let sha1Hash = sha1Hash {
+                if let sha1Hash {
                     if let audioTrack = trackFinder.audioTrack(forHash: sha1Hash) as? AudioTrack {
                         audioPlayer.play(sha1Hash: sha1Hash)
                         return audioTrack

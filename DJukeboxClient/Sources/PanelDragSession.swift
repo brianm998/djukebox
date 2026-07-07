@@ -73,7 +73,7 @@ public final class PanelDragSession: ObservableObject {
     }
 
     func update(screenPoint: CGPoint) {
-        guard let payload = payload, let controller = controller else {
+        guard let payload, let controller = controller else {
             dropTarget = nil
             return
         }
@@ -99,7 +99,7 @@ public final class PanelDragSession: ObservableObject {
     func end(screenPoint: CGPoint) {
         NSCursor.arrow.set()
         defer { payload = nil; dropTarget = nil }
-        guard let payload = payload, let controller = controller else { return }
+        guard let payload, let controller = controller else { return }
         switch payload {
         case .move(let panel, let sourceWindowID):
             if let target = dropTarget {

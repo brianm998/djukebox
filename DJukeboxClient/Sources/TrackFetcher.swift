@@ -333,7 +333,7 @@ public class TrackFetcher: ObservableObject {
         let gainSha1 = self.currentTrack?.SHA1
         if gainSha1 != self.lastGainSha1 {
             self.lastGainSha1 = gainSha1
-            if let gainSha1 = gainSha1 {
+            if let gainSha1 {
                 self.refreshSavedGain(forHash: gainSha1)
             } else {
                 self.currentTrackGainDB = 0
@@ -373,7 +373,7 @@ public class TrackFetcher: ObservableObject {
     // so the bar moves without resending the whole queue. A nil duration/position
     // means "nothing playing" → clear the bar.
     public func updateProgress(position: TimeInterval?, duration: TimeInterval?) {
-        if let duration = duration, let position = position, duration > 0 {
+        if let duration, let position = position, duration > 0 {
             self.progressBarLevel = ProgressBar.State(level: position, max: duration)
         } else {
             self.progressBarLevel = nil
@@ -386,7 +386,7 @@ public class TrackFetcher: ObservableObject {
         desiredArtist = audioTrack.Artist
         desiredAlbum = audioTrack.Album
 
-        if let desiredAlbum = desiredAlbum {
+        if let desiredAlbum {
             for track in allTracks {
                 if track.Artist == desiredArtist,
                    track.Album == desiredAlbum
@@ -715,8 +715,8 @@ extension TrackFetcher {
     }
     
     public func cacheQueue() {
-        if let localTracks = localTracks {
-            if let currentTrack = currentTrack {
+        if let localTracks {
+            if let currentTrack {
                 localTracks.keepLocal(sha1Hash: currentTrack.SHA1) { success in
                     Log.w(success)
                 }

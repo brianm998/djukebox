@@ -39,7 +39,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
             return Double(currentTime.value)/Double(currentTime.timescale)
         }
         set(newValue) {
-            if let newValue = newValue {
+            if let newValue {
                 let seekTime = CMTime(value: Int64(newValue), timescale: 1)
                 self.logPlayerStatus()
                 Log.i("trying to seek to \(seekTime)")
@@ -55,7 +55,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
 
     public var playingTrackDuration: TimeInterval? {
         // The playback point, in seconds, within the timeline of the sound associated with the audio player.
-        if let playingTrack = playingTrack { return playingTrack.timeInterval }
+        if let playingTrack { return playingTrack.timeInterval }
         return nil
     }
 
@@ -333,7 +333,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         // any of it.
         let finishedBox = UncheckedSendableBox(note.object as? AVPlayerItem)
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             Log.d("playerDidFinishPlaying")
 
             // resolve the played track from the finished item itself: by the

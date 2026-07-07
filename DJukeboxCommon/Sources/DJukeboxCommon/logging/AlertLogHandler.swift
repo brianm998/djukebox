@@ -52,7 +52,7 @@ public final class AlertLogHandler: LogHandler, @unchecked Sendable {
             let dateString = self.dateFormatter.string(from: Date())
 
             var logString = "" 
-            if let data = data {
+            if let data {
                 logString = "\(dateString)\n\(fileLocation)\n\(message)\n\(data.description)"
             } else {
                 logString = "\(dateString)\n\(fileLocation)\n\(message)"

@@ -193,11 +193,11 @@ public final class PanelWindowController: NSObject, NSWindowDelegate {
                            excludeWindow: UUID?,
                            leafFrames: [UUID: [UUID: CGRect]]) -> DropTarget? {
         guard let (winID, window) = windowUnder(screenPoint) else { return nil }
-        if let excludeWindow = excludeWindow, winID == excludeWindow { return nil }
+        if let excludeWindow, winID == excludeWindow { return nil }
         guard let local = windowLocalPoint(screenPoint, window: window),
               let frames = leafFrames[winID] else { return nil }
         guard let (leafID, rect) = frames.first(where: { $0.value.contains(local) }) else { return nil }
-        if let draggingPanelID = draggingPanelID, leafID == draggingPanelID { return nil }
+        if let draggingPanelID, leafID == draggingPanelID { return nil }
         return DropTarget(windowID: winID, leafID: leafID, zone: zone(for: local, in: rect))
     }
 

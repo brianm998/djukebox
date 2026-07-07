@@ -30,7 +30,7 @@ public enum PairingStore {
 
     /// The token for the jukebox this device is paired with, or nil if unpaired.
     public static func load() -> String? {
-        guard let url = url,
+        guard let url,
               let data = try? Data(contentsOf: url),
               let stored = try? JSONDecoder().decode(Stored.self, from: data)
         else { return nil }
@@ -38,7 +38,7 @@ public enum PairingStore {
     }
 
     public static func save(_ token: String) {
-        guard let url = url else { return }
+        guard let url else { return }
         do {
             try JSONEncoder().encode(Stored(token: token)).write(to: url)
         } catch {
@@ -47,7 +47,7 @@ public enum PairingStore {
     }
 
     public static func clear() {
-        if let url = url { try? FileManager.default.removeItem(at: url) }
+        if let url { try? FileManager.default.removeItem(at: url) }
     }
 
     /// A friendly default name for this device, shown in the pair request.
@@ -238,7 +238,7 @@ public class PairingClient: ObservableObject {
     }
 
     private func pollStatus() {
-        guard let requestId = requestId,
+        guard let requestId,
               let url = URL(string: "\(serverURL)/pair/status/\(requestId)") else { return }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
@@ -320,8 +320,8 @@ public class PairingMonitor: ObservableObject {
     public func approve(_ request: PendingPairRequest) {
         post("pair/approve", body: ["requestId": request.requestId],
              decodeAs: PairApproveResponse.self) { [weak self] response in
-            guard let self = self else { return }
-            if let response = response {
+            guard let self else { return }
+            if let response {
                 self.activeCode = (name: request.name, code: response.code)
             }
             self.poll()

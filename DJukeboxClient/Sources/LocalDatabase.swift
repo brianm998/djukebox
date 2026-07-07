@@ -38,7 +38,7 @@ public final class LocalDatabase {
     }
 
     deinit {
-        if let db = db { sqlite3_close_v2(db) }
+        if let db { sqlite3_close_v2(db) }
     }
 
     public func allTracks() -> [AudioTrack] {
@@ -192,7 +192,7 @@ public final class LocalDatabase {
     }
 
     private func bind(_ stmt: OpaquePointer?, _ index: Int32, _ value: String?) {
-        if let value = value {
+        if let value {
             sqlite3_bind_text(stmt, index, value, -1, SQLITE_TRANSIENT)
         } else {
             sqlite3_bind_null(stmt, index)
