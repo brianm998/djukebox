@@ -759,6 +759,13 @@ fileprivate extension Log {
 }
 
 
+// Deliberately still a serial DispatchQueue, not an actor: a DispatchQueue
+// guarantees strict FIFO ordering of enqueued blocks, which an actor's task
+// scheduling does not — swapping this (or the per-handler queues below) for
+// actors risks reordering log lines under concurrent logging, which matters
+// for a logging system. dispatchQueue is also a public LogHandler requirement
+// LOG_ABORT() relies on to sequence its abort after pending prints. See
+// docs/modernization-audit.md F47 for the fuller writeup of this decision.
 fileprivate let logQueue = DispatchQueue(label: "logging")
 #if !os(macOS)
 //fileprivate var backgroundTask: BackgroundTask?

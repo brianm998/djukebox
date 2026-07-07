@@ -24,7 +24,7 @@ public final class FileLogHandler: LogHandler, @unchecked Sendable {
         // this is for the logfile name
         let dateString = Date().formatted(FileLogHandler.filenameFormat)
         self.logfilename = "log-\(dateString).txt"
-        self.dispatchQueue = DispatchQueue(label: "consoleLogging")
+        self.dispatchQueue = DispatchQueue(label: "fileLogging")
 
         // this is for log lines
         dateFormatter.dateFormat = "H:mm:ss.SSSS"

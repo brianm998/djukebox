@@ -11,7 +11,7 @@ public final class ConsoleLogHandler: LogHandler, @unchecked Sendable {
     public init(at level: Log.Level) {
         self.level = level
         dateFormatter.dateFormat = "H:mm:ss.SSSS"
-        self.dispatchQueue = DispatchQueue(label: "fileLogging")
+        self.dispatchQueue = DispatchQueue(label: "consoleLogging")
     }
     
     public func log(message: String,
