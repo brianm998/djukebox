@@ -54,19 +54,21 @@ struct ContentView: View {
         // PairingApprovalHost surfaces incoming pair requests from other devices so
         // they can be allowed/denied here (no-op when running offline/local).
         PairingApprovalHost(server: client.serverConnection) {
-            // iPad gets the pinned branding bar in the upper-left; iPhone doesn't
-            // (its screen is too small to spend the vertical space). Attach it via
-            // safeAreaInset rather than wrapping the TabView in a VStack — keeping
-            // the TabView as the root view stops iPadOS 26 from rendering a second,
-            // duplicate tab bar.
+            // iPad shows the app-icon badge as branding in the top-left corner;
+            // iPhone doesn't (its screen is too small to spend the space).
+            //
+            // NOTE: on iPadOS 26 the TabView floats its tab selector at the top-
+            // *center*. The branding must therefore be a small, non-interactive
+            // corner overlay — an earlier full-width safeAreaInset bar (opaque,
+            // spanning the top) sat right on top of the selector and made the tabs
+            // vanish. Keeping the TabView as the plain root (no wrapping VStack) also
+            // avoids iPadOS 26 rendering a second, duplicate tab bar.
             if layoutIsLarge() {
                 tabView(client)
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        VStack(spacing: 0) {
-                            DJHeaderBar()
-                            DJNeonDivider()
-                        }
-                        .background(DJTheme.screenGradient)
+                    .overlay(alignment: .topLeading) {
+                        DJIconBadge(size: 30)
+                            .padding(.leading, 12)
+                            .allowsHitTesting(false)
                     }
             } else {
                 tabView(client)
@@ -76,17 +78,31 @@ struct ContentView: View {
     }
 
     private func tabView(_ client: Client) -> some View {
+        // The vacuum-tube VU meter lives in the *background of each tab page*,
+        // centered at the top and glowing up through the page's translucent panel
+        // (macOS pins it in a corner instead). It has to be per-page rather than a
+        // single layer behind the whole TabView: on iOS the TabView's page backdrop
+        // is opaque, so anything behind the TabView (or the screen gradient itself)
+        // never shows — the meter must sit inside the page, in front of that backdrop
+        // but behind the semi-transparent djCard / nav bar. (An earlier attempt that
+        // hung a .background on the TabView also jammed up iPad tab switching, since
+        // the TabView bridges to a UITabBarController.)
         TabView {
             Group {
                 if layoutIsLarge() {
                     ArtistAlbumTrackList(client) // looks ok on iPad, even mini
                         .djCard()
                         .padding(8)
+                        .tubeBackdrop(client.levelMonitor)
                 } else {
                     // iPhone browses via a navigation stack; its bars are themed
                     // globally (see AppDelegate) so it sits on the neon gradient.
+                    // The tube backdrop goes *inside* the NavigationView (on the
+                    // list content) — a background behind the NavigationView itself
+                    // is hidden by its opaque UIKit backdrop, same as the TabView.
                     NavigationView {
                         NaviArtistList(client)
+                            .tubeBackdrop(client.levelMonitor)
                             .navigationBarTitle("Artists", displayMode: .inline)
                     }
                 }
@@ -99,6 +115,7 @@ struct ContentView: View {
             PlayingTracksView(client, onScan: startScan, onGoOffline: browser.rememberCurrentPlayLocal)
               .djCard()
               .padding(8)
+              .tubeBackdrop(client.levelMonitor)
               .tabItem {
                   Image(systemName: "music.note.list")
                   Text("playing")
@@ -107,6 +124,7 @@ struct ContentView: View {
             SearchView(client)
               .djCard()
               .padding(8)
+              .tubeBackdrop(client.levelMonitor)
               .tabItem {
                   Image(systemName: "magnifyingglass.circle.fill")
                   Text("search")
@@ -115,19 +133,11 @@ struct ContentView: View {
             HistoryView(client)
               .djCard()
               .padding(8)
+              .tubeBackdrop(client.levelMonitor)
               .tabItem {
                   Image(systemName: "gobackward")
                   Text("history")
               }
-        }
-        // Vacuum-tube VU meter pinned to the upper-right corner, above every tab.
-        // Smaller on iPhone, where the corner is tight; non-interactive so it never
-        // intercepts taps on the content or nav bar beneath it.
-        .overlay(alignment: .topTrailing) {
-            VacuumTubeMeter(monitor: client.levelMonitor, scale: layoutIsLarge() ? 1.0 : 0.72)
-                .padding(.top, layoutIsLarge() ? 6 : 2)
-                .padding(.trailing, 10)
-                .allowsHitTesting(false)
         }
     }
 
@@ -227,6 +237,21 @@ struct SplashView: View {
             .frame(width: geo.size.width, height: geo.size.height)
         }
         .ignoresSafeArea()
+    }
+}
+
+private extension View {
+    /// Place the vacuum-tube VU meter in the background of a tab page, centered at
+    /// the top and non-interactive, so it glows up through the page's translucent
+    /// panel. Applied per-page (see the note in `tabView`) because the iOS TabView's
+    /// page backdrop is opaque — a single meter behind the whole TabView never shows.
+    /// Smaller on iPhone, where space is tighter, than on iPad.
+    func tubeBackdrop(_ monitor: AudioLevelMonitor) -> some View {
+        background(alignment: .top) {
+            VacuumTubeMeter(monitor: monitor, scale: layoutIsLarge() ? 1.0 : 0.72)
+                .padding(.top, layoutIsLarge() ? 10 : 8)
+                .allowsHitTesting(false)
+        }
     }
 }
 
