@@ -93,8 +93,6 @@ struct SplashView: View {
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView(ServerBrowser(initialQueueType: .remote))
-    }
+#Preview {
+    ContentView(ServerBrowser(initialQueueType: .remote))
 }
