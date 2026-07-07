@@ -11,7 +11,7 @@ public struct PlayingTrackView: View {
     public var body: some View {
         return VStack {
             if trackFetcher.currentTrack == nil {
-                Text("Nothing Playing").foregroundColor(Color.gray)
+                Text("Nothing Playing").foregroundStyle(Color.gray)
             } else {
                 HStack {
                     //            Spacer()

@@ -66,11 +66,11 @@ struct ServerStatusView: View {
                 Text(title)
                     .font(.title)
                     .bold()
-                    .foregroundColor(DJTheme.textPrimary)
+                    .foregroundStyle(DJTheme.textPrimary)
 
                 Text(message)
                     .font(.body)
-                    .foregroundColor(DJTheme.textSecondary)
+                    .foregroundStyle(DJTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 420)

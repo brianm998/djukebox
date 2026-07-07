@@ -44,7 +44,7 @@ public struct AlbumList: View {
             }
             List(trackFetcher.albums) { artist in
                 Text(artist.Album ?? "Singles") // XXX constant
-                  .foregroundColor((self.trackFetcher.albumCacheStatus[TrackFetcher.albumStatusKey(artist: artist.Artist, album: artist.Album)] ?? .none).color)
+                  .foregroundStyle((self.trackFetcher.albumCacheStatus[TrackFetcher.albumStatusKey(artist: artist.Artist, album: artist.Album)] ?? .none).color)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture {

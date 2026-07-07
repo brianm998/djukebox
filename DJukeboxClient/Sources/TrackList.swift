@@ -42,7 +42,7 @@ public struct TrackList: View {
             }
             List(trackFetcher.tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
-                  .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
+                  .foregroundStyle((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
                   .onTapGesture {
                       Task {
                           do {
@@ -109,7 +109,7 @@ public struct TrackList: View {
             }
             List(trackFetcher.tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
-                  .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
+                  .foregroundStyle((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
                   .onTapGesture {
                       Task {
                           do {

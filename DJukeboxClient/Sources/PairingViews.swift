@@ -44,11 +44,11 @@ public struct PairingEntryView: View {
 
                 Text("Pair this device")
                     .font(.title).bold()
-                    .foregroundColor(DJTheme.textPrimary)
+                    .foregroundStyle(DJTheme.textPrimary)
 
                 Text(statusMessage)
                     .font(.body)
-                    .foregroundColor(DJTheme.textSecondary)
+                    .foregroundStyle(DJTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 420)
@@ -75,7 +75,7 @@ public struct PairingEntryView: View {
                 if let note = pairing.note {
                     Text(note)
                         .font(.footnote)
-                        .foregroundColor(DJTheme.neonMagenta)
+                        .foregroundStyle(DJTheme.neonMagenta)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 420)
                 }
@@ -97,7 +97,7 @@ public struct PairingEntryView: View {
                 .numericKeyboard()
                 .multilineTextAlignment(.center)
                 .font(.system(size: 32, weight: .semibold, design: .monospaced))
-                .foregroundColor(DJTheme.neonCyan)
+                .foregroundStyle(DJTheme.neonCyan)
                 .frame(maxWidth: 220)
                 .textFieldStyle(.plain)
                 .djField()
@@ -177,13 +177,13 @@ public struct PairingApprovalView: View {
                 Text("🔗").font(.system(size: 48))
                 Text("Pairing “\(active.name)”")
                     .font(.title2).bold()
-                    .foregroundColor(DJTheme.textPrimary)
+                    .foregroundStyle(DJTheme.textPrimary)
                     .multilineTextAlignment(.center)
                 Text("Enter this code on the new device:")
-                    .foregroundColor(DJTheme.textSecondary)
+                    .foregroundStyle(DJTheme.textSecondary)
                 Text(groupedPairingCode(active.code))
                     .font(.system(size: 44, weight: .bold, design: .monospaced))
-                    .foregroundColor(DJTheme.neonCyan)
+                    .foregroundStyle(DJTheme.neonCyan)
                     .padding(.vertical, 8)
                 Button("Done") { monitor.clearCode() }
                     .buttonStyle(.borderedProminent).tint(DJTheme.neonViolet)
@@ -191,10 +191,10 @@ public struct PairingApprovalView: View {
                 Text("🔗").font(.system(size: 48))
                 Text("“\(request.name)” wants to pair")
                     .font(.title2).bold()
-                    .foregroundColor(DJTheme.textPrimary)
+                    .foregroundStyle(DJTheme.textPrimary)
                     .multilineTextAlignment(.center)
                 Text("Allow this device to control your DJukebox?")
-                    .foregroundColor(DJTheme.textSecondary)
+                    .foregroundStyle(DJTheme.textSecondary)
                     .multilineTextAlignment(.center)
                 HStack(spacing: 16) {
                     Button("Deny") { monitor.deny(request) }

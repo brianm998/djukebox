@@ -155,7 +155,7 @@ public extension View {
                 .fill(DJTheme.panel.opacity(0.7)))
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .strokeBorder(DJTheme.neonViolet.opacity(0.8), lineWidth: 1))
-            .foregroundColor(DJTheme.textPrimary)
+            .foregroundStyle(DJTheme.textPrimary)
             .tint(DJTheme.neonCyan)
     }
 }

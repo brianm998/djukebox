@@ -39,7 +39,7 @@ public struct ArtistList: View {
             }
             List(trackFetcher.artists(matching: self.searchQuery)) { artist in
                 Text(artist.Artist)
-                  .foregroundColor((self.trackFetcher.artistCacheStatus[artist.Artist] ?? .none).color)
+                  .foregroundStyle((self.trackFetcher.artistCacheStatus[artist.Artist] ?? .none).color)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture {

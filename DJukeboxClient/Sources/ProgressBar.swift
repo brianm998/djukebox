@@ -25,7 +25,7 @@ public struct ProgressBar: View {
                     Rectangle().frame(width: geometry.size.width,
                                       height: geometry.size.height)
                       .opacity(0.25)
-                      .foregroundColor(DJTheme.textSecondary)
+                      .foregroundStyle(DJTheme.textSecondary)
 
                     Rectangle().frame(width: min(CGFloat(self.state.level/self.state.max)*geometry.size.width,
                                                  geometry.size.width),
@@ -37,7 +37,7 @@ public struct ProgressBar: View {
                 if self.labelClosure != nil && self.state.level > 0 {
                     Text(self.labelClosure!(self.state.max-self.state.level))
                       .offset(x: -8)
-                      .foregroundColor(DJTheme.textPrimary)
+                      .foregroundStyle(DJTheme.textPrimary)
                       .opacity(0.85)
                 }
             }
