@@ -108,7 +108,7 @@ public final class History: HistoryType, @unchecked Sendable {
         }
         for url in urls {
             guard url.pathExtension == "txt" else { continue }
-            guard let string = try? String(contentsOf: url) else { continue }
+            guard let string = try? String(contentsOf: url, encoding: .utf8) else { continue }
             for line in string.split(whereSeparator: { $0.isNewline }) {
                 let data = line.split(separator: ",")
                 guard data.count == 3, let time = Double(data[1]) else { continue }
