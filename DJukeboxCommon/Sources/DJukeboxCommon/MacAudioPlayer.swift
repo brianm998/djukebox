@@ -4,7 +4,7 @@ import Dispatch
 import os
 
 // @unchecked Sendable: a process-wide singleton audio player. Its queue mutations
-// are guarded by `trackQueueSemaphore`; the remaining playback state is only
+// are guarded by `trackQueueLock`; the remaining playback state is only
 // touched from the serial audio dispatch queue / the node completion callback.
 // Kept unchecked so the server can hold it in a global `any AudioPlayerType & Sendable`.
 //
@@ -19,9 +19,13 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
 
     public var isPlaying = false
 
-    public var trackQueue: [String] = []
+    // Guards every read/mutation of the pending-track queue (including
+    // shuffleQueue(), which used to mutate it with no lock at all).
+    private let trackQueueLock = OSAllocatedUnfairLock(initialState: [String]())
 
-    fileprivate var trackQueueSemaphore = DispatchSemaphore(value: 1)
+    public var trackQueue: [String] {
+        trackQueueLock.withLock { $0 }
+    }
 
     public var playingTrack: AudioTrackType?
 
@@ -103,26 +107,23 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
     }
 
     public func clearQueue() {
-        self.trackQueueSemaphore.wait()
-        trackQueue = []
-        self.trackQueueSemaphore.signal()
+        trackQueueLock.withLock { $0 = [] }
     }
 
     public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {
-        self.trackQueueSemaphore.wait()
-        if fromIndex < 0,
-           toIndex < 0,
-           fromIndex >= trackQueue.count,
-           toIndex >= trackQueue.count,
-           trackQueue[fromIndex] != track.SHA1
-        {
-            self.trackQueueSemaphore.signal()
-            return false
+        trackQueueLock.withLock { queue in
+            if fromIndex < 0,
+               toIndex < 0,
+               fromIndex >= queue.count,
+               toIndex >= queue.count,
+               queue[fromIndex] != track.SHA1
+            {
+                return false
+            }
+            queue.remove(at: fromIndex)
+            queue.insert(track.SHA1, at: toIndex)
+            return true
         }
-        self.trackQueue.remove(at: fromIndex)
-        self.trackQueue.insert(track.SHA1, at: toIndex)
-        self.trackQueueSemaphore.signal()
-        return true
     }
 
     fileprivate func playingDone() {
@@ -143,24 +144,22 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
 
     public func stopPlaying(sha1Hash: String, atIndex index: Int) {
         Log.d("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
-        self.trackQueueSemaphore.wait()
-        for (trackIndex, hash) in trackQueue.enumerated() {
-            Log.d("index \(trackIndex) hash \(sha1Hash)")
-            if hash == sha1Hash,
-               index == trackIndex
-            {
-                Log.d("index \(index) needs to be removed")
-                self.trackQueue.remove(at: index)
+        trackQueueLock.withLock { queue in
+            for (trackIndex, hash) in queue.enumerated() {
+                Log.d("index \(trackIndex) hash \(sha1Hash)")
+                if hash == sha1Hash,
+                   index == trackIndex
+                {
+                    Log.d("index \(index) needs to be removed")
+                    queue.remove(at: index)
+                }
             }
         }
-        self.trackQueueSemaphore.signal()
     }
 
     public func play(sha1Hash: String) {
         // XXX look up this hash beforehand, and throw error if not found?
-        self.trackQueueSemaphore.wait()
-        trackQueue.append(sha1Hash)
-        self.trackQueueSemaphore.signal()
+        trackQueueLock.withLock { $0.append(sha1Hash) }
         Log.d("calling serviceQueue from play")
         // AVAudioEngine graph mutation is not thread-safe: funnel every engine /
         // node operation through the serial dispatchQueue (the completion callback
@@ -206,13 +205,10 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
     // must be called on dispatchQueue (see play()/skip()/the completion callback)
     fileprivate func serviceQueue() {
         guard !isPlaying else { return }
-        self.trackQueueSemaphore.wait()
-        guard trackQueue.count > 0 else {
-            self.trackQueueSemaphore.signal()
-            return
-        }
-        let nextTrackHash = trackQueue.removeFirst()
-        self.trackQueueSemaphore.signal()
+        guard let nextTrackHash = trackQueueLock.withLock({ queue -> String? in
+            guard !queue.isEmpty else { return nil }
+            return queue.removeFirst()
+        }) else { return }
         self.playingTrack = trackFinder.audioTrack(forHash: nextTrackHash)
 
         isPlaying = true
@@ -274,7 +270,7 @@ public final class MacAudioPlayer: AudioPlayerType, @unchecked Sendable {
     }
 
     public func shuffleQueue() {
-        trackQueue.shuffle()
+        trackQueueLock.withLock { $0.shuffle() }
     }
 
     // Install the read-only metering tap on the main mixer once. The mixer output
