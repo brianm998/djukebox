@@ -1,9 +1,9 @@
 import Foundation
 import DJukeboxCommon
 
-// @unchecked Sendable: bridges the (non-isolated) AsyncAudioPlayerType to server
-// endpoints. `isPaused`/`playingTrackPosition` are only touched from URLSession
-// callbacks and the main thread; treated as internally main-thread-disciplined.
+// AsyncAudioPlayerType is @MainActor (F30), so this is too; `isPaused`/
+// `playingTrackPosition` are only touched from URLSession callbacks and the main
+// thread anyway, so this wasn't a behavior change.
 //
 // ServerConnection's request/post/requestJson helpers are async throws (F07), so
 // every method here just calls them directly with try await -- no continuation

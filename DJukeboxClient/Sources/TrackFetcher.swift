@@ -35,19 +35,30 @@ public struct LocalTrackCache {
 
 // this is a view model used to update SwiftUI
 //
-// @unchecked Sendable: this is both a SwiftUI view model and the client's
-// TrackFinderType (a non-isolated DJukeboxCommon protocol the audio players call
-// off the main thread), so it can't be @MainActor. Every @Published mutation is
-// routed to the main thread via DispatchQueue.main.async; the catalog maps
-// (allTracks / trackMap) are built off-main then published on-main. See the
-// client concurrency note in AsyncAudioPlayer.
-public class TrackFetcher: ObservableObject, @unchecked Sendable {
+// @MainActor: this is a SwiftUI view model. It used to also have to be the
+// client's TrackFinderType (a non-isolated DJukeboxCommon protocol the audio
+// players call off the main thread), which meant it couldn't be @MainActor and
+// every @Published mutation had to be manually routed to the main thread via
+// DispatchQueue.main.async. F30 split that non-isolated lookup surface out into
+// TrackCatalog (see TrackCatalog.swift); TrackFetcher now delegates its
+// TrackFinderType conformance to an owned `catalog` and is free to be a normal
+// @MainActor view model. Non-isolated consumers (AVDoghouseAudioPlayer,
+// LocalTracks) hold `catalog` directly instead of holding TrackFetcher.
+@MainActor
+public class TrackFetcher: ObservableObject {
     var allTracks: [AudioTrack] = []
 
     var trackMap: [String:AudioTrack] = [:]
 
-    var localTracks: LocalTrackType?
-    
+    // The non-isolated TrackFinderType surface; see TrackCatalog.swift. Kept in
+    // sync with trackMap/localTracks below so non-isolated consumers (which hold
+    // this directly) always see the current catalog.
+    public let catalog: TrackCatalog
+
+    var localTracks: LocalTrackType? {
+        didSet { catalog.setLocalTracks(localTracks) }
+    }
+
     // turn on to not use streaming for tracks (offline mode)
     public var useLocalContentOnly = false {
         didSet(oldValue) {
@@ -91,10 +102,10 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
                 Log.i(self.initialRuntimeState)
             } else {
                 if let playingTrack = runtimeState.playingTrack {
-                    self.currentTrack = self.audioTrack(forHash: playingTrack) as? AudioTrack
+                    self.currentTrack = self.catalog.audioTrack(forHash: playingTrack) as? AudioTrack
                 }
                 self.pendingTracks = runtimeState.pendingTracks.map {
-                    self.audioTrack(forHash: $0) as! AudioTrack
+                    self.catalog.audioTrack(forHash: $0) as! AudioTrack
                 }
             }
         }
@@ -181,6 +192,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
 
     public init(withServer server: ServerType) {
         self.server = server
+        self.catalog = TrackCatalog(serverURL: server.url, authHeaderValue: server.authHeaderValue)
         self.albumTitle = "Albums"
         self.trackTitle = "Songs"
         self.audioPlayer = ViewObservableAudioPlayer()
@@ -238,14 +250,13 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
             artistMap[track.Artist] = track
             sha1Map[track.SHA1] = track
         }
-        DispatchQueue.main.async {
-            self.allTracks = tracks
-            self.artists = Array(artistMap.values).sorted()
-            self.trackMap = sha1Map
-            self.reapplyBrowseColumns()
-            self.recomputeCacheStatus()
-            self.maybeDoInitialSetup()
-        }
+        self.allTracks = tracks
+        self.artists = Array(artistMap.values).sorted()
+        self.trackMap = sha1Map
+        self.catalog.update(trackMap: sha1Map)
+        self.reapplyBrowseColumns()
+        self.recomputeCacheStatus()
+        self.maybeDoInitialSetup()
     }
 
     // After the catalog is (re)loaded — e.g. switching to local/offline — the mac /
@@ -304,47 +315,45 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     }
 
     func update(playingQueue: PlayingQueue) {
-        DispatchQueue.main.async {
-            self.playingQueue = playingQueue
-            
-            if playingQueue.tracks.count > 0 {
-                self.currentTrack = playingQueue.tracks[0]
+        self.playingQueue = playingQueue
 
-                if playingQueue.tracks.count > 1 {
-                    self.pendingTracks = Array(playingQueue.tracks[1..<playingQueue.tracks.count])
-                } else {
-                    self.pendingTracks = []
-                }
+        if playingQueue.tracks.count > 0 {
+            self.currentTrack = playingQueue.tracks[0]
+
+            if playingQueue.tracks.count > 1 {
+                self.pendingTracks = Array(playingQueue.tracks[1..<playingQueue.tracks.count])
             } else {
-                self.currentTrack = nil
                 self.pendingTracks = []
             }
-            // keep the volume-button label in sync with whatever is now playing
-            let gainSha1 = self.currentTrack?.SHA1
-            if gainSha1 != self.lastGainSha1 {
-                self.lastGainSha1 = gainSha1
-                if let gainSha1 = gainSha1 {
-                    self.refreshSavedGain(forHash: gainSha1)
-                } else {
-                    self.currentTrackGainDB = 0
-                }
-            }
-            var totalDuration: TimeInterval = 0
-            // XXX make this track the PlayingQueue directly
-            if let duration = playingQueue.playingTrackDuration,
-               let position = playingQueue.playingTrackPosition
-            {
-                self.progressBarLevel = ProgressBar.State(level: position, max: duration)
-                totalDuration = duration - position
-            } else {
-                self.progressBarLevel = nil
-            }
-            for (index, track) in playingQueue.tracks.enumerated() {
-                if index > 0 { totalDuration += track.timeInterval ?? 0 }
-            }
-            self.totalDuration = totalDuration
-            self.completionTime = Date(timeIntervalSinceNow: totalDuration)
+        } else {
+            self.currentTrack = nil
+            self.pendingTracks = []
         }
+        // keep the volume-button label in sync with whatever is now playing
+        let gainSha1 = self.currentTrack?.SHA1
+        if gainSha1 != self.lastGainSha1 {
+            self.lastGainSha1 = gainSha1
+            if let gainSha1 = gainSha1 {
+                self.refreshSavedGain(forHash: gainSha1)
+            } else {
+                self.currentTrackGainDB = 0
+            }
+        }
+        var totalDuration: TimeInterval = 0
+        // XXX make this track the PlayingQueue directly
+        if let duration = playingQueue.playingTrackDuration,
+           let position = playingQueue.playingTrackPosition
+        {
+            self.progressBarLevel = ProgressBar.State(level: position, max: duration)
+            totalDuration = duration - position
+        } else {
+            self.progressBarLevel = nil
+        }
+        for (index, track) in playingQueue.tracks.enumerated() {
+            if index > 0 { totalDuration += track.timeInterval ?? 0 }
+        }
+        self.totalDuration = totalDuration
+        self.completionTime = Date(timeIntervalSinceNow: totalDuration)
     }
     
     public func refreshQueue() {
@@ -364,12 +373,10 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     // so the bar moves without resending the whole queue. A nil duration/position
     // means "nothing playing" → clear the bar.
     public func updateProgress(position: TimeInterval?, duration: TimeInterval?) {
-        DispatchQueue.main.async {
-            if let duration = duration, let position = position, duration > 0 {
-                self.progressBarLevel = ProgressBar.State(level: position, max: duration)
-            } else {
-                self.progressBarLevel = nil
-            }
+        if let duration = duration, let position = position, duration > 0 {
+            self.progressBarLevel = ProgressBar.State(level: position, max: duration)
+        } else {
+            self.progressBarLevel = nil
         }
     }
 
@@ -401,19 +408,17 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
 
     // show all tracks for the artist/album combo in the passed AudioTrack
     func showTracks(for audioTrack: AudioTrack) {
-        var tracks = self.tracks(for: audioTrack)
+        let tracks = self.tracks(for: audioTrack)
 
         self.showAlbums(forArtist: audioTrack.Artist)
 
-        DispatchQueue.main.async {
-            self.tracks = tracks.sorted()
-            if let desiredAlbum = self.desiredAlbum {
-                self.trackTitle = "\(desiredAlbum)"
-            } else if let desiredArtist = self.desiredArtist {
-                self.trackTitle = "\(desiredArtist)"
-            } else {
-                self.trackTitle = "songs" // XXX
-            }
+        self.tracks = tracks.sorted()
+        if let desiredAlbum = self.desiredAlbum {
+            self.trackTitle = "\(desiredAlbum)"
+        } else if let desiredArtist = self.desiredArtist {
+            self.trackTitle = "\(desiredArtist)"
+        } else {
+            self.trackTitle = "songs" // XXX
         }
     }
 
@@ -439,12 +444,10 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
 
     func showAlbums(forArtist artist: String) {
         let albums = self.albums(forArtist: artist)
-        DispatchQueue.main.async {
-            Log.d("show albums for \(artist)")
-            self.shownAlbumsArtist = artist
-            self.albums = albums
-            self.albumTitle = "\(artist)"
-        }
+        Log.d("show albums for \(artist)")
+        self.shownAlbumsArtist = artist
+        self.albums = albums
+        self.albumTitle = "\(artist)"
     }
 
     public func cacheTracks(forArtist artist: String) {
@@ -571,7 +574,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         Task {
             do {
                 let db = try await server.masterGain()
-                DispatchQueue.main.async { self.masterGainDB = db ?? 0 }
+                self.masterGainDB = db ?? 0
             } catch {
                 Log.e("could not refresh master gain: \(error)")
             }
@@ -610,7 +613,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         Task {
             do {
                 let db = try await server.savedGain(forHash: hash)
-                DispatchQueue.main.async { self.currentTrackGainDB = db ?? 0 }
+                self.currentTrackGainDB = db ?? 0
             } catch {
                 Log.e("could not refresh saved gain: \(error)")
             }
@@ -631,7 +634,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     // tint maps on the main queue, serialized with the other catalog mutations.
     // Called by LocalTracks.
     public func cacheDidChange() {
-        DispatchQueue.main.async { self.recomputeCacheStatus() }
+        self.recomputeCacheStatus()
     }
 
     // Rebuild artistCacheStatus / albumCacheStatus / cachedTrackSHA1s from the
@@ -682,39 +685,13 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     }
 }
 
-// tell the client which url to use for which track hash
-extension TrackFetcher: TrackFinderType {
-    public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
-
-        if let localTracks = localTracks,
-           let (track, url) = localTracks.track(forHash: sha1Hash)
-        {
-            return (track, url)
-        }
-        
-        if let track = self.trackMap[sha1Hash],
-           let url = URL(string: "\(self.server.url)/stream/\(self.server.authHeaderValue)/\(sha1Hash)")
-        {
-            //Log.d(url)
-            return (track, url)
-        }
-        return nil
-    }
-    
-    public func audioTrack(forHash sha1Hash: String) -> AudioTrackType? {
-
-        if let localTracks = localTracks,
-           let track = localTracks.audioTrack(forHash: sha1Hash)
-        {
-            return track
-        }
-        
-        if let track = self.trackMap[sha1Hash] {
-            return track
-        }
-        return nil
-    }
-
+// tell the client which url to use for which track hash. TrackFetcher itself
+// doesn't conform to TrackFinderType any more (F30) — that non-isolated surface
+// now lives on `catalog` (see TrackCatalog.swift), which non-isolated consumers
+// (AVDoghouseAudioPlayer, LocalTracks) hold directly. These conveniences stay on
+// TrackFetcher because they touch @MainActor-only state (localTracks,
+// currentTrack, pendingTracks).
+extension TrackFetcher {
     public func clearCache() {
         localTracks?.clearLocalStore()
     }

@@ -70,7 +70,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         }
     }
 
-    let trackFinder: TrackFinderType
+    let trackFinder: TrackCatalog
 
     let historyWriter: HistoryWriterType
 
@@ -120,7 +120,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         }
     }
     
-    public init(trackFinder: TrackFinderType,
+    public init(trackFinder: TrackCatalog,
                 historyWriter: HistoryWriterType,
                 savedGainForHash: ((String, @escaping (Double) -> Void) -> Void)? = nil,
                 levelMeter: AudioLevelMeter = AudioLevelMeter())

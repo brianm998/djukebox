@@ -10,13 +10,14 @@ import DJukeboxCommon
 // The client's playback/catalog/networking core is one callback graph bridged by
 // non-isolated DJukeboxCommon protocols (AudioPlayerType, TrackFinderType,
 // HistoryWriterType) that the server also implements — so those types can't be
-// @MainActor. Instead they are `@unchecked Sendable`: UI state is mutated on the
-// main thread (via DispatchQueue.main.async / SwiftUI), and playback commands are
-// serialized by the underlying AVFoundation/AVQueuePlayer. The genuinely
-// standalone UI state machines (ServerBrowser, PairingClient, PairingMonitor) are
-// @MainActor instead.
+// @MainActor; they stay `@unchecked Sendable`, serialized by the underlying
+// AVFoundation/AVQueuePlayer. AsyncAudioPlayerType, however, is a CLIENT-ONLY
+// protocol (not shared with the server), so it and this class are @MainActor
+// (F30) — it wraps a non-isolated `player` but reads TrackFetcher (also
+// @MainActor, F30) directly. The genuinely standalone UI state machines
+// (ServerBrowser, PairingClient, PairingMonitor) are @MainActor too.
 // ---------------------------------------------------------------------------
-public class AsyncAudioPlayer: AsyncAudioPlayerType, @unchecked Sendable {
+public class AsyncAudioPlayer: AsyncAudioPlayerType {
     var player: AudioPlayerType
     let fetcher: TrackFetcher
     let history: HistoryFetcher

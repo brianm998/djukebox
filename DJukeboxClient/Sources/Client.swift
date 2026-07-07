@@ -80,18 +80,19 @@ public class Client {
         let levelMeter = AudioLevelMeter()
 
         let server = serverConnection
-        let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher,
+        let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher.catalog,
                                            historyWriter: ServerHistoryWriter(server: serverConnection),
                                            savedGainForHash: { [weak fetcher] hash, done in
                                                // `done` isn't @Sendable, so it can't be captured
                                                // directly by the Task below; box it the same way
-                                               // ServerConnection's pre-F07 helpers did. Resolve the
-                                               // weak `fetcher` to an immutable value up front too --
-                                               // capturing the weak var itself across the Task
-                                               // boundary trips the same sending-closure diagnostic.
+                                               // ServerConnection's pre-F07 helpers did. This closure
+                                               // is called synchronously from the (non-isolated)
+                                               // AVDoghouseAudioPlayer, so reading fetcher.masterGainDB
+                                               // (now @MainActor, F30) needs an explicit hop rather
+                                               // than a direct read.
                                                let doneBox = UncheckedSendableBox(done)
-                                               let currentMasterGainDB = fetcher?.masterGainDB ?? 0
-                                               Task {
+                                               Task { @MainActor in
+                                                   let currentMasterGainDB = fetcher?.masterGainDB ?? 0
                                                    let db = try? await server.savedGain(forHash: hash)
                                                    doneBox.value((db ?? 0) + currentMasterGainDB)
                                                }
@@ -162,7 +163,8 @@ public class Client {
         // refreshTracks() via its didSet, which needs localTracks in place when
         // restoring offline mode. (An explicit refreshTracks() used to follow as
         // a workaround, fetching the whole catalog from the server a second time.)
-        let localTracks = LocalTracks(trackFinder: self.trackFetcher)
+        let localTracks = LocalTracks(trackFinder: self.trackFetcher.catalog)
+        localTracks.fetcher = fetcher
         trackFetcher.localTracks = localTracks
 
         trackFetcher.initialize(with: runtimeState)
@@ -179,11 +181,15 @@ public class Client {
         // The remote queue and the history now arrive over /stream (pushed), so this
         // only saves runtime state and refreshes the LOCAL queue — a purely on-device
         // computation (no network) that advances the local-playback progress bar.
+        // Timer's closure is @Sendable/non-isolated, but trackFetcher is @MainActor
+        // (F30) now, so hop over explicitly rather than touching it directly.
         self.refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            self.trackFetcher.runtimeState.save()
-            if self.trackFetcher.queueType == .local {
-                self.trackFetcher.refreshQueue()
+            Task { @MainActor in
+                self.trackFetcher.runtimeState.save()
+                if self.trackFetcher.queueType == .local {
+                    self.trackFetcher.refreshQueue()
+                }
             }
         }
     }

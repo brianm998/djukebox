@@ -10,11 +10,12 @@ import DJukeboxCommon
 // flicker, maps it onto a perceptual 0...1 scale, and publishes values the tube
 // view animates.
 //
-// @unchecked Sendable / not @MainActor, matching the client's playback core
-// (TrackFetcher et al.): the timer fires on the main run loop and every @Published
-// mutation happens there; the only cross-thread state (the pushed remote levels)
-// lives behind a lock. See the client concurrency note in AsyncAudioPlayer.
-public final class AudioLevelMonitor: ObservableObject, @unchecked Sendable {
+// @MainActor: the timer fires on the main run loop and every @Published mutation
+// happens there; it also reads TrackFetcher's @MainActor state directly (F30).
+// The only cross-thread state (the pushed remote levels) lives behind a lock, so
+// ingestRemoteLevels can still be called from the stream socket's receive side.
+@MainActor
+public final class AudioLevelMonitor: ObservableObject {
     // Smoothed, normalized per-channel levels in 0...1 for the view (0 = tube at
     // rest / grey, 1 = fully lit golden-orange).
     @Published public private(set) var left: Double = 0
@@ -34,7 +35,13 @@ public final class AudioLevelMonitor: ObservableObject, @unchecked Sendable {
     private var rightRing: [Double]
     private var ringIndex = 0
 
-    private var timer: Timer?
+    // nonisolated(unsafe): Timer isn't Sendable, so a plain @MainActor-isolated
+    // stored property can't be touched from deinit (always nonisolated). Only
+    // ever written from start()/stop() (both @MainActor) and read here in deinit
+    // for a one-time invalidate() — Timer.invalidate() is documented safe to call
+    // from any thread, so this is a narrow, safe escape hatch (same spirit as
+    // ServerStreamSocket's nonisolated deinit teardown).
+    private nonisolated(unsafe) var timer: Timer?
 
     public init(localMeter: AudioLevelMeter, trackFetcher: TrackFetcher?) {
         self.localMeter = localMeter
@@ -53,11 +60,15 @@ public final class AudioLevelMonitor: ObservableObject, @unchecked Sendable {
 
     public func start() {
         timer?.invalidate()
-        // Scheduled on the main run loop; the block only touches main-thread state
-        // (and lock-guarded values), so no cross-actor hop is needed — this mirrors
-        // Client's 1 s refresh timer.
+        // Scheduled on the main run loop; the block runs on the main thread in
+        // practice (so this hop is an immediate same-thread resumption, not a real
+        // dispatch), but Timer's closure is nonisolated/@Sendable, and tick() is
+        // @MainActor now (F30, since it reads TrackFetcher directly) — so hop
+        // explicitly rather than rely on the (untracked) thread the timer fires on.
         let t = Timer(timeInterval: 1.0 / sampleHz, repeats: true) { [weak self] _ in
-            self?.tick()
+            Task { @MainActor in
+                self?.tick()
+            }
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t

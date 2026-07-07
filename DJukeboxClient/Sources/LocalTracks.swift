@@ -36,8 +36,16 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
         return self.cacheDir?.appendingPathComponent(filename).appendingPathExtension(extention)
     }
 
-    let trackFinder: TrackFinderType
+    let trackFinder: TrackCatalog
     private var db: LocalDatabase?
+
+    // Weak back-reference to the owning TrackFetcher, used ONLY to nudge its
+    // @Published cache-status UI to refresh after a download/reconcile/clear
+    // (fetcher.refreshTracks() / cacheDidChange()). Set by Client after both are
+    // constructed (LocalTracks needs `catalog`, a property of TrackFetcher, to
+    // exist first). Every use is already inside a MainActor.run / Task { @MainActor
+    // in } block below, so hopping onto the fetcher's actor here is a no-op.
+    public weak var fetcher: TrackFetcher?
 
     // SHA1s kept (downloaded) while the background reconcile scan was running;
     // main-queue only. The scan's drop list is a snapshot from init, so anything
@@ -45,7 +53,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     private var keptDuringReconcile = Set<String>()
     private var reconcilePending = true
 
-    public init(trackFinder: TrackFinderType) {
+    public init(trackFinder: TrackCatalog) {
         self.trackFinder = trackFinder
         super.init()
         if let databaseURL = self.databaseURL {
@@ -110,7 +118,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                 self.db?.delete(shas: Array(dropSet))
                 self.downloadedTracks.removeAll { dropSet.contains($0.SHA1) }
                 self.sanitizeDownloadedTracks()
-                if let fetcher = self.trackFinder as? TrackFetcher {
+                if let fetcher = self.fetcher {
                     if fetcher.useLocalContentOnly {
                         // the UI is showing the local catalog (offline mode) and it
                         // just changed underneath it — republish (this also re-tints)
@@ -160,8 +168,13 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
         self.db?.clear()
         self.downloadedTracks = []
         self.downloadedTrackMap = [:]
-        // everything just went uncached — repaint the browse lists white
-        (self.trackFinder as? TrackFetcher)?.cacheDidChange()
+        // everything just went uncached — repaint the browse lists white. This is a
+        // non-isolated method (part of LocalTrackType) that may be called from the
+        // main actor (TrackFetcher.clearCache()) or elsewhere, so hop explicitly
+        // rather than assume the caller's context.
+        Task { @MainActor [weak fetcher] in
+            fetcher?.cacheDidChange()
+        }
     }
 
     fileprivate func download(url: URL,
@@ -279,7 +292,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                     self.downloadedTracks.append(track)
                     self.sanitizeDownloadedTracks()
                     // a newly cached track re-tints its artist/album/song rows
-                    (self.trackFinder as? TrackFetcher)?.cacheDidChange()
+                    self.fetcher?.cacheDidChange()
                     closure(true)
                 }
             } else {

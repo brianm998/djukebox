@@ -17,13 +17,9 @@ public struct ArtistList: View {
             HStack() {
                 Text("Artists")
                 if self.trackFetcher.allTracks.count > 0 {
-                    let fetcher = trackFetcher
-                    let action = {
-                        DispatchQueue.global().async {
-                            fetcher.cache(tracks: fetcher.allTracks)
-                        }
-                    }
-                    Button(action: action) {
+                    // cache(tracks:) already launches its own Task internally
+                    // (TrackFetcher, F30/F20), so no manual dispatch is needed here.
+                    Button(action: { trackFetcher.cache(tracks: trackFetcher.allTracks) }) {
                         Text("Cache All")
                     }
                 }

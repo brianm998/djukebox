@@ -10,6 +10,12 @@ public enum AudioPlayerError: Error {
     case moveFailed
 }
 
+// Client-only protocol (not shared with the server, unlike AudioPlayerType /
+// TrackFinderType), and every call site is already on the main actor: SwiftUI
+// view Task {} blocks and TrackFetcher (@MainActor, F30). Marking it @MainActor
+// lets AsyncAudioPlayer (the local-queue conformer) read TrackFetcher's
+// @MainActor state directly instead of needing an actor hop per call.
+@MainActor
 public protocol AsyncAudioPlayerType {
     var isPaused: Bool { get }
 
