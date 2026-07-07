@@ -14,7 +14,50 @@ import DJukeboxCommon
 
  Loopback is judged from the real TCP peer (`req.remoteAddress`), which Vapor does
  not derive from forwarding headers, so it can't be spoofed by a remote client.
+
+ The actual gate lives in `AuthMiddleware` below, applied to a protected route
+ group (`let protected = app.grouped(AuthMiddleware(...))`) in routes.swift's
+ top-level `routes(_:)`. `AuthController` now only holds the track-resolution
+ helpers (`track`/`trackFromPath`), which do more than auth —
+ they also resolve `:sha1` into an `AudioTrack` — so they stay available to
+ handlers that need that resolution, but no longer perform the auth check
+ themselves; the group's middleware has already gated the request by the time a
+ handler runs.
  */
+
+// Loopback-or-token check, shared by AuthMiddleware and (for the WebSocket
+// upgrade, which can't throw into a normal HTTP error the same way) the
+// `/stream` route's own non-throwing check.
+func isLoopback(_ req: Request) -> Bool {
+    guard let ip = req.remoteAddress?.ipAddress else { return false }
+    return ip == "127.0.0.1" || ip == "::1" || ip == "::ffff:127.0.0.1"
+}
+
+func isAuthorized(_ req: Request, credential: String?, pairing: PairingService) -> Bool {
+    if isLoopback(req) { return true }
+    if let credential, pairing.accepts(token: credential) { return true }
+    return false
+}
+
+// Applied to a protected route group (`app.grouped(AuthMiddleware(pairing:))`)
+// covering every route that used to open with `AuthController(...).headerAuth`.
+// Accepts EITHER the `Authorization` header (used by almost every protected
+// route) OR an `auth` path parameter (used only by `/stream/:auth/:sha1`, whose
+// auth token travels in the URL rather than a header) — checking both means the
+// same middleware/group can protect that route too, rather than needing a
+// special-cased carve-out.
+struct AuthMiddleware: AsyncMiddleware {
+    let pairing: PairingService
+
+    func respond(to req: Request, chainingTo next: AsyncResponder) async throws -> Response {
+        let credential = req.headers.first(name: "Authorization") ?? req.parameters.get("auth")
+        guard isAuthorized(req, credential: credential, pairing: pairing) else {
+            throw Abort(.unauthorized)
+        }
+        return try await next.respond(to: req)
+    }
+}
+
 class AuthController {
     let pairing: PairingService
     let trackFinder: TrackFinderType
@@ -24,67 +67,45 @@ class AuthController {
         self.trackFinder = trackFinder
     }
 
-    private func isLoopback(_ req: Request) -> Bool {
-        guard let ip = req.remoteAddress?.ipAddress else { return false }
-        return ip == "127.0.0.1" || ip == "::1" || ip == "::ffff:127.0.0.1"
-    }
-
-    private func isAuthorized(_ req: Request, credential: String?) -> Bool {
-        if isLoopback(req) { return true }
-        if let credential, pairing.accepts(token: credential) { return true }
-        return false
-    }
-
-    // curl -H "Authorization: <token>" http://localhost:8080/rand
-    func headerAuth<T>(request req: Request, closure: () throws -> T) throws -> T {
-        if isAuthorized(req, credential: req.headers.first(name: "Authorization")) {
-            return try closure()
-        }
-        throw Abort(.unauthorized)
-    }
-
     // Non-throwing header auth for the WebSocket upgrade, which can't use the
-    // closure form (it either accepts the socket or closes it). Same rule as
-    // headerAuth: loopback, or a paired device's token in the Authorization header.
+    // AsyncMiddleware form directly for its own belt-and-suspenders check (the
+    // route itself is now also gated by AuthMiddleware on the protected group;
+    // this stays as a defensive second check right at the upgrade closure,
+    // matching the pre-existing behavior of closing rather than throwing there).
     func authorizes(_ req: Request) -> Bool {
-        isAuthorized(req, credential: req.headers.first(name: "Authorization"))
+        isAuthorized(req, credential: req.headers.first(name: "Authorization"), pairing: pairing)
     }
 
+    // Resolves `:sha1` (from the `:auth`-authed streaming route) into an
+    // AudioTrack + file path. NOT an auth check — the caller must already be on
+    // the protected group (AuthMiddleware checks the `auth` path param there).
     // curl http://localhost:8080/stream/<token>/<sha1>
-    func pathAuth<T>(request req: Request, closure: () async throws -> T) async throws -> T {
-        if isAuthorized(req, credential: req.parameters.get("auth")) {
-            return try await closure()
-        }
-        throw Abort(.unauthorized)
-    }
-
-    func trackFromPath<T>(from req: Request, // XXX reame this
+    func trackFromPath<T>(from req: Request,
                           closure: (AudioTrack, String) async throws -> T) async throws -> T
     {
-        return try await self.pathAuth(request: req) {
-            if let hash = req.parameters.get("sha1"),
-               let (track, path) = trackFinder.track(forHash: hash),
-               let audioTrack = track as? AudioTrack
-            {
-                return try await closure(audioTrack, path.path)
-            } else {
-                throw Abort(.notFound)
-            }
+        if let hash = req.parameters.get("sha1"),
+           let (track, path) = trackFinder.track(forHash: hash),
+           let audioTrack = track as? AudioTrack
+        {
+            return try await closure(audioTrack, path.path)
+        } else {
+            throw Abort(.notFound)
         }
     }
 
+    // Resolves `:sha1` into an AudioTrack + file path. NOT an auth check — the
+    // caller must already be on the protected group (AuthMiddleware has already
+    // gated the request via the Authorization header by the time this runs).
     func track<T>(from req: Request,
                   closure: (AudioTrack, String) throws -> T) throws -> T
     {
-        return try self.headerAuth(request: req) {
-            if let hash = req.parameters.get("sha1"),
-               let (track, path) = trackFinder.track(forHash: hash),
-               let audioTrack = track as? AudioTrack
-            {
-                return try closure(audioTrack, path.path)
-            } else {
-                throw Abort(.notFound)
-            }
+        if let hash = req.parameters.get("sha1"),
+           let (track, path) = trackFinder.track(forHash: hash),
+           let audioTrack = track as? AudioTrack
+        {
+            return try closure(audioTrack, path.path)
+        } else {
+            throw Abort(.notFound)
         }
     }
 }

@@ -23,10 +23,14 @@ struct PairClaimResponse: Content {
  The device-pairing handshake. See PairingService for the state it drives.
 
  Request/status/claim are reachable WITHOUT auth — the new device has no token
- yet. Pending/approve/deny require auth (loopback or an already-paired token), so
- only a trusted client can see and approve incoming requests.
+ yet — so they're registered on `app` directly. Pending/approve/deny require auth
+ (loopback or an already-paired token), so only a trusted client can see and
+ approve incoming requests; those three are registered on `protected`
+ (`app.grouped(AuthMiddleware(...))`, built in routes.swift) instead, and no
+ longer perform their own auth check — AuthMiddleware has already gated the
+ request by the time these closures run.
  */
-func pairingRoutes(_ app: Application) throws {
+func pairingRoutes(_ app: Application, protected: any RoutesBuilder) throws {
 
     // Step 1 (new device): announce an intent to pair.
     // curl -d '{"name":"Brian iPhone"}' -H 'content-type: application/json' localhost:8080/pair/request
@@ -45,21 +49,13 @@ func pairingRoutes(_ app: Application) throws {
     }
 
     // Step 5 (trusted client): the requests waiting for approval.
-    // headerAuth's closure form is synchronous (see AuthController), so the auth
-    // check happens inside it and the actor-isolated call happens after, gated
-    // on that check having passed without throwing.
-    app.get("pair", "pending") { req async throws -> [PairingService.PendingInfo] in
-        let auth = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        try auth.headerAuth(request: req) { () }
+    protected.get("pair", "pending") { req async throws -> [PairingService.PendingInfo] in
         return await pairingService.pending()
     }
 
     // Step 6/7 (trusted client): approve a request and get the code to read aloud.
-    app.post("pair", "approve") { req async throws -> PairApproveResponse in
-        let auth = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        let body = try auth.headerAuth(request: req) {
-            try req.content.decode(PairIdBody.self)
-        }
+    protected.post("pair", "approve") { req async throws -> PairApproveResponse in
+        let body = try req.content.decode(PairIdBody.self)
         guard let code = await pairingService.approve(id: body.requestId) else {
             throw Abort(.notFound)
         }
@@ -67,11 +63,8 @@ func pairingRoutes(_ app: Application) throws {
     }
 
     // Step 6 (trusted client): reject a request.
-    app.post("pair", "deny") { req async throws -> Response in
-        let auth = AuthController(pairing: pairingService, trackFinder: trackFinder)
-        let body = try auth.headerAuth(request: req) {
-            try req.content.decode(PairIdBody.self)
-        }
+    protected.post("pair", "deny") { req async throws -> Response in
+        let body = try req.content.decode(PairIdBody.self)
         return await pairingService.deny(id: body.requestId) ? Response(status: .ok)
                                                               : Response(status: .notFound)
     }
