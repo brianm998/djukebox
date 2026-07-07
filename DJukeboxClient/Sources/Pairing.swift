@@ -138,23 +138,20 @@ public class PairingClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = body
         request.timeoutInterval = 15
-        session.dataTask(with: request) { [weak self] data, _, error in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                if let error = error {
-                    self.setPhase(.failed("Couldn't reach the server: \(error.localizedDescription)"))
-                    return
-                }
-                guard let data = data,
-                      let decoded = try? JSONDecoder().decode(PairRequestResponse.self, from: data) else {
+        Task { @MainActor in
+            do {
+                let (data, _) = try await session.data(for: request)
+                guard let decoded = try? JSONDecoder().decode(PairRequestResponse.self, from: data) else {
                     self.setPhase(.failed("The server didn't accept the pairing request."))
                     return
                 }
                 self.requestId = decoded.requestId
                 self.setPhase(.waiting)
                 self.startPolling()
+            } catch {
+                self.setPhase(.failed("Couldn't reach the server: \(error.localizedDescription)"))
             }
-        }.resume()
+        }
     }
 
     /// Exchange the code the user read off the trusted device for a token.
@@ -176,16 +173,10 @@ public class PairingClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = body
         request.timeoutInterval = 15
-        session.dataTask(with: request) { [weak self] data, _, error in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                if let error = error {
-                    self.note = "Couldn't reach the server: \(error.localizedDescription)"
-                    self.setPhase(.readyForCode)
-                    return
-                }
-                guard let data = data,
-                      let decoded = try? JSONDecoder().decode(PairClaimResponse.self, from: data) else {
+        Task { @MainActor in
+            do {
+                let (data, _) = try await session.data(for: request)
+                guard let decoded = try? JSONDecoder().decode(PairClaimResponse.self, from: data) else {
                     self.note = "Unexpected response from the server."
                     self.setPhase(.readyForCode)
                     return
@@ -214,8 +205,11 @@ public class PairingClient: ObservableObject {
                     self.stopPolling()
                     self.setPhase(.failed("This pairing request expired. Try again."))
                 }
+            } catch {
+                self.note = "Couldn't reach the server: \(error.localizedDescription)"
+                self.setPhase(.readyForCode)
             }
-        }.resume()
+        }
     }
 
     /// Start over with a fresh request (after a denial or failure).
@@ -247,23 +241,20 @@ public class PairingClient: ObservableObject {
               let url = URL(string: "\(serverURL)/pair/status/\(requestId)") else { return }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
-        session.dataTask(with: request) { [weak self] data, _, _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                guard let data = data,
-                      let decoded = try? JSONDecoder().decode(PairStatusResponse.self, from: data) else { return }
-                switch decoded.state {
-                case "approved":
-                    // don't clobber the user mid-submit
-                    if self.phase == .waiting { self.setPhase(.readyForCode) }
-                case "denied":
-                    self.stopPolling()
-                    self.setPhase(.denied)
-                default:
-                    break // still "requested"
-                }
+        Task { @MainActor in
+            guard let (data, _) = try? await session.data(for: request),
+                  let decoded = try? JSONDecoder().decode(PairStatusResponse.self, from: data) else { return }
+            switch decoded.state {
+            case "approved":
+                // don't clobber the user mid-submit
+                if self.phase == .waiting { self.setPhase(.readyForCode) }
+            case "denied":
+                self.stopPolling()
+                self.setPhase(.denied)
+            default:
+                break // still "requested"
             }
-        }.resume()
+        }
     }
 
     private func setPhase(_ phase: Phase) {
@@ -362,33 +353,25 @@ public class PairingMonitor: ObservableObject {
         var request = URLRequest(url: url)
         request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 10
-        session.dataTask(with: request) { [weak self] data, response, _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
-                      let data = data,
-                      let decoded = try? JSONDecoder().decode([PendingPairRequest].self, from: data) else { return }
-                // forget ignores for requests the server no longer lists
-                let liveIds = Set(decoded.map { $0.requestId })
-                self.ignoredIds = self.ignoredIds.intersection(liveIds)
-                self.pending = decoded.filter { !self.ignoredIds.contains($0.requestId) }
-            }
-        }.resume()
+        Task { @MainActor in
+            guard let (data, response) = try? await session.data(for: request),
+                  let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+                  let decoded = try? JSONDecoder().decode([PendingPairRequest].self, from: data) else { return }
+            // forget ignores for requests the server no longer lists
+            let liveIds = Set(decoded.map { $0.requestId })
+            self.ignoredIds = self.ignoredIds.intersection(liveIds)
+            self.pending = decoded.filter { !self.ignoredIds.contains($0.requestId) }
+        }
     }
 
-    // closure is @MainActor: it mutates @Published state on the callers' side, and
-    // marking it so lets it cross the nonisolated URLSession completion safely. A
-    // bare (T?) -> Void inherits this class's main-actor isolation *without* being
-    // Sendable, which newer Swift toolchains (Xcode 26.5) reject as a data race
-    // when it's captured by the completion handler and hopped back to the main actor.
     private func post<T: Decodable & Sendable>(_ path: String,
                                     body: [String: String],
                                     decodeAs: T.Type,
-                                    closure: @escaping @MainActor (T?) -> Void)
+                                    closure: @escaping (T?) -> Void)
     {
         guard let url = URL(string: "\(serverURL)/\(path)"),
               let payload = try? JSONEncoder().encode(body) else {
-            Task { @MainActor in closure(nil) }
+            closure(nil)
             return
         }
         var request = URLRequest(url: url)
@@ -397,9 +380,12 @@ public class PairingMonitor: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = payload
         request.timeoutInterval = 15
-        session.dataTask(with: request) { data, _, _ in
-            let decoded = data.flatMap { try? JSONDecoder().decode(T.self, from: $0) }
-            Task { @MainActor in closure(decoded) }
-        }.resume()
+        Task { @MainActor in
+            guard let (data, _) = try? await session.data(for: request) else {
+                closure(nil)
+                return
+            }
+            closure(try? JSONDecoder().decode(T.self, from: data))
+        }
     }
 }
