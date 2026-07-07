@@ -92,12 +92,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                let player = browser.currentClient?.trackFetcher.audioPlayer.player
             {
                 if player.isPaused {
-                    player.resumePlaying() { success, error in
-                        
+                    Task {
+                        do {
+                            _ = try await player.resumePlaying()
+                        } catch {
+                            Log.e("could not resume playing: \(error)")
+                        }
                     }
                 } else {
-                    player.pausePlaying() { success, error in
-                        
+                    Task {
+                        do {
+                            _ = try await player.pausePlaying()
+                        } catch {
+                            Log.e("could not pause playing: \(error)")
+                        }
                     }
                 }
                 return nil

@@ -34,14 +34,24 @@ public struct NaviAlbumList: View {
           .navigationBarItems(trailing:
                                 Menu {
                                     Button {
-                                        self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.artist) { success, error in
+                                        Task {
+                                            do {
+                                                _ = try await self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.artist)
+                                            } catch {
+                                                Log.e("could not play new random track: \(error)")
+                                            }
                                             self.trackFetcher.refreshQueue()
                                         }
                                     } label: {
                                         Label("Play New Random Track", systemImage: "shuffle")
                                     }
                                     Button {
-                                        self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.artist) { success, error in
+                                        Task {
+                                            do {
+                                                _ = try await self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.artist)
+                                            } catch {
+                                                Log.e("could not play random track: \(error)")
+                                            }
                                             self.trackFetcher.refreshQueue()
                                         }
                                     } label: {

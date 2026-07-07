@@ -27,11 +27,15 @@ public struct NaviTrackList: View {
             Text(track.Title)
               .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
               .onTapGesture {
-                  self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
-                      // XXX check error, etc here
-                      if let track = track {
-                        self.fuck = "\(track.Title) playing"
-                          withAnimation { self.showOneTrackToast = true }
+                  Task {
+                      do {
+                          let playedTrack = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1)
+                          if let playedTrack = playedTrack {
+                              self.fuck = "\(playedTrack.Title) playing"
+                              withAnimation { self.showOneTrackToast = true }
+                          }
+                      } catch {
+                          Log.e("could not play track: \(error)")
                       }
                   }
               }
@@ -47,7 +51,12 @@ public struct NaviTrackList: View {
           .navigationBarItems(trailing:
                                 Menu {
                                     Button {
-                                        self.trackFetcher.audioPlayer.player?.playTracks(tracks) { success, error in
+                                        Task {
+                                            do {
+                                                _ = try await self.trackFetcher.audioPlayer.player?.playTracks(tracks)
+                                            } catch {
+                                                Log.e("could not play all tracks: \(error)")
+                                            }
                                             self.trackFetcher.refreshQueue()
                                             withAnimation { self.showAllTracksToast = true }
                                         }

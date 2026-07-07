@@ -289,8 +289,14 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         guard index >= 0 else { return }
         guard index < pendingTracks.count else { return }
 
-        audioPlayer.player?.stopPlayingTrack(withHash: pendingTracks[index].SHA1, atIndex: index) { success, error in
-            if success { self.refreshQueue() }
+        let hash = pendingTracks[index].SHA1
+        Task {
+            do {
+                let success = try await audioPlayer.player?.stopPlayingTrack(withHash: hash, atIndex: index)
+                if success == true { self.refreshQueue() }
+            } catch {
+                Log.e("could not stop playing track: \(error)")
+            }
         }
     }
 
@@ -339,8 +345,14 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     }
     
     public func refreshQueue() {
-        audioPlayer.player?.listPlayingQueue() { playingQueue, error in
-            if let queue = playingQueue { self.update(playingQueue: queue) }
+        Task {
+            do {
+                if let queue = try await audioPlayer.player?.listPlayingQueue() {
+                    self.update(playingQueue: queue)
+                }
+            } catch {
+                Log.e("could not list playing queue: \(error)")
+            }
         }
     }
 
@@ -453,40 +465,50 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     }
 
     public func clearPlayingQueue() {
-        self.audioPlayer.player?.clearPlayingQueue() { audioTrack, error in
-            if let error = error {
-                Log.e("DOH")
-            } else {
-                Log.d("clear queue: \(audioTrack)")
+        Task {
+            do {
+                let success = try await self.audioPlayer.player?.clearPlayingQueue()
+                Log.d("clear queue: \(success)")
+            } catch {
+                Log.e("DOH \(error)")
             }
             self.refreshQueue()
         }
     }
 
     public func playRandomTrack() {
-        self.audioPlayer.player?.playRandomTrack() { audioTrack, error in
-            if let error = error {
-                Log.e("DOH")
-            } else if let audioTrack = audioTrack {
-                Log.d("random enqueued: \(audioTrack.Title)")
+        Task {
+            do {
+                if let audioTrack = try await self.audioPlayer.player?.playRandomTrack() {
+                    Log.d("random enqueued: \(audioTrack.Title)")
+                }
+            } catch {
+                Log.e("DOH \(error)")
             }
             self.refreshQueue()
         }
     }
 
     public func playNewRandomTrack() {
-        self.audioPlayer.player?.playNewRandomTrack() { audioTrack, error in
-            if let error = error {
+        Task {
+            do {
+                if let audioTrack = try await self.audioPlayer.player?.playNewRandomTrack() {
+                    Log.d("new random enqueued: \(audioTrack.Title)")
+                }
+            } catch {
                 Log.e("DOH error: \(error)")
-            } else if let audioTrack = audioTrack {
-                Log.d("new random enqueued: \(audioTrack.Title)")
             }
             self.refreshQueue()
         }
     }
 
     public func playUntil(date: Date) {
-        self.audioPlayer.player?.playUntil(date: date) { playingQueue, error in
+        Task {
+            do {
+                _ = try await self.audioPlayer.player?.playUntil(date: date)
+            } catch {
+                Log.e("could not play until \(date): \(error)")
+            }
             self.refreshQueue()
         }
     }

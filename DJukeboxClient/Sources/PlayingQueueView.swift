@@ -39,21 +39,33 @@ public struct PlayingQueueView: View {
         if startIndex < endIndex {
             let positionsAhead = endIndex-startIndex-1
             Log.d("moving track \(trackToMove.SHA1) up \(positionsAhead) positions from \(startIndex)")
-            trackFetcher.audioPlayer.player?.movePlayingTrack(withHash: trackToMove.SHA1,
-                                                              fromIndex: startIndex,
-                                                              toIndex: startIndex + positionsAhead) { playingQueue, error in
-                if let queue = playingQueue {
-                    self.trackFetcher.update(playingQueue: queue)
+            Task {
+                do {
+                    let queue = try await trackFetcher.audioPlayer.player?.movePlayingTrack(
+                        withHash: trackToMove.SHA1,
+                        fromIndex: startIndex,
+                        toIndex: startIndex + positionsAhead)
+                    if let queue = queue {
+                        self.trackFetcher.update(playingQueue: queue)
+                    }
+                } catch {
+                    Log.e("could not move playing track: \(error)")
                 }
             }
         } else if startIndex > endIndex {
             let positionsBehind = startIndex-endIndex
             Log.d("moving track \(trackToMove.SHA1) down \(positionsBehind) positions from \(startIndex)")
-            trackFetcher.audioPlayer.player?.movePlayingTrack(withHash: trackToMove.SHA1,
-                                                              fromIndex: startIndex,
-                                                              toIndex: startIndex - positionsBehind) { playingQueue, error in
-                if let queue = playingQueue {
-                    self.trackFetcher.update(playingQueue: queue)
+            Task {
+                do {
+                    let queue = try await trackFetcher.audioPlayer.player?.movePlayingTrack(
+                        withHash: trackToMove.SHA1,
+                        fromIndex: startIndex,
+                        toIndex: startIndex - positionsBehind)
+                    if let queue = queue {
+                        self.trackFetcher.update(playingQueue: queue)
+                    }
+                } catch {
+                    Log.e("could not move playing track: \(error)")
                 }
             }
         } else {

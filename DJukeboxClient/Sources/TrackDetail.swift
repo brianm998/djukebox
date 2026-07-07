@@ -61,9 +61,14 @@ public struct TrackDetail: View {
         }
           .onTapGesture {
               if self.playOnTap {
-                  self.trackFetcher.audioPlayer.player?.playTrack(withHash: self.track.SHA1) { track, error in
+                  Task {
+                      do {
+                          let track = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: self.track.SHA1)
+                          Log.d("track \(track)")
+                      } catch {
+                          Log.e("could not play track: \(error)")
+                      }
                       self.trackFetcher.refreshQueue()
-                      Log.d("track \(track) error \(error)")
                   }
               }
           }

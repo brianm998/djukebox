@@ -62,7 +62,12 @@ public struct BoundTrackList: View {
                 Text(album ?? "\(artist) singles").foregroundColor(DJTheme.textPrimary)
                 if tracks.count > 0 {
                     Button("Play All") {
-                        self.trackFetcher.audioPlayer.player?.playTracks(tracks) { _, _ in
+                        Task {
+                            do {
+                                _ = try await self.trackFetcher.audioPlayer.player?.playTracks(tracks)
+                            } catch {
+                                Log.e("could not play all tracks: \(error)")
+                            }
                             self.trackFetcher.refreshQueue()
                         }
                     }
@@ -75,7 +80,12 @@ public struct BoundTrackList: View {
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture {
-                      self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { _, _ in
+                      Task {
+                          do {
+                              _ = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1)
+                          } catch {
+                              Log.e("could not play track: \(error)")
+                          }
                           self.trackFetcher.refreshQueue()
                       }
                   }

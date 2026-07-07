@@ -1,4 +1,5 @@
 import SwiftUI
+import DJukeboxCommon
 
 public struct AlbumList: View {
     let client: Client
@@ -16,14 +17,24 @@ public struct AlbumList: View {
                 Text(trackFetcher.albumTitle)
                 if self.trackFetcher.albums.count > 0 {
                     Button(action: {
-                        self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                        Task {
+                            do {
+                                _ = try await self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist)
+                            } catch {
+                                Log.e("could not play random track: \(error)")
+                            }
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
                         Text("Random")
                     }
                     Button(action: {
-                        self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist) { success, error in
+                        Task {
+                            do {
+                                _ = try await self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist)
+                            } catch {
+                                Log.e("could not play new random track: \(error)")
+                            }
                             self.trackFetcher.refreshQueue()
                         }
                     }) {

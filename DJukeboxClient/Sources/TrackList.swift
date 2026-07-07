@@ -21,7 +21,12 @@ public struct TrackList: View {
                 Text(trackFetcher.trackTitle)
                 if self.trackFetcher.tracks.count > 0 {
                     Button(action: {
-                            self.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks) { success, error in
+                        Task {
+                            do {
+                                _ = try await self.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks)
+                            } catch {
+                                Log.e("could not play all tracks: \(error)")
+                            }
                             self.trackFetcher.refreshQueue()
                         }
                     }) {
@@ -39,9 +44,14 @@ public struct TrackList: View {
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
                   .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
                   .onTapGesture {
-                      self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
+                      Task {
+                          do {
+                              let playedTrack = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1)
+                              Log.d("track \(playedTrack)")
+                          } catch {
+                              Log.e("could not play track: \(error)")
+                          }
                           self.trackFetcher.refreshQueue()
-                          Log.d("track \(track) error \(error)")
                       }
                   }
                   .onDrag {
@@ -76,7 +86,12 @@ public struct TrackList: View {
 
                     Menu {
                         Button {
-                            self.client.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks.sorted()) { success, error in
+                            Task {
+                                do {
+                                    _ = try await self.client.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks.sorted())
+                                } catch {
+                                    Log.e("could not play all tracks: \(error)")
+                                }
                                 self.client.trackFetcher.refreshQueue()
                             }
                         } label: {
@@ -96,9 +111,14 @@ public struct TrackList: View {
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
                   .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
                   .onTapGesture {
-                      self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
+                      Task {
+                          do {
+                              let playedTrack = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1)
+                              Log.d("track \(playedTrack)")
+                          } catch {
+                              Log.e("could not play track: \(error)")
+                          }
                           self.trackFetcher.refreshQueue()
-                          Log.d("track \(track) error \(error)")
                       }
                   }
                   .onDrag {

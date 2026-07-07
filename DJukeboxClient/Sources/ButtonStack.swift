@@ -12,11 +12,12 @@ public struct PlayButton: View {
     
     public var body: some View {
         Button(action: {
-            self.audioPlayer.player?.resumePlaying() { audioTrack, error in
-                if let error = error {
-                    Log.e("DOH")
-                } else {
-                    Log.d("play: \(audioTrack)")
+            Task {
+                do {
+                    let success = try await self.audioPlayer.player?.resumePlaying()
+                    Log.d("play: \(success)")
+                } catch {
+                    Log.e("DOH \(error)")
                 }
             }
         }) {
@@ -41,11 +42,12 @@ public struct PauseButton: View {
     
     public var body: some View {
         Button(action: {
-            self.audioPlayer.player?.pausePlaying() { audioTrack, error in
-                if let error = error {
-                    Log.e("DOH")
-                } else {
-                    Log.d("pause: \(audioTrack)")
+            Task {
+                do {
+                    let success = try await self.audioPlayer.player?.pausePlaying()
+                    Log.d("pause: \(success)")
+                } catch {
+                    Log.e("DOH \(error)")
                 }
             }
         }) {
@@ -70,12 +72,14 @@ public struct SkipCurrentTrackButton: View {
     
     public var body: some View {
         Button(action: {
-                self.trackFetcher.audioPlayer.player?.stopPlayingTrack(withHash: self.trackFetcher.currentTrack?.SHA1 ?? "",
-                                                         atIndex: -1) { audioTrack, error in
-                if let error = error {
-                    Log.e("DOH")
-                } else {
-                    Log.d("skip: \(audioTrack)")
+            Task {
+                do {
+                    let success = try await self.trackFetcher.audioPlayer.player?.stopPlayingTrack(
+                        withHash: self.trackFetcher.currentTrack?.SHA1 ?? "",
+                        atIndex: -1)
+                    Log.d("skip: \(success)")
+                } catch {
+                    Log.e("DOH \(error)")
                 }
                 self.trackFetcher.refreshQueue()
             }
