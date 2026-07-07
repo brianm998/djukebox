@@ -73,15 +73,7 @@ struct Toast<Presenting, Content>: View where Presenting: View, Content: View {
     let delay: TimeInterval = 2
 
     var body: some View {
-        if self.isPresented {
-            DispatchQueue.main.asyncAfter(deadline: .now() + self.delay) {
-                withAnimation {
-                    self.isPresented = false
-                }
-            }
-        }
-
-        return GeometryReader { geometry in
+        GeometryReader { geometry in
             ZStack(alignment: .bottom) {
                 self.presenter()
 
@@ -99,6 +91,13 @@ struct Toast<Presenting, Content>: View where Presenting: View, Content: View {
             } //ZStack (outer)
             .padding(.bottom)
         } //GeometryReader
+        .task(id: self.isPresented) {
+            guard self.isPresented else { return }
+            try? await Task.sleep(for: .seconds(self.delay))
+            withAnimation {
+                self.isPresented = false
+            }
+        }
     } //body
 } //Toast
 
