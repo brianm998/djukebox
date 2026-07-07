@@ -26,7 +26,7 @@ public struct NaviTrackList: View {
         let tracks = trackFetcher.tracks(for: album).sorted()
         return List(tracks) { track in
             Text(track.Title)
-              .foregroundColor(DJTheme.textPrimary)
+              .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
               .onTapGesture {
                   self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1) { track, error in
                       // XXX check error, etc here

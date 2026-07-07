@@ -33,6 +33,19 @@ public enum DJTheme {
     /// Dimmer secondary text (lavender-grey).
     public static let textSecondary = Color(djHex: 0xB9A8E0)
 
+    // MARK: - Local-cache indicators
+    //
+    // Browse lists tint each row by how much of it is cached locally for offline
+    // play: green when everything is cached, amber when only some is, and the
+    // normal near-white text when none is. Songs are all-or-nothing, so only
+    // `cacheFull` / `cacheNone` ever apply to them. See `CacheStatus`.
+    /// Fully cached locally.
+    public static let cacheFull    = Color(djHex: 0x2BFF88)
+    /// Partially cached locally.
+    public static let cachePartial = Color(djHex: 0xFFD54A)
+    /// Not cached — the normal row text colour (near-white).
+    public static let cacheNone    = textPrimary
+
     /// Default control tint — cyan reads best against the dark background.
     public static let accent = neonCyan
 

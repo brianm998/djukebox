@@ -31,7 +31,7 @@ public struct BoundAlbumList: View {
             }.padding(.horizontal, 4)
             List(trackFetcher.albums(forArtist: artist)) { album in
                 Text(album.Album ?? "Singles")
-                  .foregroundColor(album.Album == nil ? DJTheme.neonMagenta : DJTheme.textPrimary)
+                  .foregroundColor((self.trackFetcher.albumCacheStatus[TrackFetcher.albumStatusKey(artist: album.Artist, album: album.Album)] ?? .none).color)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture { self.trackFetcher.showTracks(for: album) }
@@ -71,7 +71,7 @@ public struct BoundTrackList: View {
             }.padding(.horizontal, 4)
             List(tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
-                  .foregroundColor(self.client.historyFetcher.eventCount(for: track.SHA1) == 0 ? DJTheme.neonCyan : DJTheme.textSecondary)
+                  .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture {
