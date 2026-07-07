@@ -196,28 +196,25 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                     // body) — clear it so it can't satisfy this fast-path again
                     // or collide with the download's moveItem below
                     try? FileManager.default.removeItem(atPath: destURL.path)
-                    let download = URLSession.shared.downloadTask(with: url) { localURL, urlResponse, error in
-                        // downloadTask writes the response body to localURL even for
+                    do {
+                        let (localURL, urlResponse) = try await URLSession.shared.download(from: url)
+                        // download(from:) writes the response body to localURL even for
                         // HTTP errors (401/404/5xx), so we MUST check the status — else
                         // an error page gets saved as <sha1>.mp3 and recorded as a real
                         // downloaded track (junk that can't play).
                         let status = (urlResponse as? HTTPURLResponse)?.statusCode ?? 0
-                        if let localURL, error == nil, (200..<300).contains(status) {
+                        if (200..<300).contains(status) {
                             Log.i("moving from \(localURL) to \(destURL)")
-                            do {
-                                try FileManager.default.moveItem(atPath: localURL.path, toPath: destURL.path)
-                                closure(true)
-                            } catch {
-                                Log.e("error: \(error)")
-                                closure(false)
-                            }
+                            try FileManager.default.moveItem(atPath: localURL.path, toPath: destURL.path)
+                            closure(true)
                         } else {
-                            Log.w("download failed for \(filename): HTTP \(status), error \(String(describing: error))")
+                            Log.w("download failed for \(filename): HTTP \(status)")
                             closure(false)
                         }
+                    } catch {
+                        Log.e("error: \(error)")
+                        closure(false)
                     }
-
-                    download.resume()
                 }
             } else {
                 closure(false)
