@@ -21,10 +21,7 @@ public struct NaviAlbumList: View {
     public var body: some View {
         let albums = trackFetcher.albums(forArtist: artist)
         return List(albums) { album in
-            NavigationLink( destination: NaviTrackList(self.client,
-                                                       album: album,
-                                                       title: album.Album ?? ""))
-            {
+            NavigationLink(value: BrowseRoute.tracks(album: album)) {
                 Text(album.Album ?? "")
                   .foregroundStyle((self.trackFetcher.albumCacheStatus[TrackFetcher.albumStatusKey(artist: album.Artist, album: album.Album)] ?? .none).color)
             }
