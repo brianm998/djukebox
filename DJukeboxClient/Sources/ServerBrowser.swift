@@ -27,11 +27,15 @@ public enum ServerConnectionState {
  Every step that can go wrong moves to `.failed` with a message so the UI can show
  something other than an empty view.
  */
-// @MainActor: a UI state machine driving @Published `state`. Its network callbacks
-// are all delivered on the main thread already — the NWBrowser/NWConnection handlers
-// are started with queue: .main and the loopback/verify URLSession completions hop
-// through DispatchQueue.main before touching `self` — so main-actor isolation lines
-// up with how the code already runs.
+// @MainActor: a UI state machine driving @Published `state`. The NWBrowser/NWConnection
+// handlers are started with queue: .main, so they run on the main thread at runtime, but
+// the compiler still sees them as plain nonisolated @Sendable closures — Swift 6 doesn't
+// treat "queue: .main" as proof of main-actor isolation, so each handler hops back in via
+// `Task { @MainActor in ... }` (a same-thread, immediate resumption in practice, not a
+// dispatch queue round trip) rather than assuming isolation lines up. The loopback/verify
+// probes use async URLSession.data(for:), which resumes its awaiting Task on the main
+// actor here since the whole class (and therefore every Task { ... } it spawns) is
+// @MainActor.
 @MainActor
 public class ServerBrowser: ObservableObject {
 
@@ -92,7 +96,7 @@ public class ServerBrowser: ObservableObject {
         generation += 1
         let gen = generation
         hasResolved = false
-        DispatchQueue.main.async { self.state = .searching }
+        state = .searching
 
         if tryLoopbackFirst {
             probeLoopback(gen: gen)
@@ -147,7 +151,7 @@ public class ServerBrowser: ObservableObject {
         } else {
             urlString = "http://\(trimmed):\(port)"
         }
-        DispatchQueue.main.async { self.state = .connecting }
+        state = .connecting
         verify(urlString: urlString, gen: gen)
     }
 
@@ -165,35 +169,39 @@ public class ServerBrowser: ObservableObject {
         }
         var request = URLRequest(url: url)
         request.timeoutInterval = 2.0   // keep the fall-through to WiFi snappy
-        URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+        Task { [weak self] in
             guard let self = self else { return }
-            DispatchQueue.main.async {
-                guard gen == self.generation else { return }
-                if error == nil,
-                   let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
-                    Log.i("found a local daemon at 127.0.0.1:\(self.loopbackPort)")
-                    self.connect(toURL: urlString, token: Self.loopbackToken, gen: gen)
-                } else {
-                    Log.i("no local daemon; browsing the WiFi for a server")
-                    self.startBonjour(gen: gen)
-                }
+            var response: URLResponse?
+            do {
+                (_, response) = try await URLSession.shared.data(for: request)
+            } catch {
+                response = nil
             }
-        }.resume()
+            guard gen == self.generation else { return }
+            if let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
+                Log.i("found a local daemon at 127.0.0.1:\(self.loopbackPort)")
+                self.connect(toURL: urlString, token: Self.loopbackToken, gen: gen)
+            } else {
+                Log.i("no local daemon; browsing the WiFi for a server")
+                self.startBonjour(gen: gen)
+            }
+        }
     }
 
     // MARK: - Bonjour discovery
 
     private func startBonjour(gen: Int) {
         guard gen == self.generation else { return }
-        DispatchQueue.main.async { if gen == self.generation { self.state = .searching } }
+        state = .searching
 
         let browser = NWBrowser(for: .bonjour(type: serviceType, domain: nil), using: .tcp)
         self.browser = browser
 
-        // NWBrowser delivers these on .main (see browser.start below); hop through
-        // DispatchQueue.main so the body runs in the main-actor context.
+        // NWBrowser delivers these on .main, so at runtime this is an immediate
+        // same-thread resumption, not a real dispatch hop — but the compiler still
+        // requires an explicit hop back to the main actor (see the class doc comment).
         browser.stateUpdateHandler = { [weak self] browserState in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 guard let self = self, gen == self.generation else { return }
                 if case .failed(let error) = browserState {
                     self.fail("Couldn't search the local network: \(error.localizedDescription)", gen: gen)
@@ -202,7 +210,7 @@ public class ServerBrowser: ObservableObject {
         }
 
         browser.browseResultsChangedHandler = { [weak self] results, _ in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 guard let self = self, gen == self.generation, !self.hasResolved else { return }
                 guard let result = results.first else { return }
                 self.hasResolved = true
@@ -213,7 +221,9 @@ public class ServerBrowser: ObservableObject {
         browser.start(queue: .main)
 
         // if nothing shows up in time, stop spinning and tell the user
-        DispatchQueue.main.asyncAfter(deadline: .now() + searchTimeout) { [weak self] in
+        let timeout = searchTimeout
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(timeout))
             guard let self = self, gen == self.generation else { return }
             if case .searching = self.state {
                 self.fail("Couldn't find a DJukebox server on your WiFi network. "
@@ -223,7 +233,7 @@ public class ServerBrowser: ObservableObject {
     }
 
     private func resolve(_ endpoint: NWEndpoint, gen: Int) {
-        DispatchQueue.main.async { self.state = .connecting }
+        state = .connecting
 
         // Connecting to the Bonjour endpoint resolves it to a concrete host/port.
         // Restrict the probe to IPv4: the server only listens on IPv4, but mDNS
@@ -236,10 +246,11 @@ public class ServerBrowser: ObservableObject {
         }
         let connection = NWConnection(to: endpoint, using: params)
         self.probe = connection
+        // delivered on .main, so at runtime this is an immediate same-thread
+        // resumption, not a real dispatch hop — but the compiler still requires
+        // an explicit hop back to the main actor (see the class doc comment).
         connection.stateUpdateHandler = { [weak self] connectionState in
-            // delivered on .main (see connection.start below); hop through
-            // DispatchQueue.main so the body runs in the main-actor context.
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 guard let self = self, gen == self.generation else { return }
                 switch connectionState {
                 case .ready:
@@ -270,7 +281,9 @@ public class ServerBrowser: ObservableObject {
         // fail()'s offline fallback still happens. Reuse the browse-phase budget:
         // a working-but-slow connect (mDNS retransmit backoff on lossy WiFi, a
         // sleeping server waking on demand) can legitimately need well over 5s.
-        DispatchQueue.main.asyncAfter(deadline: .now() + searchTimeout) { [weak self] in
+        let timeout = searchTimeout
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(timeout))
             guard let self = self, gen == self.generation, self.probe === connection else { return }
             connection.cancel()
             self.probe = nil
@@ -328,26 +341,28 @@ public class ServerBrowser: ObservableObject {
             request.setValue(token, forHTTPHeaderField: "Authorization")
         }
         request.timeoutInterval = 8.0
-        URLSession.shared.dataTask(with: request) { [weak self] _, response, error in
+        Task { [weak self] in
             guard let self = self else { return }
-            DispatchQueue.main.async {
+            var response: URLResponse?
+            do {
+                (_, response) = try await URLSession.shared.data(for: request)
+            } catch {
                 guard gen == self.generation else { return }
-                if let error = error {
-                    self.fail("Couldn't reach the DJukebox server: \(error.localizedDescription)", gen: gen)
-                    return
-                }
-                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-                if (200..<300).contains(status), let token = token {
-                    // our stored token still works
-                    self.connect(toURL: urlString, token: token, gen: gen)
-                } else if status == 401 || token == nil {
-                    // not paired (or token no longer accepted): start pairing
-                    self.beginPairing(urlString: urlString, gen: gen)
-                } else {
-                    self.fail("The DJukebox server refused the connection (HTTP \(status)).", gen: gen)
-                }
+                self.fail("Couldn't reach the DJukebox server: \(error.localizedDescription)", gen: gen)
+                return
             }
-        }.resume()
+            guard gen == self.generation else { return }
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if (200..<300).contains(status), let token = token {
+                // our stored token still works
+                self.connect(toURL: urlString, token: token, gen: gen)
+            } else if status == 401 || token == nil {
+                // not paired (or token no longer accepted): start pairing
+                self.beginPairing(urlString: urlString, gen: gen)
+            } else {
+                self.fail("The DJukebox server refused the connection (HTTP \(status)).", gen: gen)
+            }
+        }
     }
 
     // Hand off to the pairing flow. On success we build a real client with the new token.
@@ -388,17 +403,15 @@ public class ServerBrowser: ObservableObject {
     }
 
     private func fail(_ reason: String, gen: Int) {
-        DispatchQueue.main.async {
-            guard gen == self.generation else { return }
-            self.cancelAll()
-            if self.autoFallbackToLocal {
-                Log.i("server discovery failed (\(reason)); falling back to local")
-                self.makeLocalClient(gen: gen)
-                return
-            }
-            self.state = .failed(reason)
-            Log.w("server discovery failed: \(reason)")
+        guard gen == self.generation else { return }
+        cancelAll()
+        if autoFallbackToLocal {
+            Log.i("server discovery failed (\(reason)); falling back to local")
+            makeLocalClient(gen: gen)
+            return
         }
+        state = .failed(reason)
+        Log.w("server discovery failed: \(reason)")
     }
 
     private func cancelAll() {
