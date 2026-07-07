@@ -21,10 +21,7 @@ public func layoutIsLarge() -> Bool {
 
 // XXX move these
 public func string(forTime date: Date) -> String {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateStyle = .none
-    dateFormatter.timeStyle = .medium
-    return dateFormatter.string(from: date)
+    date.formatted(date: .omitted, time: .standard)
 }
 
 public func format(duration: TimeInterval) -> String {
