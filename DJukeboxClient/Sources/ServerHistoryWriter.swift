@@ -18,8 +18,13 @@ public class ServerHistoryWriter: HistoryWriterType, @unchecked Sendable {
         let history = ServerHistoryEntry(hash: sha1,
                                          time: Int(date.timeIntervalSince1970),
                                          fullyPlayed: true)
-        server.post(history: history) { success, error in
-            Log.d("wrote play of \(sha1)")
+        Task {
+            do {
+                try await server.post(history: history)
+                Log.d("wrote play of \(sha1)")
+            } catch {
+                Log.e("could not write play of \(sha1): \(error)")
+            }
         }
     }
 
@@ -27,8 +32,13 @@ public class ServerHistoryWriter: HistoryWriterType, @unchecked Sendable {
         let history = ServerHistoryEntry(hash: sha1,
                                          time: Int(date.timeIntervalSince1970),
                                          fullyPlayed: false)
-        server.post(history: history) { success, error in
-            Log.d("wrote skip of \(sha1)")
+        Task {
+            do {
+                try await server.post(history: history)
+                Log.d("wrote skip of \(sha1)")
+            } catch {
+                Log.e("could not write skip of \(sha1): \(error)")
+            }
         }
     }
 }

@@ -5,10 +5,9 @@ import DJukeboxCommon
 // endpoints. `isPaused`/`playingTrackPosition` are only touched from URLSession
 // callbacks and the main thread; treated as internally main-thread-disciplined.
 //
-// ServerConnection's own request/post/requestJson helpers are still
-// closure-based pending F07 (which will convert ServerType to async throws), so
-// every method here bridges to them via withCheckedThrowingContinuation. This
-// bridging is intentionally thin — it should mostly fall away once F07 lands.
+// ServerConnection's request/post/requestJson helpers are async throws (F07), so
+// every method here just calls them directly with try await -- no continuation
+// bridging needed.
 public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType, @unchecked Sendable {
 
 
@@ -23,17 +22,7 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType, @uncheck
     public var isPaused = false
 
     public func playTrack(withHash hash: String) async throws -> AudioTrack {
-        try await withCheckedThrowingContinuation { continuation in
-            self.requestJson(atPath: "play/\(hash)") { (audioTrack: AudioTrack?, error: Error?) in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let audioTrack = audioTrack {
-                    continuation.resume(returning: audioTrack)
-                } else {
-                    continuation.resume(throwing: AudioPlayerError.trackNotFound)
-                }
-            }
-        }
+        try await self.requestJson(atPath: "play/\(hash)")
     }
 
     public func playTracks(_ tracks: [AudioTrack]) async throws -> Bool {
@@ -53,166 +42,79 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType, @uncheck
     public func stopPlayingTrack(withHash hash: String,
                           atIndex index: Int) async throws -> Bool
     {
-        try await withCheckedThrowingContinuation { continuation in
-            self.request(path: "stop/\(hash)/\(index)") { success, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: success)
-                }
-            }
-        }
+        try await self.request(path: "stop/\(hash)/\(index)")
+        return true
     }
 
     public func movePlayingTrack(withHash hash: String,
                           fromIndex: Int,
                           toIndex: Int) async throws -> PlayingQueue
     {
-        try await withCheckedThrowingContinuation { continuation in
-            self.requestJson(atPath: "move/\(hash)/\(fromIndex)/\(toIndex)") { (playingQueue: PlayingQueue?, error: Error?) in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let playingQueue = playingQueue {
-                    continuation.resume(returning: playingQueue)
-                } else {
-                    continuation.resume(throwing: AudioPlayerError.moveFailed)
-                }
-            }
-        }
+        try await self.requestJson(atPath: "move/\(hash)/\(fromIndex)/\(toIndex)")
     }
 
     public func listPlayingQueue() async throws -> PlayingQueue {
-        try await withCheckedThrowingContinuation { continuation in
-            self.requestJson(atPath: "queue") { (playingQueue: PlayingQueue?, error: Error?) in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let playingQueue = playingQueue {
-                    continuation.resume(returning: playingQueue)
-                } else {
-                    continuation.resume(throwing: AudioPlayerError.noTrackAvailable)
-                }
-            }
-        }
+        try await self.requestJson(atPath: "queue")
     }
 
     public func playRandomTrack() async throws -> AudioTrack {
-        try await withCheckedThrowingContinuation { continuation in
-            self.requestJson(atPath: "rand") { (audioTrack: AudioTrack?, error: Error?) in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let audioTrack = audioTrack {
-                    continuation.resume(returning: audioTrack)
-                } else {
-                    continuation.resume(throwing: AudioPlayerError.noTrackAvailable)
-                }
-            }
-        }
+        try await self.requestJson(atPath: "rand")
     }
 
     public func playRandomTrack(forArtist artist: String) async throws -> AudioTrack {
-        try await withCheckedThrowingContinuation { continuation in
-            self.requestJson(atPath: "rand/\(artist)") { (audioTrack: AudioTrack?, error: Error?) in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let audioTrack = audioTrack {
-                    continuation.resume(returning: audioTrack)
-                } else {
-                    continuation.resume(throwing: AudioPlayerError.noTrackAvailable)
-                }
-            }
-        }
+        try await self.requestJson(atPath: "rand/\(artist)")
     }
 
     public func playNewRandomTrack() async throws -> AudioTrack {
-        try await withCheckedThrowingContinuation { continuation in
-            self.requestJson(atPath: "newrand") { (audioTrack: AudioTrack?, error: Error?) in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let audioTrack = audioTrack {
-                    continuation.resume(returning: audioTrack)
-                } else {
-                    continuation.resume(throwing: AudioPlayerError.noTrackAvailable)
-                }
-            }
-        }
+        try await self.requestJson(atPath: "newrand")
     }
 
     public func playNewRandomTrack(forArtist artist: String) async throws -> AudioTrack {
-        try await withCheckedThrowingContinuation { continuation in
-            self.requestJson(atPath: "newrand/\(artist)") { (audioTrack: AudioTrack?, error: Error?) in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let audioTrack = audioTrack {
-                    continuation.resume(returning: audioTrack)
-                } else {
-                    continuation.resume(throwing: AudioPlayerError.noTrackAvailable)
-                }
-            }
-        }
+        try await self.requestJson(atPath: "newrand/\(artist)")
     }
 
     public func clearPlayingQueue() async throws -> Bool {
-        try await withCheckedThrowingContinuation { continuation in
-            self.request(path: "stop") { success, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: success)
-                }
-            }
-        }
+        try await self.request(path: "stop")
+        return true
     }
 
     public func pausePlaying() async throws -> Bool {
-        try await withCheckedThrowingContinuation { continuation in
-            self.request(path: "pause") { success, error in
-                if success { self.isPaused = true }
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: success)
-                }
-            }
-        }
+        try await self.request(path: "pause")
+        self.isPaused = true
+        return true
     }
 
     public func resumePlaying() async throws -> Bool {
-        try await withCheckedThrowingContinuation { continuation in
-            self.request(path: "resume") { success, error in
-                if success { self.isPaused = false }
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: success)
-                }
-            }
-        }
+        try await self.request(path: "resume")
+        self.isPaused = false
+        return true
     }
 
     public func shuffleQueue() {
-        self.request(path: "shuffle") { success, error in
-            Log.i("shuffled")
-            // XXX refresh queue?
+        Task {
+            do {
+                try await self.request(path: "shuffle")
+                Log.i("shuffled")
+                // XXX refresh queue?
+            } catch {
+                Log.e("could not shuffle queue: \(error)")
+            }
         }
     }
 
     public func playUntil(date: Date) async throws -> PlayingQueue {
         let timestamp = Int(date.timeIntervalSince1970)
-        return try await withCheckedThrowingContinuation { continuation in
-            self.requestJson(atPath: "playuntil/\(timestamp)") { (playingQueue: PlayingQueue?, error: Error?) in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else if let playingQueue = playingQueue {
-                    continuation.resume(returning: playingQueue)
-                } else {
-                    continuation.resume(throwing: AudioPlayerError.noTrackAvailable)
-                }
-            }
-        }
+        return try await self.requestJson(atPath: "playuntil/\(timestamp)")
     }
 
     // remote queue: audition the gain on the server's currently-playing track
     public func setLivePlaybackGain(decibels: Double) {
-        self.request(path: "volume/live/\(decibels)") { _, _ in }
+        Task {
+            do {
+                try await self.request(path: "volume/live/\(decibels)")
+            } catch {
+                Log.e("could not set live playback gain: \(error)")
+            }
+        }
     }
 }

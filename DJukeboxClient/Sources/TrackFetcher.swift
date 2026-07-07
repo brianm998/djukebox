@@ -277,9 +277,12 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
                 self.update(with: []) // XXX should show an error here
             }
         } else {
-            server.listTracks() { tracks, error in
-                if let tracks = tracks {
+            Task {
+                do {
+                    let tracks = try await server.listTracks()
                     self.update(with: tracks)
+                } catch {
+                    Log.e("could not list tracks: \(error)")
                 }
             }
         }
@@ -532,13 +535,14 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         case .artist:
             adjustment = VolumeAdjustment(scope: "artist", artist: track.Artist, decibels: decibels)
         }
-        server.setVolumeAdjustment(adjustment) { success, error in
-            if let error = error {
-                Log.e("could not set \(scope) volume: \(error)")
-            } else {
+        Task {
+            do {
+                try await server.setVolumeAdjustment(adjustment)
                 Log.d("set \(scope) volume to \(decibels) dB for \(track.Title)")
                 // refresh the button label to the new effective gain for this track
                 self.refreshSavedGain(forHash: track.SHA1)
+            } catch {
+                Log.e("could not set \(scope) volume: \(error)")
             }
         }
     }
@@ -564,8 +568,13 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     // Pull the current master level from the server (it is global, so another
     // client may have changed it). Views call this on appear; Client on startup.
     public func refreshMasterGain() {
-        server.masterGain { db, _ in
-            DispatchQueue.main.async { self.masterGainDB = db ?? 0 }
+        Task {
+            do {
+                let db = try await server.masterGain()
+                DispatchQueue.main.async { self.masterGainDB = db ?? 0 }
+            } catch {
+                Log.e("could not refresh master gain: \(error)")
+            }
         }
     }
 
@@ -578,8 +587,12 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
 
     // Persist the current master level to the server (call when the knob settles).
     public func commitMasterGain() {
-        server.setMasterGain(masterGainDB) { _, error in
-            if let error = error { Log.e("could not set master volume: \(error)") }
+        Task {
+            do {
+                try await server.setMasterGain(masterGainDB)
+            } catch {
+                Log.e("could not set master volume: \(error)")
+            }
         }
     }
 
@@ -594,8 +607,13 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     private var lastGainSha1: String?
 
     public func refreshSavedGain(forHash hash: String) {
-        server.savedGain(forHash: hash) { db, _ in
-            DispatchQueue.main.async { self.currentTrackGainDB = db ?? 0 }
+        Task {
+            do {
+                let db = try await server.savedGain(forHash: hash)
+                DispatchQueue.main.async { self.currentTrackGainDB = db ?? 0 }
+            } catch {
+                Log.e("could not refresh saved gain: \(error)")
+            }
         }
     }
 

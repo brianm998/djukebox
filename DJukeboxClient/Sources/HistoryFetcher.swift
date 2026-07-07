@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import DJukeboxCommon
 
 // this is a view model used to update SwiftUI
 public class HistoryEntry: Comparable, Identifiable, ObservableObject, Hashable {
@@ -138,23 +139,30 @@ public class HistoryFetcher: ObservableObject, @unchecked Sendable {
     public func refresh() {
         if let lastUpdateTime = self.lastUpdateTime {
             let historyOverlapDuration: Double = 300
-            server.listHistory(since: Int(lastUpdateTime.timeIntervalSince1970-historyOverlapDuration)) { history, error in
-                if let history = history {
+            let since = Int(lastUpdateTime.timeIntervalSince1970 - historyOverlapDuration)
+            Task {
+                do {
+                    let history = try await server.listHistory(since: since)
                     DispatchQueue.main.async {
                         self.all = self.all.merge(with: history)
                         self.updateRecent()
                     }
+                } catch {
+                    Log.e("could not refresh history: \(error)")
                 }
             }
         } else {
-            server.listHistory() { history, error in
-                DispatchQueue.main.async {
-                    if let history = history {
+            Task {
+                do {
+                    let history = try await server.listHistory()
+                    DispatchQueue.main.async {
                         // merge (not replace): a socket delta may have already
                         // landed before this initial full fetch completes
                         self.all = self.all.merge(with: history)
                         self.updateRecent()
                     }
+                } catch {
+                    Log.e("could not refresh history: \(error)")
                 }
             }
         }

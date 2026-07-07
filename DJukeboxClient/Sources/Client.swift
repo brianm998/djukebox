@@ -75,8 +75,17 @@ public class Client {
         let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher,
                                            historyWriter: ServerHistoryWriter(server: serverConnection),
                                            savedGainForHash: { [weak fetcher] hash, done in
-                                               server.savedGain(forHash: hash) { db, _ in
-                                                   done((db ?? 0) + (fetcher?.masterGainDB ?? 0))
+                                               // `done` isn't @Sendable, so it can't be captured
+                                               // directly by the Task below; box it the same way
+                                               // ServerConnection's pre-F07 helpers did. Resolve the
+                                               // weak `fetcher` to an immutable value up front too --
+                                               // capturing the weak var itself across the Task
+                                               // boundary trips the same sending-closure diagnostic.
+                                               let doneBox = UncheckedSendableBox(done)
+                                               let currentMasterGainDB = fetcher?.masterGainDB ?? 0
+                                               Task {
+                                                   let db = try? await server.savedGain(forHash: hash)
+                                                   doneBox.value((db ?? 0) + currentMasterGainDB)
                                                }
                                            },
                                            levelMeter: levelMeter)

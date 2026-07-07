@@ -2,23 +2,25 @@ import Foundation
 import SwiftUI
 import DJukeboxCommon
 
-public protocol ServerType {
-    func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void)
+public protocol ServerType: Sendable {
+    func listTracks() async throws -> [AudioTrack]
 
-    func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void)
-    func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void)
-    func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void)
+    func listHistory() async throws -> PlayingHistory
+    func listHistory(since: Int) async throws -> PlayingHistory
+    func post(history: ServerHistoryEntry) async throws
 
     // persist / read the per-track/album/artist playback gains the server applies
-    func setVolumeAdjustment(_ adjustment: VolumeAdjustment, closure: @escaping (Bool, Error?) -> Void)
-    func clearVolumeAdjustment(_ adjustment: VolumeAdjustment, closure: @escaping (Bool, Error?) -> Void)
-    func listVolumeAdjustments(closure: @escaping ([VolumeAdjustment]?, Error?) -> Void)
-    // the saved gain (dB) for a track, for pre-filling the volume control
-    func savedGain(forHash hash: String, closure: @escaping (Double?, Error?) -> Void)
+    func setVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws
+    func clearVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws
+    func listVolumeAdjustments() async throws -> [VolumeAdjustment]
+    // the saved gain (dB) for a track, for pre-filling the volume control; nil
+    // means there is no adjustment on record (not an error)
+    func savedGain(forHash hash: String) async throws -> Double?
 
-    // the global master gain (dB, <= 0), applied on top of every per-track gain
-    func masterGain(closure: @escaping (Double?, Error?) -> Void)
-    func setMasterGain(_ decibels: Double, closure: @escaping (Bool, Error?) -> Void)
+    // the global master gain (dB, <= 0), applied on top of every per-track gain;
+    // nil means no master gain has been set on the server yet (not an error)
+    func masterGain() async throws -> Double?
+    func setMasterGain(_ decibels: Double) async throws
 
     var authHeaderValue: String { get }
     var url: String { get }
@@ -74,31 +76,21 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         self.authHeaderValue = token
     }
 
-    internal func request(path: String, closure: @escaping (Bool, Error?) -> Void) {
+    internal func request(path: String) async throws {
         guard let url = URL(string: "\(serverUrl)/\(path)") else {
-            closure(false, nil)
-            return
+            throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 60.0
 
-        let closureBox = UncheckedSendableBox(closure)
-        Task {
-            do {
-                _ = try await URLSession.shared.data(for: request)
-                closureBox.value(true, nil)
-            } catch {
-                closureBox.value(false, error)
-            }
-        }
+        _ = try await URLSession.shared.data(for: request)
     }
 
-    internal func post(body: Data, toPath path: String, closure: @escaping (Bool, Error?) -> Void) {
+    internal func post(body: Data, toPath path: String) async throws {
         guard let url = URL(string: "\(serverUrl)/\(path)") else {
-            closure(false, nil)
-            return
+            throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -107,125 +99,81 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         request.timeoutInterval = 60.0
         request.httpBody = body
 
-        let closureBox = UncheckedSendableBox(closure)
-        Task {
-            do {
-                _ = try await URLSession.shared.data(for: request)
-                closureBox.value(true, nil)
-            } catch {
-                closureBox.value(false, error)
-            }
-        }
+        _ = try await URLSession.shared.data(for: request)
     }
 
-    internal func requestJson<T>(atPath path: String, closure: @escaping (T?, Error?) -> Void) where T: Decodable {
+    internal func requestJson<T>(atPath path: String) async throws -> T where T: Decodable {
         let urlPath = path.replacingOccurrences(of: " ", with: "%20")
         guard let url = URL(string: "\(serverUrl)/\(urlPath)") else {
-            closure(nil, nil)
-            return
+            throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue(authHeaderValue, forHTTPHeaderField:"Authorization")
         request.timeoutInterval = 60.0
 
-        let closureBox = UncheckedSendableBox(closure)
-        Task {
-            do {
-                let (data, _) = try await URLSession.shared.data(for: request)
-                let json = try JSONDecoder().decode(T.self, from: data)
-                closureBox.value(json, nil)
-            } catch {
-                closureBox.value(nil, error)
-            }
-        }
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(T.self, from: data)
     }
 
-    public func post(history: ServerHistoryEntry, closure: @escaping (Bool, Error?) -> Void) {
+    public func post(history: ServerHistoryEntry) async throws {
         let encoder = JSONEncoder()
-        do {
-            let jsonString = try encoder.encode(history)
-            self.post(body: jsonString, toPath: "history", closure: closure)
-        } catch {
-            Log.e("json error \(error)")
-        }
-    }
-    
-    public func listTracks(closure: @escaping ([AudioTrack]?, Error?) -> Void) {
-        self.requestJson(atPath: "tracks") { (audioTracks: [AudioTrack]?, error: Error?) in
-            if let error = error {
-                closure(nil, error)
-            } else if let audioTracks = audioTracks {
-                closure(audioTracks, nil)
-            } else {
-                closure(nil, nil) // XXX ???
-            }
-        }
+        let jsonString = try encoder.encode(history)
+        try await self.post(body: jsonString, toPath: "history")
     }
 
-    func trackInfo(forHash hash: String, closure: @escaping (AudioTrack?, Error?) -> Void) {
-        self.requestJson(atPath: "info/\(hash)") { (audioTrack: AudioTrack?, error: Error?) in
-            if let error = error {
-                closure(nil, error)
-            } else if let audioTrack = audioTrack {
-                closure(audioTrack, nil)
-            } else {
-                closure(nil, nil) // XXX ???
-            }
-        }
+    public func listTracks() async throws -> [AudioTrack] {
+        try await self.requestJson(atPath: "tracks")
     }
 
-    public func listHistory(closure: @escaping (PlayingHistory?, Error?) -> Void) {
-        self.requestJson(atPath: "history", closure: closure)
+    // XXX no callers anywhere in the repo; kept for parity with the server's
+    // /info/<hash> endpoint in case a caller shows up.
+    func trackInfo(forHash hash: String) async throws -> AudioTrack {
+        try await self.requestJson(atPath: "info/\(hash)")
     }
 
-    public func listHistory(since: Int, closure: @escaping (PlayingHistory?, Error?) -> Void) {
-        self.requestJson(atPath: "history/\(since)", closure: closure)
+    public func listHistory() async throws -> PlayingHistory {
+        try await self.requestJson(atPath: "history")
     }
 
-    public func setVolumeAdjustment(_ adjustment: VolumeAdjustment,
-                                    closure: @escaping (Bool, Error?) -> Void) {
-        do {
-            let body = try JSONEncoder().encode(adjustment)
-            self.post(body: body, toPath: "volume", closure: closure)
-        } catch {
-            closure(false, error)
-        }
+    public func listHistory(since: Int) async throws -> PlayingHistory {
+        try await self.requestJson(atPath: "history/\(since)")
     }
 
-    public func clearVolumeAdjustment(_ adjustment: VolumeAdjustment,
-                                      closure: @escaping (Bool, Error?) -> Void) {
-        do {
-            let body = try JSONEncoder().encode(adjustment)
-            self.post(body: body, toPath: "volume/clear", closure: closure)
-        } catch {
-            closure(false, error)
-        }
+    public func setVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws {
+        let body = try JSONEncoder().encode(adjustment)
+        try await self.post(body: body, toPath: "volume")
     }
 
-    public func listVolumeAdjustments(closure: @escaping ([VolumeAdjustment]?, Error?) -> Void) {
-        self.requestJson(atPath: "volume", closure: closure)
+    public func clearVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws {
+        let body = try JSONEncoder().encode(adjustment)
+        try await self.post(body: body, toPath: "volume/clear")
     }
 
-    public func savedGain(forHash hash: String, closure: @escaping (Double?, Error?) -> Void) {
-        self.requestJson(atPath: "volume/for/\(hash)") { (adj: VolumeAdjustment?, error: Error?) in
-            closure(adj?.decibels, error)
-        }
+    public func listVolumeAdjustments() async throws -> [VolumeAdjustment] {
+        try await self.requestJson(atPath: "volume")
     }
 
-    public func masterGain(closure: @escaping (Double?, Error?) -> Void) {
-        self.requestJson(atPath: "volume/master") { (mv: MasterVolume?, error: Error?) in
-            closure(mv?.decibels, error)
-        }
+    // The server always resolves an effective (default 0 dB) gain server-side, so
+    // this never actually returns nil today; the Optional return is kept because
+    // "no adjustment on record" is a meaningful, non-error outcome for callers
+    // (they treat nil the same as 0 dB) -- only a failed HTTP request/decode throws.
+    public func savedGain(forHash hash: String) async throws -> Double? {
+        let adjustment: VolumeAdjustment = try await self.requestJson(atPath: "volume/for/\(hash)")
+        return adjustment.decibels
     }
 
-    public func setMasterGain(_ decibels: Double, closure: @escaping (Bool, Error?) -> Void) {
-        do {
-            let body = try JSONEncoder().encode(MasterVolume(decibels: decibels))
-            self.post(body: body, toPath: "volume/master", closure: closure)
-        } catch {
-            closure(false, error)
-        }
+    // See savedGain(forHash:) above: the server always resolves a value (default
+    // 0 dB), so this never actually returns nil today, but nil remains a valid,
+    // non-error outcome for callers. Only a failed HTTP request/decode throws.
+    public func masterGain() async throws -> Double? {
+        let masterVolume: MasterVolume = try await self.requestJson(atPath: "volume/master")
+        return masterVolume.decibels
+    }
+
+    public func setMasterGain(_ decibels: Double) async throws {
+        let body = try JSONEncoder().encode(MasterVolume(decibels: decibels))
+        try await self.post(body: body, toPath: "volume/master")
     }
 }
 
