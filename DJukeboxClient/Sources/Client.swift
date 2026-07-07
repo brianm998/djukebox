@@ -23,10 +23,10 @@ public class Client {
     private var streamTask: Task<Void, Never>?
 
     // the 1s state-save / refresh loop; held so it can be torn down with the client
-    private var refreshTimer: Timer?
+    private var refreshTask: Task<Void, Never>?
 
     deinit {
-        refreshTimer?.invalidate()
+        refreshTask?.cancel()
         streamTask?.cancel()
         streamSocket?.disconnectSync()
     }
@@ -169,16 +169,17 @@ public class Client {
 
         // Create the SwiftUI view that provides the window contents.
 
-        // weak self so the timer doesn't keep this client alive forever; deinit
-        // invalidates it, so replacing the client (e.g. on a scan/reconnect) stops it.
+        // weak self so the loop doesn't keep this client alive forever; deinit
+        // cancels it, so replacing the client (e.g. on a scan/reconnect) stops it.
         // The remote queue and the history now arrive over /stream (pushed), so this
         // only saves runtime state and refreshes the LOCAL queue — a purely on-device
         // computation (no network) that advances the local-playback progress bar.
-        // Timer's closure is @Sendable/non-isolated, but trackFetcher is @MainActor
-        // (F30) now, so hop over explicitly rather than touching it directly.
-        self.refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
+        // Pinned to @MainActor: trackFetcher is @MainActor (F30) and runtimeState.save()
+        // does a synchronous disk write that should stay off the cooperative pool.
+        self.refreshTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, let self else { return }
                 self.trackFetcher.runtimeState.save()
                 if self.trackFetcher.queueType == .local {
                     self.trackFetcher.refreshQueue()
