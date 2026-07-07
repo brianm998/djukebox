@@ -12,5 +12,4 @@ import Testing
 @Test func stringLogData() {
     let data = StringLogData(with: "hello")
     #expect(data.description == "hello")
-    #expect(data.encodable == nil)
 }
