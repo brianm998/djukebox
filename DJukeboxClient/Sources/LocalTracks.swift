@@ -74,7 +74,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     // the catalog already had before this launch.
     private func reconcileWithDownloadedFiles() {
         let snapshot = self.downloadedTracks
-        DispatchQueue.global(qos: .utility).async { [weak self] in
+        Task.detached(priority: .utility) { [weak self] in
             guard let self = self else { return }
             var presentCount = 0
             var drop: [String] = []
@@ -99,10 +99,10 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                 }
             }
             Log.i("local catalog reconcile: \(snapshot.count) rows, \(presentCount) valid audio, \(drop.count) missing/invalid")
-            // decide AND apply the drop on the main queue, serialized with
+            // decide AND apply the drop on the main actor, serialized with
             // keepLocal's upsert/append: a track re-downloaded mid-scan is in
             // keptDuringReconcile and must not have its fresh row deleted
-            DispatchQueue.main.async {
+            await MainActor.run {
                 let dropSet = Set(drop).subtracting(self.keptDuringReconcile)
                 self.keptDuringReconcile.removeAll()
                 self.reconcilePending = false
@@ -169,7 +169,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                               andExtention extention: String,
                               closure: @escaping @Sendable (Bool) -> Void)
     {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             if let _ = LocalCache.libDir,
                let destURL = self.cacheDirURL(forFilename: filename, withExtention: extention)
             {
@@ -270,10 +270,10 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
         self.download(sha1Hash: sha1Hash) { track in
             if let track = track as? AudioTrack {
                 // mutate the catalog (in memory AND the database) on the main
-                // queue only, serialized with the reconcile scan's apply step —
+                // actor only, serialized with the reconcile scan's apply step —
                 // which also checks keptDuringReconcile so its stale drop list
                 // can't delete this fresh row
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.db?.upsert(track)
                     if self.reconcilePending { self.keptDuringReconcile.insert(track.SHA1) }
                     self.downloadedTracks.append(track)
