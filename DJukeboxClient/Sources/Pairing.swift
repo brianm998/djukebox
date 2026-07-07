@@ -259,11 +259,7 @@ public class PairingClient: ObservableObject {
     }
 
     private func setPhase(_ phase: Phase) {
-        if Thread.isMainThread {
-            self.phase = phase
-        } else {
-            DispatchQueue.main.async { self.phase = phase }
-        }
+        self.phase = phase
     }
 }
 
