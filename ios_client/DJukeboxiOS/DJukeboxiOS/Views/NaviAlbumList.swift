@@ -10,7 +10,6 @@ public struct NaviAlbumList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     let artist: String
     let title: String
-    @State private var showingActionSheet = false
 
     public init(_ client: Client, artist: String, title: String) {
         self.client = client
@@ -33,27 +32,28 @@ public struct NaviAlbumList: View {
           .djListChrome()
           .navigationBarTitle(Text(title), displayMode: .inline)
           .navigationBarItems(trailing:
-                                Button(action: {self.showingActionSheet = true }) {
+                                Menu {
+                                    Button {
+                                        self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.artist) { success, error in
+                                            self.trackFetcher.refreshQueue()
+                                        }
+                                    } label: {
+                                        Label("Play New Random Track", systemImage: "shuffle")
+                                    }
+                                    Button {
+                                        self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.artist) { success, error in
+                                            self.trackFetcher.refreshQueue()
+                                        }
+                                    } label: {
+                                        Label("Play Random Track", systemImage: "shuffle")
+                                    }
+                                    Button {
+                                        self.trackFetcher.cacheTracks(forArtist: self.artist)
+                                    } label: {
+                                        Label("Cache All", systemImage: "arrow.down.circle")
+                                    }
+                                } label: {
                                     Image(systemName: "plus").imageScale(.large)
                                 })
-          .actionSheet(isPresented: $showingActionSheet) {
-              ActionSheet(title: Text(""),
-                          buttons: [
-                            .default(Text("Cache All")) {
-                                self.trackFetcher.cacheTracks(forArtist: self.artist)
-                            },
-                            .default(Text("Play New Random Track")) {
-                                self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.artist) { success, error in
-                                    self.trackFetcher.refreshQueue()
-                                }
-                            },
-                            .default(Text("Play Random Track")) {
-                                self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.artist) { success, error in
-                                    self.trackFetcher.refreshQueue()
-                                }
-                            },
-                            .cancel()
-                          ])
-          }
     }
 }

@@ -62,8 +62,6 @@ public struct TrackList: View {
     var client: Client
     @ObservedObject var trackFetcher: TrackFetcher
 
-    @State private var showingActionSheet = false
-
     public init(_ client: Client) {
         self.client = client
         self.trackFetcher = client.trackFetcher
@@ -76,7 +74,20 @@ public struct TrackList: View {
                 Text(trackFetcher.trackTitle)
                 if self.trackFetcher.tracks.count > 0 {
 
-                    Button(action: {self.showingActionSheet = true }) {
+                    Menu {
+                        Button {
+                            self.client.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks.sorted()) { success, error in
+                                self.client.trackFetcher.refreshQueue()
+                            }
+                        } label: {
+                            Label("Play All", systemImage: "play.fill")
+                        }
+                        Button {
+                            self.client.trackFetcher.cache(tracks: self.trackFetcher.tracks)
+                        } label: {
+                            Label("Cache All", systemImage: "arrow.down.circle")
+                        }
+                    } label: {
                         Image(systemName: "plus").imageScale(.large)
                     }
                 }
@@ -98,20 +109,6 @@ public struct TrackList: View {
             }
             .djListChrome()
         }
-          .actionSheet(isPresented: $showingActionSheet) {
-              ActionSheet(title: Text(""),
-                          buttons: [
-                            .default(Text("Play All")) {
-                                self.client.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks.sorted()) { success, error in
-                                    self.client.trackFetcher.refreshQueue()
-                                }
-                            },
-                            .default(Text("Cache All")) {
-                                self.client.trackFetcher.cache(tracks: self.trackFetcher.tracks)
-                            },
-                            .cancel()
-                          ])
-          }
     }
 }
 

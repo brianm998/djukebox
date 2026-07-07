@@ -10,7 +10,6 @@ public struct NaviTrackList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     let album: AudioTrack   // representative track carrying the artist + album to show
     let title: String
-    @State private var showingActionSheet = false
     @State private var showAllTracksToast: Bool = false
     @State private var showOneTrackToast: Bool = false
     @State private var fuck: String = ""
@@ -46,25 +45,23 @@ public struct NaviTrackList: View {
           }
           .navigationBarTitle(Text(title), displayMode: .inline)
           .navigationBarItems(trailing:
-                                Button(action: {self.showingActionSheet = true }) {
+                                Menu {
+                                    Button {
+                                        self.trackFetcher.audioPlayer.player?.playTracks(tracks) { success, error in
+                                            self.trackFetcher.refreshQueue()
+                                            withAnimation { self.showAllTracksToast = true }
+                                        }
+                                    } label: {
+                                        Label("Play All", systemImage: "play.fill")
+                                    }
+                                    Button {
+                                        self.trackFetcher.cache(tracks: tracks)
+                                    } label: {
+                                        Label("Cache All Locally", systemImage: "arrow.down.circle")
+                                    }
+                                } label: {
                                     Image(systemName: "plus").imageScale(.large)
                                 })
-          .actionSheet(isPresented: $showingActionSheet) {
-              ActionSheet(title: Text(""),
-                          buttons: [
-                            .default(Text("Play All")) {
-                                self.trackFetcher.audioPlayer.player?.playTracks(tracks) { success, error in
-                                    self.trackFetcher.refreshQueue()
-                                    withAnimation { self.showAllTracksToast = true }
-                                }
-                            },
-                            .default(Text("Cache All Locally")) {
-                                self.trackFetcher.cache(tracks: tracks)
-                            },
-                            .cancel()
-                          ]
-              )
-          }
     }
 }
 
