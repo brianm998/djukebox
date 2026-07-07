@@ -16,12 +16,19 @@ public class Client {
     // do NOT own the socket, so a closing browse window can't tear down the stream.
     private let streamSocket: ServerStreamSocket?
 
+    // Consumes streamSocket.frames with `for await`, routing each frame to the
+    // right consumer. Held so deinit can cancel it synchronously (deinit is
+    // nonisolated and can't await); Task is Sendable, so this needs no
+    // nonisolated(unsafe) escape hatch (same pattern as Pairing.swift).
+    private var streamTask: Task<Void, Never>?
+
     // the 1s state-save / refresh loop; held so it can be torn down with the client
     private var refreshTimer: Timer?
 
     deinit {
         refreshTimer?.invalidate()
-        streamSocket?.disconnect()
+        streamTask?.cancel()
+        streamSocket?.disconnectSync()
     }
 
     public func copy() -> Client {
@@ -110,24 +117,43 @@ public class Client {
         // pushes only on change (or while playing), so this replaces the per-second
         // polling of /levels, /queue and /history. Consumers are captured weakly;
         // the socket is owned here.
+        //
+        // All four consumers are safe to call from this single @MainActor Task:
+        // ingestRemoteLevels only writes into a lock-guarded value (no @Published
+        // touch, so the old "levels on the receive thread" fast path was never
+        // load-bearing — the lock already made it thread-safe from anywhere);
+        // TrackFetcher.update(playingQueue:)/updateProgress hop to main internally;
+        // and HistoryFetcher is now @MainActor (F27), so being on the main actor
+        // here is what makes ingest(_:) callable at all. Unifying onto one stream
+        // consumed on the main actor is therefore strictly simpler, not a behavior
+        // change for any of the three.
         let history = historyFetcher
         let socket = ServerStreamSocket(baseURL: serverURL, token: token)
         self.streamSocket = socket
-        socket?.onLevels = { [weak monitor] levels in monitor?.ingestRemoteLevels(levels) }
-        socket?.onQueue = { [weak fetcher] queue in
-            // The server's queue is only what we display in REMOTE mode; in local
-            // mode the on-device player owns the queue, so ignore server pushes.
-            guard let fetcher = fetcher, fetcher.queueType == .remote else { return }
-            fetcher.update(playingQueue: queue)
+        if let socket {
+            self.streamTask = Task { @MainActor [weak monitor, weak fetcher, weak history] in
+                await socket.connect()
+                for await frame in socket.frames {
+                    if let levels = frame.levels {
+                        monitor?.ingestRemoteLevels(levels)
+                    }
+                    if let queueFrame = frame.queue,
+                       let fetcher, fetcher.queueType == .remote {
+                        // The server's queue is only what we display in REMOTE mode;
+                        // in local mode the on-device player owns the queue, so
+                        // ignore server pushes.
+                        fetcher.update(playingQueue: queueFrame)
+                    }
+                    if let positionFrame = frame.position,
+                       let fetcher, fetcher.queueType == .remote {
+                        fetcher.updateProgress(position: positionFrame.position, duration: positionFrame.duration)
+                    }
+                    if let historyFrame = frame.history {
+                        history?.ingest(historyFrame)
+                    }
+                }
+            }
         }
-        socket?.onPosition = { [weak fetcher] position, duration in
-            guard let fetcher = fetcher, fetcher.queueType == .remote else { return }
-            fetcher.updateProgress(position: position, duration: duration)
-        }
-        socket?.onHistory = { [weak history] pushed in
-            Task { @MainActor in history?.ingest(pushed) }
-        }
-        socket?.connect()
 
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
 
