@@ -30,40 +30,44 @@ public struct NaviAlbumList: View {
             }
         }
           .djListChrome()
-          .navigationBarTitle(Text(title), displayMode: .inline)
-          .navigationBarItems(trailing:
-                                Menu {
-                                    Button {
-                                        Task {
-                                            do {
-                                                _ = try await self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.artist)
-                                            } catch {
-                                                Log.e("could not play new random track: \(error)")
-                                            }
-                                            self.trackFetcher.refreshQueue()
-                                        }
-                                    } label: {
-                                        Label("Play New Random Track", systemImage: "shuffle")
-                                    }
-                                    Button {
-                                        Task {
-                                            do {
-                                                _ = try await self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.artist)
-                                            } catch {
-                                                Log.e("could not play random track: \(error)")
-                                            }
-                                            self.trackFetcher.refreshQueue()
-                                        }
-                                    } label: {
-                                        Label("Play Random Track", systemImage: "shuffle")
-                                    }
-                                    Button {
-                                        self.trackFetcher.cacheTracks(forArtist: self.artist)
-                                    } label: {
-                                        Label("Cache All", systemImage: "arrow.down.circle")
-                                    }
-                                } label: {
-                                    Image(systemName: "plus").imageScale(.large)
-                                })
+          .navigationTitle(Text(title))
+          .navigationBarTitleDisplayMode(.inline)
+          .toolbar {
+              ToolbarItem(placement: .navigationBarTrailing) {
+                  Menu {
+                      Button {
+                          Task {
+                              do {
+                                  _ = try await self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.artist)
+                              } catch {
+                                  Log.e("could not play new random track: \(error)")
+                              }
+                              self.trackFetcher.refreshQueue()
+                          }
+                      } label: {
+                          Label("Play New Random Track", systemImage: "shuffle")
+                      }
+                      Button {
+                          Task {
+                              do {
+                                  _ = try await self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.artist)
+                              } catch {
+                                  Log.e("could not play random track: \(error)")
+                              }
+                              self.trackFetcher.refreshQueue()
+                          }
+                      } label: {
+                          Label("Play Random Track", systemImage: "shuffle")
+                      }
+                      Button {
+                          self.trackFetcher.cacheTracks(forArtist: self.artist)
+                      } label: {
+                          Label("Cache All", systemImage: "arrow.down.circle")
+                      }
+                  } label: {
+                      Image(systemName: "plus").imageScale(.large)
+                  }
+              }
+          }
     }
 }

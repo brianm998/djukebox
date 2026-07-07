@@ -103,7 +103,8 @@ struct ContentView: View {
                     NavigationStack {
                         NaviArtistList(client)
                             .tubeBackdrop(client.levelMonitor)
-                            .navigationBarTitle("Artists", displayMode: .inline)
+                            .navigationTitle("Artists")
+                            .navigationBarTitleDisplayMode(.inline)
                     }
                 }
             }

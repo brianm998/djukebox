@@ -47,30 +47,34 @@ public struct NaviTrackList: View {
           .toast(isPresented: $showAllTracksToast) {
               Text("All tracks playing")
           }
-          .navigationBarTitle(Text(title), displayMode: .inline)
-          .navigationBarItems(trailing:
-                                Menu {
-                                    Button {
-                                        Task {
-                                            do {
-                                                _ = try await self.trackFetcher.audioPlayer.player?.playTracks(tracks)
-                                            } catch {
-                                                Log.e("could not play all tracks: \(error)")
-                                            }
-                                            self.trackFetcher.refreshQueue()
-                                            withAnimation { self.showAllTracksToast = true }
-                                        }
-                                    } label: {
-                                        Label("Play All", systemImage: "play.fill")
-                                    }
-                                    Button {
-                                        self.trackFetcher.cache(tracks: tracks)
-                                    } label: {
-                                        Label("Cache All Locally", systemImage: "arrow.down.circle")
-                                    }
-                                } label: {
-                                    Image(systemName: "plus").imageScale(.large)
-                                })
+          .navigationTitle(Text(title))
+          .navigationBarTitleDisplayMode(.inline)
+          .toolbar {
+              ToolbarItem(placement: .navigationBarTrailing) {
+                  Menu {
+                      Button {
+                          Task {
+                              do {
+                                  _ = try await self.trackFetcher.audioPlayer.player?.playTracks(tracks)
+                              } catch {
+                                  Log.e("could not play all tracks: \(error)")
+                              }
+                              self.trackFetcher.refreshQueue()
+                              withAnimation { self.showAllTracksToast = true }
+                          }
+                      } label: {
+                          Label("Play All", systemImage: "play.fill")
+                      }
+                      Button {
+                          self.trackFetcher.cache(tracks: tracks)
+                      } label: {
+                          Label("Cache All Locally", systemImage: "arrow.down.circle")
+                      }
+                  } label: {
+                      Image(systemName: "plus").imageScale(.large)
+                  }
+              }
+          }
     }
 }
 
