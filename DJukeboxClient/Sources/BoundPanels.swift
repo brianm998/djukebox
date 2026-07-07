@@ -36,12 +36,12 @@ public struct BoundAlbumList: View {
     public var body: some View {
         VStack {
             HStack {
-                Text(artist).foregroundColor(DJTheme.textPrimary)
+                Text(artist).foregroundStyle(DJTheme.textPrimary)
                 Spacer()
             }.padding(.horizontal, 4)
             List(trackFetcher.albums(forArtist: artist)) { album in
                 Text(album.Album ?? "Singles")
-                  .foregroundColor((self.trackFetcher.albumCacheStatus[TrackFetcher.albumStatusKey(artist: album.Artist, album: album.Album)] ?? .none).color)
+                  .foregroundStyle((self.trackFetcher.albumCacheStatus[TrackFetcher.albumStatusKey(artist: album.Artist, album: album.Album)] ?? .none).color)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture { self.trackFetcher.showTracks(for: album) }
@@ -69,7 +69,7 @@ public struct BoundTrackList: View {
         let tracks = trackFetcher.tracks(forArtist: artist, album: album)
         return VStack {
             HStack {
-                Text(album ?? "\(artist) singles").foregroundColor(DJTheme.textPrimary)
+                Text(album ?? "\(artist) singles").foregroundStyle(DJTheme.textPrimary)
                 if tracks.count > 0 {
                     Button("Play All") {
                         Task {
@@ -86,7 +86,7 @@ public struct BoundTrackList: View {
             }.padding(.horizontal, 4)
             List(tracks) { track in
                 Text(track.TrackNumber == nil ? track.Title : "\(track.TrackNumber!) - \(track.Title) - \(track.timeIntervalString)")
-                  .foregroundColor((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
+                  .foregroundStyle((self.trackFetcher.cachedTrackSHA1s.contains(track.SHA1) ? CacheStatus.full : .none).color)
                   .frame(maxWidth: .infinity, alignment: .leading)
                   .contentShape(Rectangle())
                   .onTapGesture {

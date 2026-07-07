@@ -45,7 +45,7 @@ public struct PanelContainer<Content: View>: View {
         HStack(spacing: 6) {
             Image(systemName: panel.kind.systemImage)
                 .font(.caption)
-                .foregroundColor(DJTheme.textSecondary)
+                .foregroundStyle(DJTheme.textSecondary)
             Text(panel.kind.title)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(DJTheme.neonGradientHorizontal)
@@ -53,7 +53,7 @@ public struct PanelContainer<Content: View>: View {
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(DJTheme.textSecondary)
+                    .foregroundStyle(DJTheme.textSecondary)
                     .padding(3)
             }
             .buttonStyle(.plain)
