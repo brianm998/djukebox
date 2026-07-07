@@ -110,10 +110,16 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                 self.db?.delete(shas: Array(dropSet))
                 self.downloadedTracks.removeAll { dropSet.contains($0.SHA1) }
                 self.sanitizeDownloadedTracks()
-                // if the UI is showing the local catalog (offline mode), it just
-                // changed underneath it — republish
-                if let fetcher = self.trackFinder as? TrackFetcher, fetcher.useLocalContentOnly {
-                    fetcher.refreshTracks()
+                if let fetcher = self.trackFinder as? TrackFetcher {
+                    if fetcher.useLocalContentOnly {
+                        // the UI is showing the local catalog (offline mode) and it
+                        // just changed underneath it — republish (this also re-tints)
+                        fetcher.refreshTracks()
+                    } else {
+                        // online: catalog is unchanged, but some rows are no longer
+                        // cached — re-tint the browse lists
+                        fetcher.cacheDidChange()
+                    }
                 }
             }
         }
@@ -154,6 +160,8 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
         self.db?.clear()
         self.downloadedTracks = []
         self.downloadedTrackMap = [:]
+        // everything just went uncached — repaint the browse lists white
+        (self.trackFinder as? TrackFetcher)?.cacheDidChange()
     }
 
     fileprivate func download(url: URL,
@@ -270,6 +278,8 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                     if self.reconcilePending { self.keptDuringReconcile.insert(track.SHA1) }
                     self.downloadedTracks.append(track)
                     self.sanitizeDownloadedTracks()
+                    // a newly cached track re-tints its artist/album/song rows
+                    (self.trackFinder as? TrackFetcher)?.cacheDidChange()
                     closure(true)
                 }
             } else {

@@ -24,7 +24,8 @@ public struct NaviArtistList: View {
                                                           artist: artist.Artist,
                                                           title: artist.Artist))
                 {
-                    Text(artist.Artist).foregroundColor(DJTheme.textPrimary)
+                    Text(artist.Artist)
+                      .foregroundColor((self.trackFetcher.artistCacheStatus[artist.Artist] ?? .none).color)
                 }
             }
             .djListChrome()

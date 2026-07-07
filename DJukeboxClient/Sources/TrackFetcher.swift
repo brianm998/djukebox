@@ -11,6 +11,24 @@ public enum PlayingQueueType: String, Decodable, Encodable {
     case remote
 }
 
+// How much of a browse-list row is cached locally for offline play: an artist's
+// whole catalog, one album, or a single song. Drives the row tint — full = green,
+// partial = amber, none = normal text. (Songs are all-or-nothing, so they only ever
+// resolve to .full or .none.) See DJTheme.cacheFull / cachePartial / cacheNone.
+public enum CacheStatus {
+    case none
+    case partial
+    case full
+
+    public var color: Color {
+        switch self {
+        case .full:    return DJTheme.cacheFull
+        case .partial: return DJTheme.cachePartial
+        case .none:    return DJTheme.cacheNone
+        }
+    }
+}
+
 public struct LocalTrackCache {
     var tracks: [String: URL]
 }
@@ -115,6 +133,16 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
     // what is shown on the tracks list
     @Published public var tracks: [AudioTrack] = []
 
+    // Local-cache tint maps for the browse lists (recomputeCacheStatus). Keyed by
+    // artist name and by albumStatusKey(artist:album:); cachedTrackSHA1s is the flat
+    // set the songs list checks per row. Recomputed whenever the catalog or the set
+    // of cached tracks changes. These are derived from the CURRENT catalog, so in
+    // offline mode — where the catalog is exactly the cached tracks — every row is
+    // fully cached (green).
+    @Published public var artistCacheStatus: [String: CacheStatus] = [:]
+    @Published public var albumCacheStatus: [String: CacheStatus] = [:]
+    @Published public var cachedTrackSHA1s: Set<String> = []
+
     // the text at the top of the albums list
     @Published public var albumTitle: String
 
@@ -215,6 +243,7 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
             self.artists = Array(artistMap.values).sorted()
             self.trackMap = sha1Map
             self.reapplyBrowseColumns()
+            self.recomputeCacheStatus()
             self.maybeDoInitialSetup()
         }
     }
@@ -546,6 +575,70 @@ public class TrackFetcher: ObservableObject, @unchecked Sendable {
         server.savedGain(forHash: hash) { db, _ in
             DispatchQueue.main.async { self.currentTrackGainDB = db ?? 0 }
         }
+    }
+
+    // MARK: - local cache status
+
+    // A stable key for an (artist, album) pair used by albumCacheStatus. A nil album
+    // is the artist's "Singles" bucket. Control-character separators keep artist and
+    // album names from colliding across the join.
+    public static func albumStatusKey(artist: String, album: String?) -> String {
+        return "\(artist)\u{1}\(album ?? "\u{2}singles")"
+    }
+
+    // The set of locally cached tracks may have changed (a download finished, the
+    // cache was cleared, or the reconcile scan pruned a stale row). Recompute the
+    // tint maps on the main queue, serialized with the other catalog mutations.
+    // Called by LocalTracks.
+    public func cacheDidChange() {
+        DispatchQueue.main.async { self.recomputeCacheStatus() }
+    }
+
+    // Rebuild artistCacheStatus / albumCacheStatus / cachedTrackSHA1s from the
+    // current catalog (allTracks) and the set of locally cached tracks. Main-queue
+    // only: allTracks and localTracks.downloadedTrackMap are both mutated there, and
+    // the @Published results publish on the main thread. One O(allTracks) pass; it
+    // runs on catalog reload and between (network-throttled) cache downloads.
+    fileprivate func recomputeCacheStatus() {
+        let cachedSHA1s: Set<String>
+        if let map = localTracks?.downloadedTrackMap {
+            cachedSHA1s = Set(map.keys)
+        } else {
+            cachedSHA1s = []
+        }
+
+        var artistTotal: [String: Int] = [:]
+        var artistCached: [String: Int] = [:]
+        var albumTotal: [String: Int] = [:]
+        var albumCached: [String: Int] = [:]
+
+        for track in allTracks {
+            let isCached = cachedSHA1s.contains(track.SHA1)
+            artistTotal[track.Artist, default: 0] += 1
+            if isCached { artistCached[track.Artist, default: 0] += 1 }
+
+            let albumKey = Self.albumStatusKey(artist: track.Artist, album: track.Album)
+            albumTotal[albumKey, default: 0] += 1
+            if isCached { albumCached[albumKey, default: 0] += 1 }
+        }
+
+        func status(cached: Int, total: Int) -> CacheStatus {
+            if total == 0 || cached == 0 { return .none }
+            return cached >= total ? .full : .partial
+        }
+
+        var artistStatus: [String: CacheStatus] = [:]
+        for (artist, total) in artistTotal {
+            artistStatus[artist] = status(cached: artistCached[artist] ?? 0, total: total)
+        }
+        var albumStatus: [String: CacheStatus] = [:]
+        for (key, total) in albumTotal {
+            albumStatus[key] = status(cached: albumCached[key] ?? 0, total: total)
+        }
+
+        self.artistCacheStatus = artistStatus
+        self.albumCacheStatus = albumStatus
+        self.cachedTrackSHA1s = cachedSHA1s
     }
 }
 
