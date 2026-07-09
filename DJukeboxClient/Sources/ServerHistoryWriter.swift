@@ -15,6 +15,10 @@ public class ServerHistoryWriter: HistoryWriterType, @unchecked Sendable {
     }
     
     public func writePlay(of sha1: String, at date: Date) throws {
+        // Offline / local-only playback has no server to record to, so skip the
+        // write rather than firing a request that can only fail (it was logging
+        // a confusing "unsupported URL" error on every track finish).
+        guard server.hasServer else { return }
         let history = ServerHistoryEntry(hash: sha1,
                                          time: Int(date.timeIntervalSince1970),
                                          fullyPlayed: true)
@@ -29,6 +33,8 @@ public class ServerHistoryWriter: HistoryWriterType, @unchecked Sendable {
     }
 
     public func writeSkip(of sha1: String, at date: Date) throws {
+        // See writePlay: no server offline, so nothing to record.
+        guard server.hasServer else { return }
         let history = ServerHistoryEntry(hash: sha1,
                                          time: Int(date.timeIntervalSince1970),
                                          fullyPlayed: false)

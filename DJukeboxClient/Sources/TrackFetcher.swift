@@ -572,6 +572,9 @@ public class TrackFetcher: ObservableObject {
     // Pull the current master level from the server (it is global, so another
     // client may have changed it). Views call this on appear; Client on startup.
     public func refreshMasterGain() {
+        // Offline / local-only: master gain is a server setting, so there is
+        // nothing to fetch (avoids a failing request + error log at startup).
+        guard server.hasServer else { return }
         Task {
             do {
                 let db = try await server.masterGain()
@@ -611,6 +614,13 @@ public class TrackFetcher: ObservableObject {
     private var lastGainSha1: String?
 
     public func refreshSavedGain(forHash hash: String) {
+        // Offline / local-only: saved gains live on the server, so there is
+        // nothing to fetch. This fires on every track change, so skipping it
+        // avoids an error log per track (the control keeps its 0 dB default).
+        guard server.hasServer else {
+            self.currentTrackGainDB = 0
+            return
+        }
         Task {
             do {
                 let db = try await server.savedGain(forHash: hash)

@@ -136,6 +136,9 @@ public class HistoryFetcher: ObservableObject {
     }
 
     public func refresh() {
+        // Offline / local-only: there is no server history to fetch, so don't
+        // fire a request that can only fail and log noise at startup.
+        guard server.hasServer else { return }
         if let lastUpdateTime = self.lastUpdateTime {
             let historyOverlapDuration: Double = 300
             let since = Int(lastUpdateTime.timeIntervalSince1970 - historyOverlapDuration)

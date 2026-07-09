@@ -345,9 +345,8 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         await MainActor.run {
             Log.d("playerDidFinishPlaying")
 
-            // resolve the played track from the finished item itself: by the
-            // time this runs the AVQueuePlayer has already dropped the item, so
-            // playingTrack would report nil (or the next track) instead.
+            // resolve the played track from the finished item itself (we drop it
+            // from trackMap just below, and playingTrack can't be trusted here).
             if let finished = finishedBox.value,
                let hash = self.trackMap[finished]
             {
@@ -358,19 +357,33 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
                 }
             }
 
-            // only refill if the doghouse is still empty: a play() call can land
-            // in the finish-to-hop gap and insert its own item, and adding a
-            // second one here would break the one-item-at-a-time invariant for
-            // good. (The guard stays OUT of serviceQueue() itself — skip() calls
-            // it while the current item is still in the player, by design.)
-            if self.player.items().isEmpty {
-                self.serviceQueue()
-            }
-            // drop the finished item's gain (its tap is torn down with the item)
-            // and its trackMap entry (nothing looks up a played item again)
+            // Drop the finished item ourselves. An AVQueuePlayer only removes an
+            // item when it ADVANCES to a following one, but the doghouse only ever
+            // holds a SINGLE item — so a finished track just stays as currentItem
+            // (parked at its end) and items() never empties on its own. That made
+            // the isEmpty guard below never fire, so the queue never auto-advanced
+            // and local/offline playback stopped dead after one track. Its gain tap
+            // is torn down with it and nothing looks up a played item again.
             if let finished = finishedBox.value {
+                self.player.remove(finished)
                 self.forgetGain(for: finished)
                 self.trackMap[finished] = nil
+            }
+
+            // Now refill from the doghouse queue — unless a play() already slipped
+            // an item in during the finish-to-hop gap (then it's already playing
+            // the right thing and a second insert would break the one-item
+            // invariant for good).
+            if self.player.items().isEmpty {
+                self.serviceQueue()
+                // A track just played to its end, so keep playing the next one.
+                // serviceQueue() enqueues it, but play()'s `if !isPaused` gate can
+                // leave it sitting silently at position NaN (auto-advance, unlike a
+                // user tap, never calls resume()). Setting isPaused fires
+                // startPlayer() via its didSet and keeps play/pause state correct.
+                if !self.player.items().isEmpty {
+                    self.isPaused = false
+                }
             }
         }
     }

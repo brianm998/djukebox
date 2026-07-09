@@ -24,6 +24,21 @@ public protocol ServerType: Sendable {
 
     var authHeaderValue: String { get }
     var url: String { get }
+
+    // True when there is a real server to talk to. The offline / local-only
+    // client is built with an empty server URL (see ServerBrowser.makeLocalClient),
+    // for which this is false; callers must then skip server round-trips rather
+    // than firing requests that can only fail.
+    var hasServer: Bool { get }
+}
+
+public enum ServerConnectionError: Error {
+    // Thrown instead of hitting the network when the client has no server
+    // (offline / local-only mode, i.e. an empty server URL). Callers that guard
+    // on `hasServer` never see this; it's the safety net for any path that
+    // reaches a networking call offline, replacing the opaque
+    // URLError(.unsupportedURL) that a scheme-less empty URL used to produce.
+    case notConnected
 }
 
 public struct ServerHistoryEntry: Codable {
@@ -66,7 +81,9 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
     public let authHeaderValue: String
 
     public var url: String { return serverUrl }
-    
+
+    public var hasServer: Bool { return !serverUrl.isEmpty }
+
     // The bearer token IS the credential now (no client-side hashing). For a
     // loopback connection on the same machine as the daemon, the server trusts the
     // peer regardless of the token, so a placeholder like "local" is fine and keeps
@@ -77,6 +94,7 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
     }
 
     internal func request(path: String) async throws {
+        guard hasServer else { throw ServerConnectionError.notConnected }
         guard let url = URL(string: "\(serverUrl)/\(path)") else {
             throw URLError(.badURL)
         }
@@ -89,6 +107,7 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
     }
 
     internal func post(body: Data, toPath path: String) async throws {
+        guard hasServer else { throw ServerConnectionError.notConnected }
         guard let url = URL(string: "\(serverUrl)/\(path)") else {
             throw URLError(.badURL)
         }
@@ -103,6 +122,7 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
     }
 
     internal func requestJson<T>(atPath path: String) async throws -> T where T: Decodable {
+        guard hasServer else { throw ServerConnectionError.notConnected }
         let urlPath = path.replacingOccurrences(of: " ", with: "%20")
         guard let url = URL(string: "\(serverUrl)/\(urlPath)") else {
             throw URLError(.badURL)

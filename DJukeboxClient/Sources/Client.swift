@@ -87,7 +87,12 @@ public class Client {
                                                // non-isolated, so it awaits us rather than reading
                                                // fetcher.masterGainDB, which is @MainActor, F30).
                                                let currentMasterGainDB = await MainActor.run { fetcher?.masterGainDB ?? 0 }
-                                               let db = try? await server.savedGain(forHash: hash)
+                                               // No server offline: skip the per-track saved-gain lookup
+                                               // (there is nothing to fetch) and just apply master.
+                                               var db: Double? = nil
+                                               if server.hasServer {
+                                                   db = try? await server.savedGain(forHash: hash)
+                                               }
                                                return (db ?? 0) + currentMasterGainDB
                                            },
                                            levelMeter: levelMeter)
