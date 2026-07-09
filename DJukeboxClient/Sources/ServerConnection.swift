@@ -49,7 +49,7 @@ public struct ServerHistoryEntry: Codable {
 
 // Mirrors the server's VolumeAdjustment wire type. Only the fields relevant to
 // `scope` are set: track -> sha1, album -> artist + album, artist -> artist.
-public struct VolumeAdjustment: Codable {
+public struct VolumeAdjustment: Codable, Sendable {
     public let scope: String
     public let sha1: String?
     public let artist: String?

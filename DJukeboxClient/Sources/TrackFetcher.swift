@@ -7,7 +7,7 @@ enum TrackFetcherError: Error {
     case noPlayer(PlayingQueueType)
 }
 
-public enum PlayingQueueType: String, Decodable, Encodable {
+public enum PlayingQueueType: String, Decodable, Encodable, Sendable {
     case local
     case remote
 }
