@@ -81,7 +81,14 @@ public class Client {
 
         let server = serverConnection
         let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher.catalog,
-                                           historyWriter: ServerHistoryWriter(server: serverConnection),
+                                           historyWriter: ServerHistoryWriter(
+                                               server: serverConnection,
+                                               // Same weak-fetcher / MainActor-hop pattern as
+                                               // savedGainForHash below: don't POST play/skip
+                                               // history while in offline mode (it can only time out).
+                                               isOffline: { [weak fetcher] in
+                                                   await MainActor.run { fetcher?.useLocalContentOnly ?? false }
+                                               }),
                                            savedGainForHash: { [weak fetcher] hash in
                                                // Called from AVDoghouseAudioPlayer's own Task (it's
                                                // non-isolated, so it awaits us rather than reading
