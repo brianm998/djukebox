@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.brianm998.djukebox</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>@BINARY@</string>
+		<string>serve</string>
+		<string>-H</string>
+		<string>0.0.0.0</string>
+		<string>-p</string>
+		<string>@PORT@</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>DJUKEBOX_MUSIC_DIR</key>
+		<string>@MUSIC_DIR@</string>
+		<key>DJUKEBOX_HISTORY_DIR</key>
+		<string>@HISTORY_DIR@</string>
+		<key>DJUKEBOX_DB_PATH</key>
+		<string>@DB_PATH@</string>
+		<key>DJUKEBOX_REQUIRE_MUSIC_DIR</key>
+		<string>1</string>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>@INSTALL_DIR@</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+	<key>ProcessType</key>
+	<string>Interactive</string>
+	<key>StandardOutPath</key>
+	<string>@LOG_PATH@</string>
+	<key>StandardErrorPath</key>
+	<string>@LOG_PATH@</string>
+</dict>
+</plist>

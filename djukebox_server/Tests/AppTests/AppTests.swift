@@ -55,4 +55,23 @@ final class AppTests: XCTestCase {
 
         try await app.asyncShutdown()
     }
+
+    func testMusicDirCheck() throws {
+        let tmp = NSTemporaryDirectory() + "mdcheck-\(UUID().uuidString)"
+        let fm = FileManager.default
+        try fm.createDirectory(atPath: tmp, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(atPath: tmp) }
+
+        XCTAssertThrowsError(try checkMusicDirectory(tmp + "/missing"))
+
+        let file = tmp + "/file"
+        fm.createFile(atPath: file, contents: Data())
+        XCTAssertThrowsError(try checkMusicDirectory(file))
+
+        let empty = tmp + "/empty"
+        try fm.createDirectory(atPath: empty, withIntermediateDirectories: true)
+        XCTAssertThrowsError(try checkMusicDirectory(empty))
+
+        XCTAssertNoThrow(try checkMusicDirectory(tmp))
+    }
 }

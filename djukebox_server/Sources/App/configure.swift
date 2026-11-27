@@ -95,6 +95,34 @@ public final class VolumeAdjustmentProvider: VolumeAdjustmentSource, @unchecked 
     }
 }
 
+/// Thrown when DJUKEBOX_REQUIRE_MUSIC_DIR=1 and the music dir is not usable yet.
+public struct MusicDirectoryUnavailable: Error, CustomStringConvertible {
+    public let path: String
+    public let reason: String
+    public var description: String { "music directory \(path) is unavailable: \(reason)" }
+}
+
+/// Verifies that `path` exists, is a directory and has at least one entry
+/// (an unmounted volume's mount point is typically empty).
+public func checkMusicDirectory(_ path: String) throws {
+    var isDir: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir) else {
+        throw MusicDirectoryUnavailable(path: path, reason: "does not exist")
+    }
+    guard isDir.boolValue else {
+        throw MusicDirectoryUnavailable(path: path, reason: "not a directory")
+    }
+    let entries: [String]
+    do {
+        entries = try FileManager.default.contentsOfDirectory(atPath: path)
+    } catch {
+        throw MusicDirectoryUnavailable(path: path, reason: "cannot be read: \(error)")
+    }
+    guard !entries.isEmpty else {
+        throw MusicDirectoryUnavailable(path: path, reason: "is empty (volume not mounted?)")
+    }
+}
+
 // configures your application
 public func configure(_ app: Application) throws {
     Log.handlers =
@@ -103,6 +131,18 @@ public func configure(_ app: Application) throws {
       ]
 
     Log.i("server starting")
+
+    // under launchd, fail (and let launchd retry) rather than come up with an
+    // empty catalog when the music volume isn't mounted yet. Checked before the
+    // database is opened or anything is advertised.
+    if ProcessInfo.processInfo.environment["DJUKEBOX_REQUIRE_MUSIC_DIR"] == "1" {
+        do {
+            try checkMusicDirectory(musicDir)
+        } catch {
+            Log.e("\(error)")
+            throw error
+        }
+    }
 
     // reconcile the on-disk catalog against the database (incremental: only
     // re-parses *.json sidecars that are new or whose modification time changed)
