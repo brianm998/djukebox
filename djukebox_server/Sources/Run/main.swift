@@ -1,5 +1,13 @@
 import App
 import Vapor
+#if canImport(Darwin)
+@preconcurrency import Darwin
+#else
+@preconcurrency import Glibc
+#endif
+
+// line-buffer stdout so logs reach a redirected file promptly
+setLineBuffered()
 
 var env = try Environment.detect()
 try LoggingSystem.bootstrap(from: &env)
@@ -10,6 +18,11 @@ do {
 } catch {
     app.logger.report(error: error)
     try? await app.asyncShutdown()
-    throw error
+    // exit with a status rather than rethrow, which traps and leaves a crash report
+    exit(1)
 }
 try await app.asyncShutdown()
+
+func setLineBuffered() {
+    setvbuf(stdout, nil, _IOLBF, 0)
+}
