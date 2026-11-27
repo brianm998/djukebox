@@ -20,6 +20,7 @@ next = "test"
 [step.test]
 type = "test"
 category = "testing"
+suites = ["swift-common", "swift-server", "swift-client"]
 max_rounds = 3
 on_red = "develop"
 next = "land"
@@ -29,3 +30,25 @@ type = "landing"
 category = "landing"
 max_rounds = 3
 on_red = "develop"
+
+# A project with suites runs its test step on a node (placement mode "remote"); without them the
+# step runs on the coordinator. The "swift" prefix sends each suite to a node with Xcode. No suite
+# has a `build` key: MASON runs those on the coordinator when a batch lands.
+
+[suite.swift-common]
+command = "swift test --package-path DJukeboxCommon 2>&1"
+parser = "swift-testing"
+min_tests = 1
+
+[suite.swift-server]
+command = "swift test --package-path djukebox_server 2>&1"
+parser = "xctest"
+min_tests = 1
+
+# DJukeboxClient has no tests yet, so this only checks that it builds.
+[suite.swift-client]
+command = '''if swift build --package-path DJukeboxClient 2>&1; then echo "test client_builds ... ok"; else echo "test client_builds ... FAILED"; exit 1; fi'''
+parser = "regex"
+pass_regex = "^test (.+) \\.\\.\\. ok$"
+fail_regex = "^test (.+) \\.\\.\\. FAILED$"
+min_tests = 1
