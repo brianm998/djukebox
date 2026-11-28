@@ -38,7 +38,7 @@ public class ServerHistoryWriter: HistoryWriterType, @unchecked Sendable {
                 try await server.post(history: history)
                 Log.d("wrote play of \(sha1)")
             } catch {
-                Log.e("could not write play of \(sha1): \(error)")
+                Log.w("could not write play of \(sha1): \(error)")
             }
         }
     }
@@ -56,7 +56,7 @@ public class ServerHistoryWriter: HistoryWriterType, @unchecked Sendable {
                 try await server.post(history: history)
                 Log.d("wrote skip of \(sha1)")
             } catch {
-                Log.e("could not write skip of \(sha1): \(error)")
+                Log.w("could not write skip of \(sha1): \(error)")
             }
         }
     }
