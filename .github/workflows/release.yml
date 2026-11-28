@@ -42,17 +42,27 @@ jobs:
   # ── Build the Vapor server as a macOS release binary ─────────────────────
   server:
     name: Server
-    runs-on: macos-latest
+    runs-on: macos-15
     needs: version
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/cache@v4
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # .build holds compiler-specific modules, so the cache is per toolchain.
+      - name: Toolchain id for the cache key
+        id: toolchain
+        run: echo "id=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
         with:
           path: djukebox_server/.build
-          key: release-server-${{ hashFiles('djukebox_server/Package.resolved') }}
-          restore-keys: release-server-
+          key: release-server-${{ steps.toolchain.outputs.id }}-${{ hashFiles('djukebox_server/Package.resolved') }}
+          restore-keys: release-server-${{ steps.toolchain.outputs.id }}-
 
       - name: Build release binary
         run: swift build -c release
@@ -75,11 +85,16 @@ jobs:
   # ── Build, sign, and export the iOS app ──────────────────────────────────
   ios-app:
     name: iOS App
-    runs-on: macos-latest
+    runs-on: macos-15
     needs: version
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       # Import the distribution certificate (same P12 as the macOS Developer ID cert).
       # Gracefully skips if the secret is absent.
@@ -180,11 +195,16 @@ jobs:
   # ── Build, sign, notarize, and package the macOS app ─────────────────────
   macos-app:
     name: macOS App
-    runs-on: macos-latest
+    runs-on: macos-15
     needs: version
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       # Import Developer ID Application + Installer certs into a throwaway keychain.
       # Gracefully skips (outputs has_cert=false) if the secret is absent.
