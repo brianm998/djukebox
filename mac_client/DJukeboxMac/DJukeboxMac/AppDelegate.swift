@@ -206,13 +206,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         panelController?.addPanel(kind)
     }
 
-    // periphery:ignore:parameters sender - target/action signature
-    @objc private func newPanelWindow(_ sender: Any?) {
+    @objc private func newPanelWindow(_: Any?) {
         panelController?.newWindow(root: .defaultLayout())
     }
 
-    // periphery:ignore:parameters sender - target/action signature
-    @objc private func resetLayout(_ sender: Any?) {
+    @objc private func resetLayout(_: Any?) {
         panelController?.resetToDefault()
         theWindow = panelController?.primaryWindow
     }

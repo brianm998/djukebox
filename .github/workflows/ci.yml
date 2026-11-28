@@ -1,6 +1,6 @@
 name: CI
 
-# Fast build checks on every push and pull request.
+# Build and test checks on every push and pull request.
 # Does not produce release artifacts — use the Release workflow for that.
 
 on:
@@ -9,50 +9,146 @@ on:
   pull_request:
     branches: [main, develop]
 
+# A newer push to a pull request cancels its older run; runs for pushes are
+# left to finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  # ── Vapor server: build + test ────────────────────────────────────────────
-  server:
-    name: Server
-    runs-on: macos-latest
+  # ── Version: the Xcode projects must agree with DJukeboxVersion.current ────
+  version:
+    name: Version
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/cache@v4
+      - name: Check MARKETING_VERSION matches scripts/version.sh
+        run: |
+          V=$(scripts/version.sh)
+          status=0
+          for P in ios_client/DJukeboxiOS/DJukeboxiOS.xcodeproj/project.pbxproj \
+                   mac_client/DJukeboxMac/DJukeboxMac.xcodeproj/project.pbxproj; do
+            FOUND=$(sed -n 's/^[[:space:]]*MARKETING_VERSION = "\{0,1\}\([^";]*\)"\{0,1\};.*/\1/p' "$P")
+            if [[ -z "$FOUND" ]]; then
+              echo "::error file=$P::MARKETING_VERSION is not set"
+              status=1
+            elif grep -qvxF "$V" <<<"$FOUND"; then
+              echo "::error file=$P::MARKETING_VERSION ($(echo $FOUND)) differs from scripts/version.sh ($V)"
+              status=1
+            fi
+          done
+          exit $status
+
+  # ── Vapor server: build + test ────────────────────────────────────────────
+  server:
+    name: Server
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # .build holds compiler-specific modules, so the cache is per toolchain.
+      - name: Toolchain id for the cache key
+        id: toolchain
+        run: echo "id=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
         with:
           path: djukebox_server/.build
-          key: ci-server-${{ hashFiles('djukebox_server/Package.resolved') }}
-          restore-keys: ci-server-
+          key: ci-server-${{ steps.toolchain.outputs.id }}-${{ hashFiles('djukebox_server/Package.resolved') }}
+          restore-keys: ci-server-${{ steps.toolchain.outputs.id }}-
 
       - name: Build
         run: swift build
         working-directory: djukebox_server
 
-  # ── DJukeboxCommon Swift package: test ───────────────────────────────────
+      - name: Test
+        run: swift test
+        working-directory: djukebox_server
+
+  # ── DJukeboxCommon Swift package: build + test ─────────────────────────────
   common:
     name: DJukeboxCommon
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/cache@v4
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # .build holds compiler-specific modules, so the cache is per toolchain.
+      - name: Toolchain id for the cache key
+        id: toolchain
+        run: echo "id=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
         with:
           path: DJukeboxCommon/.build
-          key: ci-common-${{ hashFiles('DJukeboxCommon/Package.resolved') }}
-          restore-keys: ci-common-
+          key: ci-common-${{ steps.toolchain.outputs.id }}-${{ hashFiles('DJukeboxCommon/Package.resolved') }}
+          restore-keys: ci-common-${{ steps.toolchain.outputs.id }}-
 
       - name: Build
         run: swift build
         working-directory: DJukeboxCommon
 
+      - name: Test
+        run: swift test
+        working-directory: DJukeboxCommon
+
+  # ── DJukeboxClient Swift package: build + test ─────────────────────────────
+  client:
+    name: DJukeboxClient
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # .build holds compiler-specific modules, so the cache is per toolchain.
+      - name: Toolchain id for the cache key
+        id: toolchain
+        run: echo "id=$(xcodebuild -version | awk '/Build version/ {print $3}')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v5
+        with:
+          path: DJukeboxClient/.build
+          key: ci-client-${{ steps.toolchain.outputs.id }}-${{ hashFiles('DJukeboxClient/Package.resolved') }}
+          restore-keys: ci-client-${{ steps.toolchain.outputs.id }}-
+
+      - name: Build
+        run: swift build
+        working-directory: DJukeboxClient
+
+      - name: Test
+        run: swift test
+        working-directory: DJukeboxClient
+
   # ── iOS app: build for simulator (no signing) ─────────────────────────────
   ios:
     name: iOS App
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Build
         run: |
@@ -68,10 +164,15 @@ jobs:
   # ── macOS app: build check (no signing) ──────────────────────────────────
   macos-app:
     name: macOS App
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Select latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Build
         run: |

@@ -168,13 +168,18 @@ public struct DJNeonVDivider: View {
 /// beside a neon "DJukebox" wordmark.
 public struct DJHeaderBar: View {
     private let title: String
-    public init(title: String = "DJukebox") { self.title = title }
+    private let server: ServerType?
+    public init(title: String = "DJukebox", server: ServerType? = nil) {
+        self.title = title
+        self.server = server
+    }
     public var body: some View {
         HStack(spacing: 12) {
             DJIconBadge(size: 34)
             Text(title)
                 .font(.system(size: 22, weight: .heavy, design: .rounded))
                 .foregroundStyle(DJTheme.neonGradientHorizontal)
+            VersionLabel(server: server)
             Spacer()
         }
         .padding(.horizontal, 14)

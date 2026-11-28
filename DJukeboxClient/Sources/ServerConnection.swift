@@ -20,6 +20,9 @@ public protocol ServerType: Sendable {
     func masterGain() async throws -> Double?
     func setMasterGain(_ decibels: Double) async throws
 
+    // the server's name and version (GET /version, which needs no auth)
+    func serverVersion() async throws -> ServerVersionInfo
+
     var authHeaderValue: String { get }
     var url: String { get }
 
@@ -37,9 +40,11 @@ public enum ServerConnectionError: Error {
     // reaches a networking call offline, replacing the opaque
     // URLError(.unsupportedURL) that a scheme-less empty URL used to produce.
     case notConnected
+    // The server answered with a non-2xx HTTP status.
+    case badStatus(Int)
 }
 
-public struct ServerHistoryEntry: Codable {
+public struct ServerHistoryEntry: Codable, Equatable, Sendable {
     public let hash: String
     public let time: Int
     public let fullyPlayed: Bool
@@ -68,6 +73,12 @@ public struct VolumeAdjustment: Codable, Sendable {
 public struct MasterVolume: Codable {
     public let decibels: Double
     public init(decibels: Double) { self.decibels = decibels }
+}
+
+// Mirrors the server's VersionInfo wire type.
+public struct ServerVersionInfo: Decodable, Sendable, Equatable {
+    public let name: String
+    public let version: String
 }
 
 // @unchecked Sendable: stored state is immutable (serverUrl / authHeaderValue are
@@ -104,7 +115,8 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         _ = try await URLSession.shared.data(for: request)
     }
 
-    internal func post(body: Data, toPath path: String) async throws {
+    @discardableResult
+    internal func post(body: Data, toPath path: String) async throws -> URLResponse {
         guard hasServer else { throw ServerConnectionError.notConnected }
         guard let url = URL(string: "\(serverUrl)/\(path)") else {
             throw URLError(.badURL)
@@ -116,7 +128,8 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         request.timeoutInterval = 60.0
         request.httpBody = body
 
-        _ = try await URLSession.shared.data(for: request)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        return response
     }
 
     internal func requestJson<T>(atPath path: String) async throws -> T where T: Decodable {
@@ -134,10 +147,29 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    // A server too old to have /version answers 404, whose body fails to decode.
+    public func serverVersion() async throws -> ServerVersionInfo {
+        guard hasServer else { throw ServerConnectionError.notConnected }
+        guard let url = URL(string: "\(serverUrl)/version") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 8.0
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(ServerVersionInfo.self, from: data)
+    }
+
     public func post(history: ServerHistoryEntry) async throws {
         let encoder = JSONEncoder()
         let jsonString = try encoder.encode(history)
-        try await self.post(body: jsonString, toPath: "history")
+        let response = try await self.post(body: jsonString, toPath: "history")
+        // an HTTP error is not a thrown URLSession error, but the entry was not
+        // recorded: the caller must keep it
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else {
+            throw ServerConnectionError.badStatus(status)
+        }
     }
 
     public func listTracks() async throws -> [AudioTrack] {

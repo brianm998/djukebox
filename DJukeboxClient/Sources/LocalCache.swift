@@ -29,7 +29,7 @@ public class LocalCache {
                                                             attributes: nil)
                     
                 } catch let err {
-                    Log.e(err.localizedDescription)
+                    Log.e("could not create directory \(path.path): \(err.localizedDescription)")
                 }
             }
 

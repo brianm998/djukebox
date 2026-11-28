@@ -36,7 +36,8 @@ rm -f "$WORK"/*/build.db "$WORK"/*/debug.yaml
 for debug in "$WORK"/*/*-apple-macosx/debug; do
     [ -d "$debug" ] || continue
     rm -rf "$debug/index"
-    for module in App Run AppTests DJukeboxClient DJukeboxCommon DJukeboxCommonTests; do
+    for module in App Run AppTests DJukeboxClient DJukeboxClientTests DJukeboxCommon \
+                  DJukeboxCommonTests; do
         rm -rf "$debug/$module.build"
     done
 done
@@ -128,7 +129,7 @@ CONFIG="$WORK/project.json"
 cat >"$CONFIG" <<EOF
 {
   "indexstores": $(json_array "${INDEX_STORES[@]}"),
-  "test_targets": ["DJukeboxCommonTests", "AppTests"],
+  "test_targets": ["DJukeboxCommonTests", "DJukeboxClientTests", "AppTests"],
   "plists": $(json_array "${PLISTS[@]}"),
   "xibs": $(json_array "${XIBS[@]}"),
   "xcdatamodels": [],

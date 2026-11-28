@@ -38,7 +38,7 @@ public struct PlayingQueueView: View {
                         self.trackFetcher.update(playingQueue: queue)
                     }
                 } catch {
-                    Log.e("could not move playing track: \(error)")
+                    Log.w("could not move playing track: \(error)")
                 }
             }
         } else if startIndex > endIndex {
@@ -54,7 +54,7 @@ public struct PlayingQueueView: View {
                         self.trackFetcher.update(playingQueue: queue)
                     }
                 } catch {
-                    Log.e("could not move playing track: \(error)")
+                    Log.w("could not move playing track: \(error)")
                 }
             }
         } else {
@@ -65,7 +65,8 @@ public struct PlayingQueueView: View {
     func delete (at offsets: IndexSet) {
         Log.d("delete @ \(offsets)")
 
-        offsets.forEach { index in
+        // highest first, so a removal doesn't shift the ones still to be removed
+        offsets.reversed().forEach { index in
             Log.d("index \(index)")
             trackFetcher.removeItemFromPlayingQueue(at: index)
         }

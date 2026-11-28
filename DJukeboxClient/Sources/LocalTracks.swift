@@ -1,4 +1,5 @@
 import Foundation
+import os
 import DJukeboxCommon
 
 public protocol LocalTrackType: TrackFinderType {
@@ -15,21 +16,26 @@ public protocol LocalTrackType: TrackFinderType {
 // transferred for the file; no play history is stored locally.
 // @unchecked Sendable: implements LocalTrackType (refining the non-isolated
 // TrackFinderType), so it can't be @MainActor. Downloads and the metadata store are
-// serialized through the download completion path. See the client concurrency note
-// in AsyncAudioPlayer.
+// serialized through the download completion path. The in-memory catalog is read
+// from any thread (via TrackCatalog), so it lives behind a lock. See the client
+// concurrency note in AsyncAudioPlayer.
 public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
 
-    private var cacheDir: URL? {
+    private static var defaultCacheDir: URL? {
         return LocalCache.urlForLibrary(appending: ["Caches", "AudioTracks"])
+    }
+
+    private static var defaultDatabaseURL: URL? {
+        return defaultCacheDir?.appendingPathComponent("local_tracks").appendingPathExtension("sqlite3")
+    }
+
+    private var cacheDir: URL? {
+        return Self.defaultCacheDir
     }
 
     // legacy metadata manifest, migrated into the database once on first launch
     private var tracksJsonURL: URL? {
         return self.cacheDir?.appendingPathComponent("tracks").appendingPathExtension("json")
-    }
-
-    private var databaseURL: URL? {
-        return self.cacheDir?.appendingPathComponent("local_tracks").appendingPathExtension("sqlite3")
     }
 
     private func cacheDirURL(forFilename filename: String, withExtention extention: String) -> URL? {
@@ -38,6 +44,9 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
 
     let trackFinder: TrackCatalog
     private var db: LocalDatabase?
+
+    // The same database also holds plays/skips waiting to be uploaded.
+    public var pendingHistoryStore: LocalDatabase? { db }
 
     // Weak back-reference to the owning TrackFetcher, used ONLY to nudge its
     // @Published cache-status UI to refresh after a download/reconcile/clear
@@ -53,16 +62,27 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     private var keptDuringReconcile = Set<String>()
     private var reconcilePending = true
 
-    public init(trackFinder: TrackCatalog) {
+    public convenience init(trackFinder: TrackCatalog) {
+        self.init(trackFinder: trackFinder,
+                  databaseURL: Self.defaultDatabaseURL,
+                  scanDisk: true)
+    }
+
+    // Tests pass a nil databaseURL and scanDisk false, which leaves the real
+    // Caches directory alone (no legacy migration, no reconcile scan).
+    init(trackFinder: TrackCatalog, databaseURL: URL?, scanDisk: Bool) {
         self.trackFinder = trackFinder
         super.init()
-        if let databaseURL = self.databaseURL {
+        if let databaseURL {
             self.db = LocalDatabase(path: databaseURL.path)
         }
-        self.downloadedTracks = self.db?.allTracks() ?? []
+        let stored = self.db?.allTracks() ?? []
+        self.catalog.withLock { $0.tracks = stored }
         self.sanitizeDownloadedTracks()
-        self.migrateLegacyTracksJsonIfNeeded()
-        self.reconcileWithDownloadedFiles()
+        if scanDisk {
+            self.migrateLegacyTracksJsonIfNeeded()
+            self.reconcileWithDownloadedFiles()
+        }
     }
 
     // The SQLite catalog is only an index of what we've downloaded; the audio files
@@ -116,7 +136,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                 self.reconcilePending = false
                 guard !dropSet.isEmpty else { return }
                 self.db?.delete(shas: Array(dropSet))
-                self.downloadedTracks.removeAll { dropSet.contains($0.SHA1) }
+                self.catalog.withLock { $0.tracks.removeAll { dropSet.contains($0.SHA1) } }
                 self.sanitizeDownloadedTracks()
                 if let fetcher = self.fetcher {
                     if fetcher.useLocalContentOnly {
@@ -166,8 +186,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
             }
         }
         self.db?.clear()
-        self.downloadedTracks = []
-        self.downloadedTrackMap = [:]
+        self.catalog.withLock { $0 = CatalogState() }
         // everything just went uncached — repaint the browse lists white. This is a
         // non-isolated method (part of LocalTrackType) that may be called from the
         // main actor (TrackFetcher.clearCache()) or elsewhere, so hop explicitly
@@ -212,7 +231,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                             closure(false)
                         }
                     } catch {
-                        Log.e("error: \(error)")
+                        Log.w("error: \(error)")
                         closure(false)
                     }
                 }
@@ -233,22 +252,51 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
             }
         } else {
             closure(nil)
-            Log.w("no track for hash \(sha1Hash)")
+            Log.i("no track for hash \(sha1Hash)")
         }
     }
 
-    public var downloadedTracks: [AudioTrack] = []
-    public var downloadedTrackMap: [String: AudioTrack] = [:]
+    // The in-memory catalog: the track list and its SHA1 index, always updated
+    // together under one lock. Writers also keep to the main actor, for ordering
+    // against the database and the reconcile scan.
+    private struct CatalogState {
+        var tracks: [AudioTrack] = []
+        var map: [String: AudioTrack] = [:]
+    }
 
+    private let catalog = OSAllocatedUnfairLock(initialState: CatalogState())
+
+    // snapshots, safe to read from any thread
+    public var downloadedTracks: [AudioTrack] { catalog.withLock { $0.tracks } }
+    public var downloadedTrackMap: [String: AudioTrack] { catalog.withLock { $0.map } }
+
+    private func downloadedTrack(forHash sha1Hash: String) -> AudioTrack? {
+        return catalog.withLock { $0.map[sha1Hash] }
+    }
+
+    // Full dedupe (by SHA1) and index rebuild, for loading and reconcile.
     func sanitizeDownloadedTracks() {
-        var map: [AudioTrack: Bool] = [:]
-        for track in self.downloadedTracks {
-            map[track] = true
+        catalog.withLock { state in
+            state.tracks = Array(Set(state.tracks))
+            state.map = [:]
+            for track in state.tracks {
+                state.map[track.SHA1] = track
+            }
         }
-        self.downloadedTracks = Array(map.keys)
-        self.downloadedTrackMap = [:]
-        for track in self.downloadedTracks {
-            self.downloadedTrackMap[track.SHA1] = track
+    }
+
+    // Add one track without rebuilding the catalog. A SHA1 already present is
+    // replaced in place, so the newest metadata wins (as in the database).
+    func insertDownloaded(_ track: AudioTrack) {
+        catalog.withLock { state in
+            if state.map[track.SHA1] != nil,
+               let index = state.tracks.firstIndex(of: track)
+            {
+                state.tracks[index] = track
+            } else {
+                state.tracks.append(track)
+            }
+            state.map[track.SHA1] = track
         }
     }
 
@@ -260,7 +308,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
         guard let legacy = self.loadLegacyTrackList(), !legacy.isEmpty else { return }
         Log.i("migrating \(legacy.count) tracks from tracks.json into the local database")
         for track in legacy { self.db?.upsert(track) }
-        self.downloadedTracks = legacy
+        self.catalog.withLock { $0.tracks = legacy }
         self.sanitizeDownloadedTracks()
     }
 
@@ -286,28 +334,27 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                 Task { @MainActor in
                     self.db?.upsert(track)
                     if self.reconcilePending { self.keptDuringReconcile.insert(track.SHA1) }
-                    self.downloadedTracks.append(track)
-                    self.sanitizeDownloadedTracks()
+                    self.insertDownloaded(track)
                     // a newly cached track re-tints its artist/album/song rows
                     self.fetcher?.cacheDidChange()
                     closure(true)
                 }
             } else {
-                Log.e("couldn't download \(String(describing: track))")
+                Log.w("couldn't download \(String(describing: track))")
                 closure(false)
             }
         }
     }
 
     public func audioTrack(forHash sha1Hash: String) -> AudioTrackType? {
-        if let track = self.downloadedTrackMap[sha1Hash] {
+        if let track = self.downloadedTrack(forHash: sha1Hash) {
             return track
         }
         return nil
     }
 
     public func track(forHash sha1Hash: String) -> (AudioTrackType, URL)? {
-        if let track = self.downloadedTrackMap[sha1Hash],
+        if let track = self.downloadedTrack(forHash: sha1Hash),
            let url = self.cacheDirURL(forFilename: track.SHA1, withExtention: "mp3"),
            // a stale row (file evicted by iOS / junk placeholder) must never
            // reach the player: a missing file makes a failed AVPlayerItem that

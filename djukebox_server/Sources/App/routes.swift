@@ -23,6 +23,12 @@ func offload<T>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
     }
 }
 
+// What GET /version announces.
+public struct VersionInfo: Content {
+    public let name: String
+    public let version: String
+}
+
 public struct HistoryEntry: Content {
     public let hash: String
     public let time: Int
@@ -45,9 +51,9 @@ public struct AudioTrack: Content, AudioTrackType {
     public let Year: String?
     public let OriginalDate: String?
 
-    // Wire-compatible with the .json sidecars written by mp3.pl (and every
-    // existing file on disk): those keys predate the Credit/Artist rename, so
-    // they're pinned here rather than renamed.
+    // Wire-compatible with the .json sidecar files (every existing one on
+    // disk): those keys predate the Credit/Artist rename, so they're pinned
+    // here rather than renamed.
     private enum CodingKeys: String, CodingKey {
         case Credit = "Artist"
         case Artist = "Band"
@@ -56,22 +62,13 @@ public struct AudioTrack: Content, AudioTrackType {
     }
 
     public var timeInterval: Double? {
-        if let duration = self.Duration {
-            var ret: TimeInterval = 0
-            // expecting 0:07:11 (approx)
-            let values = duration.split(separator: " ")[0].split(separator: ":")
-            if values.count == 3,
-               let hours = Double(values[0]),
-               let minutes = Double(values[1]),
-               let seconds = Double(values[2])
-            {
-                ret += seconds
-                ret += minutes * 60
-                ret += hours * 60 * 60
-            }
-            return ret
-        }
-        return nil
+        // expecting 0:07:11 (approx); anything else is unknown (nil)
+        guard let clock = self.Duration?.split(separator: " ").first else { return nil }
+        let parts = clock.split(separator: ":")
+        let values = parts.compactMap { Double($0) }.filter { $0.isFinite && $0 >= 0 }
+        guard parts.count == 3, values.count == 3 else { return nil }
+        let total = values[0] * 60 * 60 + values[1] * 60 + values[2]
+        return total.isFinite ? total : nil
     }
 
     private func sanitizeDuration() -> String? {
@@ -186,7 +183,7 @@ func trackServingRoutes(_ protected: any RoutesBuilder) throws {
     }
 
     // stream a track by hash, with auth on the path
-    // curl localhost:8080/stream/0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
+    // curl localhost:8080/stream/<token>/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
     protected.get("stream", ":auth", ":sha1") { req async throws -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
         return try await authControl.trackFromPath(from: req) { _, filepath in
@@ -203,7 +200,7 @@ func trackServingRoutes(_ protected: any RoutesBuilder) throws {
         }
     }
 
-    // curl -H 'Authorization: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425' -H 'Path: /Volumes/Temp/mp3' http://127.0.0.1:8080/discover
+    // curl -H 'Authorization: <token>' -H 'Path: /Volumes/Temp/mp3' http://127.0.0.1:8080/discover
     // F32: the worst offender — a full recursive directory walk (FileManager
     // enumerator), a JSON decode of every sidecar, and a DB transaction. Auth is
     // gated by AuthMiddleware ahead of this handler; the actual ingest is
@@ -682,6 +679,14 @@ func volumeRoutes(_ protected: any RoutesBuilder) throws {
     }
 }
 
+// Registered on the unauthenticated builder: a client may ask what it is talking
+// to before it has paired.
+func versionRoutes(_ open: any RoutesBuilder) throws {
+    open.get("version") { _ -> VersionInfo in
+        VersionInfo(name: DJukeboxVersion.serverName, version: DJukeboxVersion.current)
+    }
+}
+
 func routes(_ app: Application) throws {
 
     // Every route that used to open with `AuthController(...).headerAuth`/`track`/
@@ -697,5 +702,6 @@ func routes(_ app: Application) throws {
     try playerRoutes(protected)
     try volumeRoutes(protected)
     try pairingRoutes(app, protected: protected)
+    try versionRoutes(app)
 }
 

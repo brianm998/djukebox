@@ -97,7 +97,7 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType, @uncheck
                 Log.i("shuffled")
                 // XXX refresh queue?
             } catch {
-                Log.e("could not shuffle queue: \(error)")
+                Log.w("could not shuffle queue: \(error)")
             }
         }
     }
@@ -113,7 +113,7 @@ public class ServerAudioPlayer: ServerConnection, AsyncAudioPlayerType, @uncheck
             do {
                 try await self.request(path: "volume/live/\(decibels)")
             } catch {
-                Log.e("could not set live playback gain: \(error)")
+                Log.w("could not set live playback gain: \(error)")
             }
         }
     }

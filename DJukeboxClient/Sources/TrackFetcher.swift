@@ -63,8 +63,15 @@ public class TrackFetcher: ObservableObject {
             // observers directly — the offline/local UI keys off this flag
             objectWillChange.send()
             refreshTracks()
+            if oldValue != useLocalContentOnly {
+                onLocalContentOnlyChange?(useLocalContentOnly)
+            }
         }
     }
+
+    // called when useLocalContentOnly actually changes; the owning Client uses
+    // it to close the /stream socket while offline and reopen it afterwards
+    public var onLocalContentOnlyChange: (@MainActor (Bool) -> Void)?
 
     var runtimeState: RuntimeState {
         return RuntimeState(isPaused: self.audioPlayer.player?.isPaused ?? false,
@@ -77,6 +84,19 @@ public class TrackFetcher: ObservableObject {
 
     fileprivate var initialRuntimeState: RuntimeState?
 
+    // true while a saved local queue is still waiting for the track list
+    var isAwaitingSavedState: Bool { initialRuntimeState != nil }
+
+    // Save runtimeState, unless a restore is pending: the player is still empty
+    // then, and saving would overwrite the only copy of the saved queue.
+    func persistRuntimeState() {
+        guard !isAwaitingSavedState else {
+            Log.d("saved state not yet restored; not saving")
+            return
+        }
+        runtimeState.save()
+    }
+
     // this is called after we get the track list from the server to put the client in the same place as before
     fileprivate func maybeDoInitialSetup() {
         Log.i(self.initialRuntimeState)
@@ -86,8 +106,23 @@ public class TrackFetcher: ObservableObject {
 
             // only restore saved state into the local player; the server manages its own queue
             guard queueType == .local else { return }
-            audioPlayer.player?.update(with: initialRuntimeState)
+            audioPlayer.player?.update(with: playable(initialRuntimeState))
         }
+    }
+
+    // saved hashes can outlive their tracks (evicted from the cache, removed from
+    // the server), so drop the ones the catalog no longer knows
+    private func playable(_ state: RuntimeState) -> RuntimeState {
+        func isKnown(_ hash: String) -> Bool { catalog.audioTrack(forHash: hash) != nil }
+        let playingTrack = state.playingTrack.flatMap { isKnown($0) ? $0 : nil }
+        // a saved position belongs to the saved track; don't seek another one to it
+        let lostPlayingTrack = state.playingTrack != nil && playingTrack == nil
+        return RuntimeState(isPaused: state.isPaused,
+                            isOffline: state.isOffline,
+                            playingQueue: state.playingQueue,
+                            playingTrack: playingTrack,
+                            playingTrackPosition: lostPlayingTrack ? nil : state.playingTrackPosition,
+                            pendingTracks: state.pendingTracks.filter(isKnown))
     }
     
     func initialize(with runtimeState: RuntimeState) {
@@ -101,17 +136,19 @@ public class TrackFetcher: ObservableObject {
                 if let playingTrack = runtimeState.playingTrack {
                     self.currentTrack = self.catalog.audioTrack(forHash: playingTrack) as? AudioTrack
                 }
-                self.pendingTracks = runtimeState.pendingTracks.map {
-                    self.catalog.audioTrack(forHash: $0) as! AudioTrack
+                self.pendingTracks = runtimeState.pendingTracks.compactMap {
+                    self.catalog.audioTrack(forHash: $0) as? AudioTrack
                 }
             }
         }
-        self.useLocalContentOnly = runtimeState.isOffline
+        // before useLocalContentOnly: going offline loads the catalog synchronously,
+        // which restores the saved state into whichever queue is being watched
         do {
             try self.watch(queue: runtimeState.playingQueue)
         } catch {
             Log.e("can't watch queue: \(error)") // XXX handle this better
         }
+        self.useLocalContentOnly = runtimeState.isOffline
     }
     
     // what is shown on the artists list
@@ -176,7 +213,7 @@ public class TrackFetcher: ObservableObject {
 
     @Published public var audioPlayer: ViewObservableAudioPlayer
 
-    @Published public var queueType: PlayingQueueType!
+    @Published public var queueType: PlayingQueueType = .local
     
     var desiredArtist: String?
     var desiredAlbum: String?
@@ -186,6 +223,17 @@ public class TrackFetcher: ObservableObject {
     var shownAlbumsArtist: String?
 
     var queues: [PlayingQueueType: AsyncAudioPlayerType] = [:]
+
+#if os(iOS)
+    // lock-screen / remote-command integration; owned by Client
+    weak var nowPlaying: NowPlayingCoordinator?
+#endif
+
+    private func refreshNowPlaying() {
+#if os(iOS)
+        nowPlaying?.refresh()
+#endif
+    }
 
     public init(withServer server: ServerType) {
         self.server = server
@@ -199,10 +247,19 @@ public class TrackFetcher: ObservableObject {
         queues[queueType] = player
     }
     
+    // Stop on-device playback because the owning client is being replaced. Also
+    // drops any not-yet-restored saved state, so a track list that arrives late
+    // can't start the old player again. The server's queue is left alone.
+    func stopLocalPlayback() {
+        initialRuntimeState = nil
+        (queues[.local] as? AsyncAudioPlayer)?.stopLocalPlayback()
+    }
+
     public func watch(queue: PlayingQueueType) throws {
         if let player = queues[queue] {
             self.updatePlayingQueue(to: player)
             self.queueType = queue
+            self.refreshNowPlaying()
         } else {
             throw TrackFetcherError.noPlayer(queue)
         }
@@ -290,7 +347,7 @@ public class TrackFetcher: ObservableObject {
                     let tracks = try await server.listTracks()
                     self.update(with: tracks)
                 } catch {
-                    Log.e("could not list tracks: \(error)")
+                    Log.w("could not list tracks: \(error)")
                 }
             }
         }
@@ -306,7 +363,7 @@ public class TrackFetcher: ObservableObject {
                 let success = try await audioPlayer.player?.stopPlayingTrack(withHash: hash, atIndex: index)
                 if success == true { self.refreshQueue() }
             } catch {
-                Log.e("could not stop playing track: \(error)")
+                Log.w("could not stop playing track: \(error)")
             }
         }
     }
@@ -338,8 +395,8 @@ public class TrackFetcher: ObservableObject {
         }
         var totalDuration: TimeInterval = 0
         // XXX make this track the PlayingQueue directly
-        if let duration = playingQueue.playingTrackDuration,
-           let position = playingQueue.playingTrackPosition
+        if let duration = playingQueue.playingTrackDuration, duration.isFinite, duration > 0,
+           let position = playingQueue.playingTrackPosition, position.isFinite
         {
             self.progressBarLevel = ProgressBar.State(level: position, max: duration)
             totalDuration = duration - position
@@ -351,6 +408,7 @@ public class TrackFetcher: ObservableObject {
         }
         self.totalDuration = totalDuration
         self.completionTime = Date(timeIntervalSinceNow: totalDuration)
+        self.refreshNowPlaying()
     }
     
     public func refreshQueue() {
@@ -360,7 +418,7 @@ public class TrackFetcher: ObservableObject {
                     self.update(playingQueue: queue)
                 }
             } catch {
-                Log.e("could not list playing queue: \(error)")
+                Log.w("could not list playing queue: \(error)")
             }
         }
     }
@@ -370,11 +428,14 @@ public class TrackFetcher: ObservableObject {
     // so the bar moves without resending the whole queue. A nil duration/position
     // means "nothing playing" → clear the bar.
     public func updateProgress(position: TimeInterval?, duration: TimeInterval?) {
-        if let duration, let position = position, duration > 0 {
+        if let duration, duration.isFinite, duration > 0,
+           let position, position.isFinite
+        {
             self.progressBarLevel = ProgressBar.State(level: position, max: duration)
         } else {
             self.progressBarLevel = nil
         }
+        self.refreshNowPlaying()
     }
 
     public func tracks(for audioTrack: AudioTrack) -> [AudioTrack] {
@@ -473,7 +534,7 @@ public class TrackFetcher: ObservableObject {
                 let success = try await self.audioPlayer.player?.clearPlayingQueue()
                 Log.d("clear queue: \(success)")
             } catch {
-                Log.e("DOH \(error)")
+                Log.w("DOH \(error)")
             }
             self.refreshQueue()
         }
@@ -486,7 +547,7 @@ public class TrackFetcher: ObservableObject {
                     Log.d("random enqueued: \(audioTrack.Title)")
                 }
             } catch {
-                Log.e("DOH \(error)")
+                Log.w("DOH \(error)")
             }
             self.refreshQueue()
         }
@@ -499,7 +560,7 @@ public class TrackFetcher: ObservableObject {
                     Log.d("new random enqueued: \(audioTrack.Title)")
                 }
             } catch {
-                Log.e("DOH error: \(error)")
+                Log.w("DOH error: \(error)")
             }
             self.refreshQueue()
         }
@@ -510,7 +571,7 @@ public class TrackFetcher: ObservableObject {
             do {
                 _ = try await self.audioPlayer.player?.playUntil(date: date)
             } catch {
-                Log.e("could not play until \(date): \(error)")
+                Log.w("could not play until \(date): \(error)")
             }
             self.refreshQueue()
         }
@@ -542,7 +603,7 @@ public class TrackFetcher: ObservableObject {
                 // refresh the button label to the new effective gain for this track
                 self.refreshSavedGain(forHash: track.SHA1)
             } catch {
-                Log.e("could not set \(scope) volume: \(error)")
+                Log.w("could not set \(scope) volume: \(error)")
             }
         }
     }
@@ -576,7 +637,7 @@ public class TrackFetcher: ObservableObject {
                 let db = try await server.masterGain()
                 self.masterGainDB = db ?? 0
             } catch {
-                Log.e("could not refresh master gain: \(error)")
+                Log.w("could not refresh master gain: \(error)")
             }
         }
     }
@@ -594,7 +655,7 @@ public class TrackFetcher: ObservableObject {
             do {
                 try await server.setMasterGain(masterGainDB)
             } catch {
-                Log.e("could not set master volume: \(error)")
+                Log.w("could not set master volume: \(error)")
             }
         }
     }
@@ -622,7 +683,7 @@ public class TrackFetcher: ObservableObject {
                 let db = try await server.savedGain(forHash: hash)
                 self.currentTrackGainDB = db ?? 0
             } catch {
-                Log.e("could not refresh saved gain: \(error)")
+                Log.w("could not refresh saved gain: \(error)")
             }
         }
     }
@@ -709,12 +770,20 @@ extension TrackFetcher {
         }
     }
 
-    private func cacheSequentially(tracks: [AudioTrack]) async {
+    func cacheSequentially(tracks: [AudioTrack]) async {
+        guard localTracks != nil else {
+            Log.w("cannot cache \(tracks.count) tracks: no local store")
+            return
+        }
         for track in tracks {
             Log.d("caching track \(track.SHA1)")
             _ = await withCheckedContinuation { continuation in
-                localTracks?.keepLocal(sha1Hash: track.SHA1) { success in
-                    continuation.resume(returning: success)
+                if let localTracks {
+                    localTracks.keepLocal(sha1Hash: track.SHA1) { success in
+                        continuation.resume(returning: success)
+                    }
+                } else {
+                    continuation.resume(returning: false)
                 }
             }
         }
@@ -724,13 +793,15 @@ extension TrackFetcher {
     public func cacheQueue() {
         if let localTracks {
             if let currentTrack {
-                localTracks.keepLocal(sha1Hash: currentTrack.SHA1) { success in
-                    Log.w(success)
+                let sha1 = currentTrack.SHA1
+                localTracks.keepLocal(sha1Hash: sha1) { success in
+                    Log.d("keepLocal \(sha1) success: \(success)")
                 }
             }
             for track in pendingTracks {
-                localTracks.keepLocal(sha1Hash: track.SHA1) { success in
-                    Log.w(success)
+                let sha1 = track.SHA1
+                localTracks.keepLocal(sha1Hash: sha1) { success in
+                    Log.d("keepLocal \(sha1) success: \(success)")
                 }
             }
         }
