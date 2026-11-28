@@ -88,7 +88,7 @@ public class RuntimeState: LocalCache, Encodable, Decodable {
                 Log.e("error:", error)
             }
         } else {
-            Log.e(nil as String?)
+            Log.e("RuntimeState url unavailable; state not saved")
         }
     }
 

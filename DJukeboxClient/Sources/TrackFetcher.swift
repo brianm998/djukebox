@@ -294,7 +294,7 @@ public class TrackFetcher: ObservableObject {
                     let tracks = try await server.listTracks()
                     self.update(with: tracks)
                 } catch {
-                    Log.e("could not list tracks: \(error)")
+                    Log.w("could not list tracks: \(error)")
                 }
             }
         }
@@ -310,7 +310,7 @@ public class TrackFetcher: ObservableObject {
                 let success = try await audioPlayer.player?.stopPlayingTrack(withHash: hash, atIndex: index)
                 if success == true { self.refreshQueue() }
             } catch {
-                Log.e("could not stop playing track: \(error)")
+                Log.w("could not stop playing track: \(error)")
             }
         }
     }
@@ -364,7 +364,7 @@ public class TrackFetcher: ObservableObject {
                     self.update(playingQueue: queue)
                 }
             } catch {
-                Log.e("could not list playing queue: \(error)")
+                Log.w("could not list playing queue: \(error)")
             }
         }
     }
@@ -477,7 +477,7 @@ public class TrackFetcher: ObservableObject {
                 let success = try await self.audioPlayer.player?.clearPlayingQueue()
                 Log.d("clear queue: \(success)")
             } catch {
-                Log.e("DOH \(error)")
+                Log.w("DOH \(error)")
             }
             self.refreshQueue()
         }
@@ -490,7 +490,7 @@ public class TrackFetcher: ObservableObject {
                     Log.d("random enqueued: \(audioTrack.Title)")
                 }
             } catch {
-                Log.e("DOH \(error)")
+                Log.w("DOH \(error)")
             }
             self.refreshQueue()
         }
@@ -503,7 +503,7 @@ public class TrackFetcher: ObservableObject {
                     Log.d("new random enqueued: \(audioTrack.Title)")
                 }
             } catch {
-                Log.e("DOH error: \(error)")
+                Log.w("DOH error: \(error)")
             }
             self.refreshQueue()
         }
@@ -514,7 +514,7 @@ public class TrackFetcher: ObservableObject {
             do {
                 _ = try await self.audioPlayer.player?.playUntil(date: date)
             } catch {
-                Log.e("could not play until \(date): \(error)")
+                Log.w("could not play until \(date): \(error)")
             }
             self.refreshQueue()
         }
@@ -546,7 +546,7 @@ public class TrackFetcher: ObservableObject {
                 // refresh the button label to the new effective gain for this track
                 self.refreshSavedGain(forHash: track.SHA1)
             } catch {
-                Log.e("could not set \(scope) volume: \(error)")
+                Log.w("could not set \(scope) volume: \(error)")
             }
         }
     }
@@ -580,7 +580,7 @@ public class TrackFetcher: ObservableObject {
                 let db = try await server.masterGain()
                 self.masterGainDB = db ?? 0
             } catch {
-                Log.e("could not refresh master gain: \(error)")
+                Log.w("could not refresh master gain: \(error)")
             }
         }
     }
@@ -598,7 +598,7 @@ public class TrackFetcher: ObservableObject {
             do {
                 try await server.setMasterGain(masterGainDB)
             } catch {
-                Log.e("could not set master volume: \(error)")
+                Log.w("could not set master volume: \(error)")
             }
         }
     }
@@ -626,7 +626,7 @@ public class TrackFetcher: ObservableObject {
                 let db = try await server.savedGain(forHash: hash)
                 self.currentTrackGainDB = db ?? 0
             } catch {
-                Log.e("could not refresh saved gain: \(error)")
+                Log.w("could not refresh saved gain: \(error)")
             }
         }
     }
@@ -728,13 +728,15 @@ extension TrackFetcher {
     public func cacheQueue() {
         if let localTracks {
             if let currentTrack {
-                localTracks.keepLocal(sha1Hash: currentTrack.SHA1) { success in
-                    Log.w(success)
+                let sha1 = currentTrack.SHA1
+                localTracks.keepLocal(sha1Hash: sha1) { success in
+                    Log.d("keepLocal \(sha1) success: \(success)")
                 }
             }
             for track in pendingTracks {
-                localTracks.keepLocal(sha1Hash: track.SHA1) { success in
-                    Log.w(success)
+                let sha1 = track.SHA1
+                localTracks.keepLocal(sha1Hash: sha1) { success in
+                    Log.d("keepLocal \(sha1) success: \(success)")
                 }
             }
         }
