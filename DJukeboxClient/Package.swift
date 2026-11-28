@@ -24,6 +24,10 @@ let package = Package(
             name: "DJukeboxClient",
             dependencies: ["DJukeboxCommon", "CSQLite"],
             path: "Sources"),
+        .testTarget(
+            name: "DJukeboxClientTests",
+            dependencies: ["DJukeboxClient"],
+            path: "Tests/DJukeboxClientTests"),
     ],
     swiftLanguageModes: [.v6]
 )
