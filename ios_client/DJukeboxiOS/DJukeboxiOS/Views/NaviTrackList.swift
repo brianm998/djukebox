@@ -35,7 +35,7 @@ public struct NaviTrackList: View {
                               withAnimation { self.showOneTrackToast = true }
                           }
                       } catch {
-                          Log.e("could not play track: \(error)")
+                          Log.w("could not play track: \(error)")
                       }
                   }
               }
@@ -57,7 +57,7 @@ public struct NaviTrackList: View {
                               do {
                                   _ = try await self.trackFetcher.audioPlayer.player?.playTracks(tracks)
                               } catch {
-                                  Log.e("could not play all tracks: \(error)")
+                                  Log.w("could not play all tracks: \(error)")
                               }
                               self.trackFetcher.refreshQueue()
                               withAnimation { self.showAllTracksToast = true }

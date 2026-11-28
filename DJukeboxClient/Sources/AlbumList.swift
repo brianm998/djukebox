@@ -21,7 +21,7 @@ public struct AlbumList: View {
                             do {
                                 _ = try await self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.trackFetcher.albums[0].Artist)
                             } catch {
-                                Log.e("could not play random track: \(error)")
+                                Log.w("could not play random track: \(error)")
                             }
                             self.trackFetcher.refreshQueue()
                         }
@@ -33,7 +33,7 @@ public struct AlbumList: View {
                             do {
                                 _ = try await self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.trackFetcher.albums[0].Artist)
                             } catch {
-                                Log.e("could not play new random track: \(error)")
+                                Log.w("could not play new random track: \(error)")
                             }
                             self.trackFetcher.refreshQueue()
                         }
