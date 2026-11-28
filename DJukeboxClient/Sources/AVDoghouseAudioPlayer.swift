@@ -11,8 +11,8 @@ import DJukeboxCommon
 // background properly, and playing each track fully without skipping back
 // @unchecked Sendable: an AudioPlayerType (a non-isolated DJukeboxCommon protocol).
 // Playback runs through a single AVQueuePlayer and the queue/trackMap mutations are
-// driven from the main thread and AVFoundation's end-of-item notification. See the
-// client concurrency note in AsyncAudioPlayer.
+// driven from the main thread: AVFoundation's end-of-item and failure signals hop
+// there first. See the client concurrency note in AsyncAudioPlayer.
 public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendable {
 
     public var trackQueue: [String] = []
@@ -32,16 +32,18 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
 
     var seekTime: CMTime?
     
-    // The total duration, in seconds, of the sound associated with the audio player.
-    public var playingTrackPosition: TimeInterval? { // ?? ?
+    // The playback point, in seconds, within the current item; nil when there is
+    // none to report (no item, or one that hasn't loaded yet).
+    public var playingTrackPosition: TimeInterval? {
         get {
             let currentTime = player.currentTime()
-            // convert to seconds
-            return Double(currentTime.value)/Double(currentTime.timescale)
+            guard currentTime.isValid, currentTime.isNumeric else { return nil }
+            let seconds = CMTimeGetSeconds(currentTime)
+            return seconds.isFinite ? seconds : nil
         }
         set(newValue) {
-            if let newValue {
-                let seekTime = CMTime(value: Int64(newValue), timescale: 1)
+            if let newValue, newValue.isFinite {
+                let seekTime = CMTime(seconds: newValue, preferredTimescale: 600)
                 self.logPlayerStatus()
                 Log.i("trying to seek to \(seekTime)")
                 if player.timeControlStatus == .paused {
@@ -95,6 +97,13 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         itemGains.withLock { $0.removeAll() }
     }
 
+    // drop everything remembered about an item that is leaving the player
+    private func forget(_ item: AVPlayerItem) {
+        forgetGain(for: item)
+        trackMap[item] = nil
+        statusObservations[item] = nil
+    }
+
     // Looks up a track's saved gain (dB) from the server; injected so this player
     // stays decoupled from the networking layer. play() (part of the synchronous,
     // non-isolated AudioPlayerType shared with the server) can't itself await this,
@@ -105,6 +114,11 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     // selector; cancelled in deinit (Task is Sendable, unlike a Notification
     // observer token, so this needs no nonisolated(unsafe) escape hatch).
     private var endOfItemTask: Task<Void, Never>?
+
+    // Same for AVPlayerItemFailedToPlayToEndTime. An item that can't even load
+    // never posts it, so each item's status is observed too (statusObservations).
+    private var failedItemTask: Task<Void, Never>?
+    private var statusObservations: [AVPlayerItem: NSKeyValueObservation] = [:]
 
     // Shared VU-meter sink handed to every item's gain tap, so the tap that's
     // currently rendering publishes per-channel output levels. Injected by Client
@@ -146,6 +160,13 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
                 await self.playerDidFinishPlaying(note: note)
             }
         }
+        let failures = NotificationCenter.default.notifications(named: .AVPlayerItemFailedToPlayToEndTime)
+        self.failedItemTask = Task { [weak self] in
+            for await note in failures {
+                guard let self else { return }
+                await self.playerDidFailToPlay(note: note)
+            }
+        }
 
         /*
         // XXX testing
@@ -169,48 +190,57 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
 
     deinit {
         endOfItemTask?.cancel()
+        failedItemTask?.cancel()
     }
     
     public func clearQueue() {
         player.removeAllItems()
         trackQueue = []
+        trackMap = [:]
+        statusObservations = [:]
         forgetAllGains()
         levelMeter.reset()
     }
 
+    // Both indexes must be inside the queue. The caller's list can be stale (the
+    // queue advances underneath it), so a fromIndex that now holds another track
+    // is resolved by hash; false if the track is no longer queued.
     public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {
-        if fromIndex < 0,
-           toIndex < 0,
-           fromIndex >= trackQueue.count,
-           toIndex >= trackQueue.count,
-           trackQueue[fromIndex] != track.SHA1
-        {
-            return false
-        }
-        self.trackQueue.remove(at: fromIndex)
-        self.trackQueue.insert(track.SHA1, at: toIndex)
+        guard trackQueue.indices.contains(fromIndex),
+              trackQueue.indices.contains(toIndex),
+              let index = queueIndex(of: track.SHA1, expectedAt: fromIndex)
+        else { return false }
+        trackQueue.remove(at: index)
+        trackQueue.insert(track.SHA1, at: toIndex)
         return true
     }
     
+    // An index of -1 means the playing track. Any other index is a queue position,
+    // resolved by hash if it is stale.
     public func stopPlaying(sha1Hash: String, atIndex index: Int) {
         Log.d("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
 
-        if index == -1,
-           let playingTrack = playingTrack,
-           playingTrack.SHA1 == sha1Hash
-        {
-            self.skip()
-        } else {
-            for (trackIndex, hash) in trackQueue.enumerated() {
-                Log.d("index \(trackIndex) hash \(sha1Hash)")
-                if hash == sha1Hash,
-                   index == trackIndex
-                {
-                    Log.d("index \(index) needs to be removed")
-                    self.trackQueue.remove(at: index)
-                }
+        if index == -1 {
+            if playingTrack?.SHA1 == sha1Hash {
+                self.skip()
             }
+        } else if index >= 0,
+                  let queueIndex = queueIndex(of: sha1Hash, expectedAt: index)
+        {
+            Log.d("index \(queueIndex) needs to be removed")
+            trackQueue.remove(at: queueIndex)
         }
+    }
+
+    // where this hash is in trackQueue: the expected index if it still matches,
+    // otherwise its first occurrence
+    private func queueIndex(of sha1Hash: String, expectedAt index: Int) -> Int? {
+        if trackQueue.indices.contains(index),
+           trackQueue[index] == sha1Hash
+        {
+            return index
+        }
+        return trackQueue.firstIndex(of: sha1Hash)
     }
 
     // Keyed by the player item (object identity) rather than its AVAsset: AVAsset
@@ -232,13 +262,25 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
             } else {
                 let asset = AVURLAsset(url: url)
                 let item = AVPlayerItem(asset: asset)
-                player.insert(item, after: nil)
                 trackMap[item] = sha1Hash
+                observeStatus(of: item)   // before insert, which starts the load
+                player.insert(item, after: nil)
                 let gain = PlaybackGain(levelMeter: levelMeter)   // fresh => unity until the saved value arrives
                 setGain(gain, for: item)
                 attachGain(to: item, asset: asset, gain: gain)
                 applySavedGain(gain, forHash: sha1Hash)
                 if !isPaused { startPlayer() }
+            }
+        }
+    }
+
+    private func observeStatus(of item: AVPlayerItem) {
+        statusObservations[item] = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+            guard item.status == .failed else { return }
+            // KVO fires on AVFoundation's thread; hop like the notifications do
+            let itemBox = UncheckedSendableBox(item)
+            Task { @MainActor in
+                self?.itemDidFail(itemBox.value)
             }
         }
     }
@@ -278,11 +320,16 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
                 Log.d("coudn't write history: \(error)")
             }
         }
+        let skipped = player.items().first
         serviceQueue()
         player.advanceToNextItem()
+        if let skipped { forget(skipped) }
     }
 
     fileprivate func seek(to time: CMTime) {
+        // nothing to seek once the queue is cleared; without this the retry below
+        // would run forever and keep a replaced player alive
+        guard !player.items().isEmpty else { return }
         self.logPlayerStatus()
         if self.player.timeControlStatus == .playing {
             self.player.seek(to: time) { success in
@@ -329,8 +376,11 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         }
     }
 
+    // Hand the player the next queued track, dropping any hash that no longer
+    // resolves to a URL: stopping at one would leave the doghouse empty for good.
     fileprivate func  serviceQueue() {
-        if trackQueue.count > 0 {
+        let itemCount = player.items().count
+        while !trackQueue.isEmpty && player.items().count == itemCount {
             let nextTrack = trackQueue.removeFirst()
             self.play(sha1Hash: nextTrack, alwaysAdd: true)
         }
@@ -366,8 +416,7 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
             // is torn down with it and nothing looks up a played item again.
             if let finished = finishedBox.value {
                 self.player.remove(finished)
-                self.forgetGain(for: finished)
-                self.trackMap[finished] = nil
+                self.forget(finished)
             }
 
             // Now refill from the doghouse queue — unless a play() already slipped
@@ -384,6 +433,35 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
                 if !self.player.items().isEmpty {
                     self.isPaused = false
                 }
+            }
+        }
+    }
+
+    private func playerDidFailToPlay(note: Notification) async {
+        let failedBox = UncheckedSendableBox(note.object as? AVPlayerItem)
+        await MainActor.run {
+            if let failed = failedBox.value {
+                self.itemDidFail(failed)
+            }
+        }
+    }
+
+    // Drop an item that can't be played and move on, else it stays the single
+    // doghouse item forever. Both failure signals can arrive for one item, and
+    // other players' items post here too: only an item still in trackMap counts.
+    // No play history is written for it. Main thread only.
+    private func itemDidFail(_ item: AVPlayerItem) {
+        guard let hash = trackMap[item] else { return }
+        Log.w("couldn't play \(hash): \(String(describing: item.error))")
+
+        player.remove(item)
+        forget(item)
+
+        if player.items().isEmpty {
+            seekTime = nil   // any pending seek was meant for the failed track
+            serviceQueue()
+            if !player.items().isEmpty && !isPaused {
+                startPlayer()
             }
         }
     }

@@ -19,7 +19,9 @@ import DJukeboxCommon
 // ---------------------------------------------------------------------------
 public class AsyncAudioPlayer: AsyncAudioPlayerType {
     var player: AudioPlayerType
-    let fetcher: TrackFetcher
+    // weak: TrackFetcher.queues owns this player, so a strong reference back would
+    // keep both (and the underlying AVQueuePlayer) alive forever
+    weak var fetcher: TrackFetcher?
     let history: HistoryFetcher
 
     public init(player: AudioPlayerType, fetcher: TrackFetcher, history: HistoryFetcher) {
@@ -35,7 +37,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     }
 
     public func playTrack(withHash hash: String) async throws -> AudioTrack {
-        guard let track = fetcher.trackMap[hash] else {
+        guard let track = fetcher?.trackMap[hash] else {
             throw AudioPlayerError.trackNotFound
         }
         player.play(sha1Hash: hash)
@@ -56,8 +58,17 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
 
     public func stopPlayingTrack(withHash hash: String,
                           atIndex index: Int) async throws -> Bool {
-        player.stopPlaying(sha1Hash: hash, atIndex: index)
+        // a negative index means the playing track, not a pending one
+        player.stopPlaying(sha1Hash: hash,
+                           atIndex: index < 0 ? index : index + pendingTracksOffset)
         return true
+    }
+
+    // The UI's pending tracks are playingQueue.tracks minus the first. With no
+    // playing track (an empty AVQueuePlayer) that first one is the head of
+    // trackQueue, so pending index i is trackQueue index i + 1.
+    private var pendingTracksOffset: Int {
+        return player.playingTrack is AudioTrack ? 0 : 1
     }
 
     fileprivate var playingQueue: PlayingQueue {
@@ -66,7 +77,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
             trackQueue.append(playingTrack)
         }
         for queueHash in player.trackQueue {
-            if let queueTrack = fetcher.trackMap[queueHash] {
+            if let queueTrack = fetcher?.trackMap[queueHash] {
                 trackQueue.append(queueTrack)
             } else {
                 Log.i("HOLY FUCK")
@@ -81,8 +92,13 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     public func movePlayingTrack(withHash hash: String,
                                  fromIndex: Int,
                                  toIndex: Int) async throws -> PlayingQueue {
-        guard let track = fetcher.trackMap[hash],
-              player.move(track: track, fromIndex: fromIndex, toIndex: toIndex)
+        let offset = pendingTracksOffset
+        guard fromIndex >= 0,
+              toIndex >= 0,
+              let track = fetcher?.trackMap[hash],
+              player.move(track: track,
+                          fromIndex: fromIndex + offset,
+                          toIndex: toIndex + offset)
         else {
             throw AudioPlayerError.moveFailed
         }
@@ -107,17 +123,18 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     }
 
     public func playRandomTrack() async throws -> AudioTrack {
-        guard fetcher.allTracks.count > 0 else {
+        let allTracks = fetcher?.allTracks ?? []
+        guard allTracks.count > 0 else {
             throw AudioPlayerError.noTrackAvailable
         }
-        let random = Int.random(in: 0..<fetcher.allTracks.count)
-        let track = fetcher.allTracks[random]
+        let random = Int.random(in: 0..<allTracks.count)
+        let track = allTracks[random]
         player.play(sha1Hash: track.SHA1)
         return track
     }
 
     public func playRandomTrack(forArtist artist: String) async throws -> AudioTrack {
-        let tracks = fetcher.tracks(forArtist: artist)
+        let tracks = fetcher?.tracks(forArtist: artist) ?? []
         guard tracks.count > 0 else {
             throw AudioPlayerError.noTrackAvailable
         }
@@ -127,14 +144,18 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     }
 
     public func playNewRandomTrack() async throws -> AudioTrack {
+        let allTracks = fetcher?.allTracks ?? []
+        guard allTracks.count > 0 else {
+            throw AudioPlayerError.noTrackAvailable
+        }
         var randomTrack: AudioTrack?
         var max = 100
         while randomTrack == nil,
               max > 0
         {
             max -= 1
-            let random = Int.random(in: 0..<fetcher.allTracks.count)
-            let track = fetcher.allTracks[random]
+            let random = Int.random(in: 0..<allTracks.count)
+            let track = allTracks[random]
             if !(await history.hasPlay(for: track.SHA1)),
                !(await history.hasSkip(for: track.SHA1)),
                !isInQueue(track.SHA1)
@@ -166,7 +187,10 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     public func playNewRandomTrack(forArtist artist: String) async throws -> AudioTrack {
         var randomTrack: AudioTrack?
         var max = 100
-        let tracksForThisArtist = fetcher.tracks(forArtist: artist)
+        let tracksForThisArtist = fetcher?.tracks(forArtist: artist) ?? []
+        guard tracksForThisArtist.count > 0 else {
+            throw AudioPlayerError.noTrackAvailable
+        }
         while randomTrack == nil,
               max > 0
         {
@@ -201,6 +225,12 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
         return true
     }
 
+    // silence the local player for good; used when its client is replaced
+    func stopLocalPlayback() {
+        player.isPaused = true   // not pause(), which toggles
+        player.clearQueue()
+    }
+
     public func shuffleQueue() {
         player.shuffleQueue()
     }
@@ -225,7 +255,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
             queuedDuration += max(0, trackDuration - position)
         }
         for hash in player.trackQueue {
-            if let track = fetcher.trackMap[hash] {
+            if let track = fetcher?.trackMap[hash] {
                 queuedDuration += track.timeInterval ?? 0
             }
         }
@@ -235,7 +265,7 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
             return self.playingQueue
         }
 
-        let candidates = fetcher.allTracks.shuffled()
+        let candidates = (fetcher?.allTracks ?? []).shuffled()
         for track in candidates {
             guard timeToFill > 0 else { break }
             if let duration = track.timeInterval,

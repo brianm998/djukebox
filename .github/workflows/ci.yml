@@ -105,7 +105,7 @@ jobs:
         run: swift test
         working-directory: DJukeboxCommon
 
-  # ── DJukeboxClient Swift package: build (it has no test target yet) ────────
+  # ── DJukeboxClient Swift package: build + test ─────────────────────────────
   client:
     name: DJukeboxClient
     runs-on: macos-15
@@ -131,6 +131,10 @@ jobs:
 
       - name: Build
         run: swift build
+        working-directory: DJukeboxClient
+
+      - name: Test
+        run: swift test
         working-directory: DJukeboxClient
 
   # ── iOS app: build for simulator (no signing) ─────────────────────────────

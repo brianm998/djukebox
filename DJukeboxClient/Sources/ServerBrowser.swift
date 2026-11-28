@@ -112,10 +112,9 @@ public class ServerBrowser: ObservableObject {
     // later scan/reconnect can put it back. No-op if we're already offline.
     public func rememberCurrentPlayLocal() {
         if let client = currentClient,
-           !client.trackFetcher.useLocalContentOnly,
-           let queueType = client.trackFetcher.queueType
+           !client.trackFetcher.useLocalContentOnly
         {
-            rememberedQueueType = queueType
+            rememberedQueueType = client.trackFetcher.queueType
         }
     }
 
@@ -129,6 +128,7 @@ public class ServerBrowser: ObservableObject {
     // Build a client with no server, backed only by the local track cache.
     private func makeLocalClient(gen: Int) {
         guard gen == self.generation else { return }
+        currentClient?.shutdown()   // before the new client restores the saved state
         // An empty server URL means the (unused) server calls just fail quietly;
         // everything the client shows comes from the on-device cache instead.
         let client = Client(serverURL: "", token: Self.loopbackToken, initialQueueType: .local)
@@ -383,6 +383,7 @@ public class ServerBrowser: ObservableObject {
         // were we offline (i.e. is this a scan/reconnect) before this connection?
         let reconnectingFromOffline = currentClient?.trackFetcher.useLocalContentOnly ?? false
         cancelAll()
+        currentClient?.shutdown()   // before the new client restores the saved state
         let client = Client(serverURL: urlString,
                             token: token,
                             initialQueueType: self.initialQueueType)

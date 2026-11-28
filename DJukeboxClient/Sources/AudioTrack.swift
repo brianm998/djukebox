@@ -157,7 +157,8 @@ public final class AudioTrack: Decodable,
     }
 
     public var timeIntervalString: String {
-        if let amount = self.timeInterval {
+        // Int(_:) traps on NaN, infinity and out-of-range values
+        if let amount = self.timeInterval, amount.isFinite, amount < Double(Int32.max) {
             if amount < 60 {
                 return "\(Int(amount))s"
             } else {
@@ -169,22 +170,13 @@ public final class AudioTrack: Decodable,
     }
 
     public var timeInterval: Double? {
-        if let duration = self.Duration {
-            var ret: TimeInterval = 0
-            // expecting 0:07:11 (approx)
-            let values = duration.split(separator: " ")[0].split(separator: ":")
-            if values.count == 3,
-               let hours = Double(values[0]),
-               let minutes = Double(values[1]),
-               let seconds = Double(values[2])
-            {
-                ret += seconds
-                ret += minutes * 60
-                ret += hours * 60 * 60
-            }
-            return ret
-        }
-        return nil
+        // expecting 0:07:11 (approx); anything else is unknown (nil)
+        guard let clock = self.Duration?.split(separator: " ").first else { return nil }
+        let parts = clock.split(separator: ":")
+        let values = parts.compactMap { Double($0) }.filter { $0.isFinite && $0 >= 0 }
+        guard parts.count == 3, values.count == 3 else { return nil }
+        let total = values[0] * 60 * 60 + values[1] * 60 + values[2]
+        return total.isFinite ? total : nil
     }
 
     public let Credit: String

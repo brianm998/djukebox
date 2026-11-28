@@ -65,10 +65,25 @@ public class RuntimeState: LocalCache, Encodable, Decodable {
           .appendingPathExtension("json")
     }
 
+    // the on-disk format, kept apart from the file I/O so it can be tested
+    func encoded() throws -> Data {
+        return try RuntimeState.encoder.encode(self)
+    }
+
+    static func decoded(from data: Data) throws -> RuntimeState {
+        let ret = try RuntimeState.decoder.decode(RuntimeState.self, from: data)
+        // one extra step required to keep swift Double? working
+        // (infinities aren't usable positions either)
+        if let position = ret.playingTrackPosition, !position.isFinite {
+            ret.playingTrackPosition = nil
+        }
+        return ret
+    }
+
     func save() {
         if let url = RuntimeState.url {
             do {
-                let jsonData = try RuntimeState.encoder.encode(self)
+                let jsonData = try self.encoded()
                 Log.d(String(data: jsonData, encoding: .utf8))
                 try jsonData.write(to: url)
             } catch {
@@ -83,9 +98,7 @@ public class RuntimeState: LocalCache, Encodable, Decodable {
     static func saved(defaultPlayingQueue: PlayingQueueType = .local) -> RuntimeState {
         if let url = RuntimeState.url {
             do {
-                if let ret = try? RuntimeState.decoder.decode(RuntimeState.self, from: try Data(contentsOf: url)) {
-                    // one extra step required to keep swift Double? working
-                    if ret.playingTrackPosition?.isNaN ?? false { ret.playingTrackPosition = nil }
+                if let ret = try? RuntimeState.decoded(from: try Data(contentsOf: url)) {
                     return ret
                 }
             } catch {

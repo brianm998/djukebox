@@ -56,13 +56,20 @@ public class HistoryFetcher: ObservableObject {
     }
     
     let server: ServerType
-    let trackFetcher: TrackFetcher
+    // weak: the local player (owned by TrackFetcher) holds this object strongly
+    weak var trackFetcher: TrackFetcher?
     
     var lastUpdateTime: Date?
 
-    public init(withServer server: ServerType, trackFetcher: TrackFetcher) {
+    // plays/skips made here that the server hasn't accepted yet
+    let pendingHistory: LocalDatabase?
+
+    public init(withServer server: ServerType,
+                trackFetcher: TrackFetcher,
+                pendingHistory: LocalDatabase? = nil) {
         self.server = server
         self.trackFetcher = trackFetcher
+        self.pendingHistory = pendingHistory
         refresh()
     }
 
@@ -82,6 +89,7 @@ public class HistoryFetcher: ObservableObject {
 
     public func hasPlay(for hash: String) -> Bool {
         return self.all.plays[hash] != nil
+            || pendingHistory?.hasPendingHistory(sha1: hash, fullyPlayed: true) == true
     }
     
     func skips(for hash: String) -> [Double] {
@@ -95,6 +103,7 @@ public class HistoryFetcher: ObservableObject {
 
     public func hasSkip(for hash: String) -> Bool {
         return self.all.skips[hash] != nil
+            || pendingHistory?.hasPendingHistory(sha1: hash, fullyPlayed: false) == true
     }
     
     func updateRecent() {
@@ -104,7 +113,7 @@ public class HistoryFetcher: ObservableObject {
         var history: [HistoryEntry] = []
 
         for (track, times) in recent.plays {
-            if let audioTrack = trackFetcher.trackMap[track] { // XXX global trackFetcher
+            if let audioTrack = trackFetcher?.trackMap[track] { // XXX global trackFetcher
                 for time in times {
                     history.append(HistoryEntry(track: audioTrack,
                                                 when: Date(timeIntervalSince1970: time),
@@ -113,7 +122,7 @@ public class HistoryFetcher: ObservableObject {
             }
         }
         for (track, times) in recent.skips {
-            if let audioTrack = trackFetcher.trackMap[track] { // XXX global trackFetcher
+            if let audioTrack = trackFetcher?.trackMap[track] { // XXX global trackFetcher
                 for time in times {
                     history.append(HistoryEntry(track: audioTrack,
                                                 when: Date(timeIntervalSince1970: time),
@@ -132,6 +141,16 @@ public class HistoryFetcher: ObservableObject {
     public func ingest(_ history: PlayingHistory) {
         self.all = self.all.merge(with: history)
         self.lastUpdateTime = Date()
+        self.updateRecent()
+    }
+
+    // A play/skip made here has reached the server. The /stream push only carries
+    // recently timed events, so one uploaded long after it happened would otherwise
+    // be missing from this view once it's no longer pending.
+    func noteUploaded(_ entry: ServerHistoryEntry) {
+        let events = [entry.hash: [Double(entry.time)]]
+        self.all = self.all.merge(with: PlayingHistory(plays: entry.fullyPlayed ? events : [:],
+                                                       skips: entry.fullyPlayed ? [:] : events))
         self.updateRecent()
     }
 
