@@ -60,6 +60,9 @@ public class Client {
         trackFetcher.onLocalContentOnlyChange = nil
         setStream(connected: false)
         trackFetcher.stopLocalPlayback()
+#if os(iOS)
+        nowPlaying = nil   // stop reacting to interruptions and remote commands
+#endif
     }
 
     // Connect or disconnect the /stream socket, after any earlier request.
