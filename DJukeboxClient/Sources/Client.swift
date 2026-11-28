@@ -25,6 +25,12 @@ public class Client {
     // the 1s state-save / refresh loop; held so it can be torn down with the client
     private var refreshTask: Task<Void, Never>?
 
+#if os(iOS)
+    // lock-screen controls and audio interruptions. Like the stream, held only by
+    // the connected client; trackFetcher (shared with copies) points to it weakly.
+    private var nowPlaying: NowPlayingCoordinator?
+#endif
+
     deinit {
         refreshTask?.cancel()
         streamTask?.cancel()
@@ -160,6 +166,12 @@ public class Client {
                 }
             }
         }
+
+#if os(iOS)
+        let coordinator = NowPlayingCoordinator(trackFetcher: fetcher)
+        fetcher.nowPlaying = coordinator
+        self.nowPlaying = coordinator
+#endif
 
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
 
