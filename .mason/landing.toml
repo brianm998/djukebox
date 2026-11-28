@@ -3,3 +3,10 @@
 # (`direct-ci` waits for CI on a candidate branch first).
 mode = "direct"
 base = "develop"
+
+# What proves a change before it reaches `develop`: the Swift suites over the batch's merged tree,
+# those the `[impact]` map in mason.toml selects for the batch's diff. A task's own test step runs on
+# its own base, so two green tasks can still break `develop` together (decision 1312).
+[[tier]]
+name   = "batch"
+suites = ["swift-common", "swift-server", "swift-client"]

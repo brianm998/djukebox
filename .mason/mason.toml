@@ -33,7 +33,19 @@ on_red = "develop"
 
 # A project with suites runs its test step on a node (placement mode "remote"); without them the
 # step runs on the coordinator. The "swift" prefix sends each suite to a node with Xcode. No suite
-# has a `build` key: MASON runs those on the coordinator when a batch lands.
+# has a `build` key: the landing batch tier (landing.toml) runs the suites whole over the merged tree.
+
+# Which suites a change needs, in the test step and in the landing batch. A path no glob names
+# runs all three. A path two globs name gets both lists, so a README inside a package still runs
+# that package's suite.
+[impact]
+"DJukeboxCommon/**" = ["swift-common", "swift-server", "swift-client"]
+"DJukeboxClient/**" = ["swift-client"]
+"djukebox_server/**" = ["swift-server"]
+"docs/**" = []
+"**/*.md" = []
+# No suite reads the exit scripts, and nearly every task adds one.
+"scripts/exit/**" = []
 
 [suite.swift-common]
 command = "swift test --package-path DJukeboxCommon 2>&1"
