@@ -288,6 +288,7 @@ public struct SmallButtonView: View {
 
 public struct PlayingTracksView: View {
     @ObservedObject var trackFetcher: TrackFetcher
+    let server: ServerType
     let onScan: () -> Void
     let onGoOffline: () -> Void
 
@@ -296,6 +297,7 @@ public struct PlayingTracksView: View {
                 onGoOffline: @escaping () -> Void)
     {
         self.trackFetcher = client.trackFetcher
+        self.server = client.serverConnection
         self.onScan = onScan
         self.onGoOffline = onGoOffline
     }
@@ -310,6 +312,8 @@ public struct PlayingTracksView: View {
             }
             PlayingTrackView(trackFetcher: trackFetcher)
             PlayingQueueView(trackFetcher: trackFetcher)
+            VersionLabel(server: trackFetcher.useLocalContentOnly ? nil : server)
+                .frame(maxWidth: .infinity)
         }
     }
 }

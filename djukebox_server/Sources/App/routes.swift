@@ -23,6 +23,12 @@ func offload<T>(_ work: @escaping @Sendable () throws -> T) async throws -> T {
     }
 }
 
+// What GET /version announces.
+public struct VersionInfo: Content {
+    public let name: String
+    public let version: String
+}
+
 public struct HistoryEntry: Content {
     public let hash: String
     public let time: Int
@@ -682,6 +688,14 @@ func volumeRoutes(_ protected: any RoutesBuilder) throws {
     }
 }
 
+// Registered on the unauthenticated builder: a client may ask what it is talking
+// to before it has paired.
+func versionRoutes(_ open: any RoutesBuilder) throws {
+    open.get("version") { _ -> VersionInfo in
+        VersionInfo(name: DJukeboxVersion.serverName, version: DJukeboxVersion.current)
+    }
+}
+
 func routes(_ app: Application) throws {
 
     // Every route that used to open with `AuthController(...).headerAuth`/`track`/
@@ -697,5 +711,6 @@ func routes(_ app: Application) throws {
     try playerRoutes(protected)
     try volumeRoutes(protected)
     try pairingRoutes(app, protected: protected)
+    try versionRoutes(app)
 }
 

@@ -130,7 +130,7 @@ public func configure(_ app: Application) throws {
         .console: ConsoleLogHandler(at: .debug),
       ]
 
-    Log.i("server starting")
+    Log.i("\(DJukeboxVersion.serverName) server \(DJukeboxVersion.current) starting")
 
     // under launchd, fail (and let launchd retry) rather than come up with an
     // empty catalog when the music volume isn't mounted yet. Checked before the
@@ -170,7 +170,7 @@ public func configure(_ app: Application) throws {
 
     // advertise this server on the local network so clients can find it via mDNS
     // instead of a hardcoded IP address.
-    let advertiser = ServiceAdvertiser(name: "DJukebox",
+    let advertiser = ServiceAdvertiser(name: DJukeboxVersion.serverName,
                                        type: "_djukebox._tcp.",
                                        port: app.http.server.configuration.port)
     advertiser.start()
