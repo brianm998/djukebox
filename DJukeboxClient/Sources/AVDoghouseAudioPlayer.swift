@@ -283,6 +283,9 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
     }
 
     fileprivate func seek(to time: CMTime) {
+        // nothing to seek once the queue is cleared; without this the retry below
+        // would run forever and keep a replaced player alive
+        guard !player.items().isEmpty else { return }
         self.logPlayerStatus()
         if self.player.timeControlStatus == .playing {
             self.player.seek(to: time) { success in

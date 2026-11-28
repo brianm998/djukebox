@@ -47,6 +47,24 @@ public class Client {
         }
     }
 
+    // Retire this client before another replaces it: stop its refresh loop (so it
+    // can't overwrite the saved runtime state), close the stream, and silence the
+    // local player, which the UI and lock-screen controls can no longer reach.
+    // Safe to call more than once. Only for the owning client: never call it on a
+    // copy(), which shares the owner's player and fetchers.
+    @MainActor
+    public func shutdown() {
+        refreshTask?.cancel()   // first, before the player state changes
+        refreshTask = nil
+        // going back online must not reopen a retired client's stream
+        trackFetcher.onLocalContentOnlyChange = nil
+        setStream(connected: false)
+        trackFetcher.stopLocalPlayback()
+#if os(iOS)
+        nowPlaying = nil   // stop reacting to interruptions and remote commands
+#endif
+    }
+
     // Connect or disconnect the /stream socket, after any earlier request.
     @MainActor
     private func setStream(connected: Bool) {

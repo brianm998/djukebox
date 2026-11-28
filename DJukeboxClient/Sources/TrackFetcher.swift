@@ -221,6 +221,14 @@ public class TrackFetcher: ObservableObject {
         queues[queueType] = player
     }
     
+    // Stop on-device playback because the owning client is being replaced. Also
+    // drops any not-yet-restored saved state, so a track list that arrives late
+    // can't start the old player again. The server's queue is left alone.
+    func stopLocalPlayback() {
+        initialRuntimeState = nil
+        (queues[.local] as? AsyncAudioPlayer)?.stopLocalPlayback()
+    }
+
     public func watch(queue: PlayingQueueType) throws {
         if let player = queues[queue] {
             self.updatePlayingQueue(to: player)

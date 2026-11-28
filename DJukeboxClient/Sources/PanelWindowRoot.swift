@@ -61,8 +61,9 @@ struct PanelWindowRoot: View {
         .preferredColorScheme(.dark)
         .environment(\.panelController, controller)
         .environmentObject(controller.dragSession)
-        // Rebuild this window's browse client if the server connection changes.
-        .onChange(of: browser.currentClient?.serverConnection.url) { _ in
+        // Rebuild this window's browse client if the connected client is replaced,
+        // even by one for the same URL: the old one's player has been shut down.
+        .onChange(of: browser.currentClient.map { ObjectIdentifier($0) }) { _ in
             browseClient = nil
         }
     }
