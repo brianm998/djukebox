@@ -198,6 +198,17 @@ public class TrackFetcher: ObservableObject {
 
     var queues: [PlayingQueueType: AsyncAudioPlayerType] = [:]
 
+#if os(iOS)
+    // lock-screen / remote-command integration; owned by Client
+    weak var nowPlaying: NowPlayingCoordinator?
+#endif
+
+    private func refreshNowPlaying() {
+#if os(iOS)
+        nowPlaying?.refresh()
+#endif
+    }
+
     public init(withServer server: ServerType) {
         self.server = server
         self.catalog = TrackCatalog(serverURL: server.url, authHeaderValue: server.authHeaderValue)
@@ -214,6 +225,7 @@ public class TrackFetcher: ObservableObject {
         if let player = queues[queue] {
             self.updatePlayingQueue(to: player)
             self.queueType = queue
+            self.refreshNowPlaying()
         } else {
             throw TrackFetcherError.noPlayer(queue)
         }
@@ -362,6 +374,7 @@ public class TrackFetcher: ObservableObject {
         }
         self.totalDuration = totalDuration
         self.completionTime = Date(timeIntervalSinceNow: totalDuration)
+        self.refreshNowPlaying()
     }
     
     public func refreshQueue() {
@@ -386,6 +399,7 @@ public class TrackFetcher: ObservableObject {
         } else {
             self.progressBarLevel = nil
         }
+        self.refreshNowPlaying()
     }
 
     public func tracks(for audioTrack: AudioTrack) -> [AudioTrack] {
