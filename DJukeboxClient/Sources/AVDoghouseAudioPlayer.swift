@@ -32,16 +32,18 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
 
     var seekTime: CMTime?
     
-    // The total duration, in seconds, of the sound associated with the audio player.
-    public var playingTrackPosition: TimeInterval? { // ?? ?
+    // The playback point, in seconds, within the current item; nil when there is
+    // none to report (no item, or one that hasn't loaded yet).
+    public var playingTrackPosition: TimeInterval? {
         get {
             let currentTime = player.currentTime()
-            // convert to seconds
-            return Double(currentTime.value)/Double(currentTime.timescale)
+            guard currentTime.isValid, currentTime.isNumeric else { return nil }
+            let seconds = CMTimeGetSeconds(currentTime)
+            return seconds.isFinite ? seconds : nil
         }
         set(newValue) {
-            if let newValue {
-                let seekTime = CMTime(value: Int64(newValue), timescale: 1)
+            if let newValue, newValue.isFinite {
+                let seekTime = CMTime(seconds: newValue, preferredTimescale: 600)
                 self.logPlayerStatus()
                 Log.i("trying to seek to \(seekTime)")
                 if player.timeControlStatus == .paused {

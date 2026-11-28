@@ -18,10 +18,11 @@ public struct PlayingTrackView: View {
                     ZStack(alignment: .leading) {
                         
                         ProgressBar(state: self.trackFetcher.progressBarLevel ?? ProgressBar.State()) { amount in
+                            guard let seconds = Int(exactly: amount.rounded(.towardZero)) else { return "" }
                             if amount < 60 {
-                                return "\(Int(amount)) seconds left"
+                                return "\(seconds) seconds left"
                             } else {
-                                return Duration.seconds(Int(amount)).formatted(.time(pattern: .minuteSecond)) + " left"
+                                return Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond)) + " left"
                             }
                         }
                         //                  .layoutPriority(0.1)

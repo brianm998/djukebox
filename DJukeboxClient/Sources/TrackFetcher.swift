@@ -386,8 +386,8 @@ public class TrackFetcher: ObservableObject {
         }
         var totalDuration: TimeInterval = 0
         // XXX make this track the PlayingQueue directly
-        if let duration = playingQueue.playingTrackDuration,
-           let position = playingQueue.playingTrackPosition
+        if let duration = playingQueue.playingTrackDuration, duration.isFinite, duration > 0,
+           let position = playingQueue.playingTrackPosition, position.isFinite
         {
             self.progressBarLevel = ProgressBar.State(level: position, max: duration)
             totalDuration = duration - position
@@ -419,7 +419,9 @@ public class TrackFetcher: ObservableObject {
     // so the bar moves without resending the whole queue. A nil duration/position
     // means "nothing playing" → clear the bar.
     public func updateProgress(position: TimeInterval?, duration: TimeInterval?) {
-        if let duration, let position = position, duration > 0 {
+        if let duration, duration.isFinite, duration > 0,
+           let position, position.isFinite
+        {
             self.progressBarLevel = ProgressBar.State(level: position, max: duration)
         } else {
             self.progressBarLevel = nil

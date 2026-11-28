@@ -21,10 +21,11 @@ struct RuntimeStateTests {
         #expect(decoded.pendingTracks == ["b", "c"])
     }
 
-    @Test func nanPositionDecodesAsNil() throws {
+    @Test(arguments: [Double.nan, .infinity, -.infinity])
+    func nonFinitePositionDecodesAsNil(position: Double) throws {
         let state = RuntimeState(playingQueue: .local,
                                  playingTrack: "a",
-                                 playingTrackPosition: .nan)
+                                 playingTrackPosition: position)
 
         let decoded = try RuntimeState.decoded(from: state.encoded())
 

@@ -91,7 +91,7 @@ public final class NowPlayingCoordinator {
         {
             info[MPMediaItemPropertyPlaybackDuration] = duration
         }
-        // the local player reports NaN until its item has loaded
+        // never hand the system a non-finite elapsed time
         let position = trackFetcher.progressBarLevel?.level
           ?? trackFetcher.audioPlayer.player?.playingTrackPosition
           ?? 0
