@@ -4,61 +4,57 @@ import DJukeboxCommon
 // this is used for writing locally played tracks to the history on the server
 //
 // @unchecked Sendable: implements the non-isolated HistoryWriterType and is called
-// from the audio player's background callbacks; it only holds an immutable server
-// reference and posts to it. See the client concurrency note in AsyncAudioPlayer.
+// from the audio player's background callbacks; it only holds immutable references
+// to Sendable collaborators. See the client concurrency note in AsyncAudioPlayer.
 public class ServerHistoryWriter: HistoryWriterType, @unchecked Sendable {
 
     let server: ServerType
 
     // Reports whether the client is in offline / local-only mode. In offline mode the
     // server is unreachable, so a play/skip write can only time out ("The Request Timed
-    // Out" on every track finish) — we skip it rather than firing a doomed request.
-    // async because the source of truth (TrackFetcher.useLocalContentOnly) is
+    // Out" on every track finish) — we keep it for later rather than firing a doomed
+    // request. async because the source of truth (TrackFetcher.useLocalContentOnly) is
     // @MainActor and this writer is called from the player's non-isolated callbacks;
     // see the Client.swift wiring.
     let isOffline: @Sendable () async -> Bool
 
+    private let pending: PendingHistoryQueue
+
+    // `store` keeps plays/skips that can't be uploaded yet; without one they are
+    // lost. `onPosted` is told about each entry the server accepts.
     public init(server: ServerType,
-                isOffline: @escaping @Sendable () async -> Bool = { false }) {
+                store: LocalDatabase? = nil,
+                isOffline: @escaping @Sendable () async -> Bool = { false },
+                onPosted: @escaping @Sendable (ServerHistoryEntry) async -> Void = { _ in }) {
         self.server = server
         self.isOffline = isOffline
+        self.pending = PendingHistoryQueue(server: server, store: store, onPosted: onPosted)
     }
 
     public func writePlay(of sha1: String, at date: Date) throws {
-        // No server URL configured at all: nothing to record to (it was logging
-        // a confusing "unsupported URL" error on every track finish).
-        guard server.hasServer else { return }
-        let history = ServerHistoryEntry(hash: sha1,
-                                         time: Int(date.timeIntervalSince1970),
-                                         fullyPlayed: true)
-        Task {
-            // A URL is configured but we're playing offline: skip the doomed write.
-            guard await !isOffline() else { return }
-            do {
-                try await server.post(history: history)
-                Log.d("wrote play of \(sha1)")
-            } catch {
-                Log.w("could not write play of \(sha1): \(error)")
-            }
-        }
+        record(sha1, at: date, fullyPlayed: true)
     }
 
     public func writeSkip(of sha1: String, at date: Date) throws {
-        // See writePlay: nothing to record with no server configured.
-        guard server.hasServer else { return }
+        record(sha1, at: date, fullyPlayed: false)
+    }
+
+    // Upload anything recorded while the server was unavailable.
+    public func drainPending() {
+        Task {
+            guard await !isOffline() else { return }
+            await pending.drain()
+        }
+    }
+
+    private func record(_ sha1: String, at date: Date, fullyPlayed: Bool) {
         let history = ServerHistoryEntry(hash: sha1,
                                          time: Int(date.timeIntervalSince1970),
-                                         fullyPlayed: false)
+                                         fullyPlayed: fullyPlayed)
         Task {
-            // See writePlay: offline, so the write can only time out.
-            guard await !isOffline() else { return }
-            do {
-                try await server.post(history: history)
-                Log.d("wrote skip of \(sha1)")
-            } catch {
-                Log.w("could not write skip of \(sha1): \(error)")
-            }
+            // no server URL configured, or playing offline: keep it for later
+            let offline = await isOffline()
+            await pending.record(history, online: !offline && server.hasServer)
         }
     }
 }
-

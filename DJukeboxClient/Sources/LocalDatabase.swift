@@ -6,10 +6,14 @@ private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.sel
 
 /// The client's local catalog of downloaded tracks, stored in SQLite. This
 /// holds the full track metadata transferred from the server for each cached
-/// file — and deliberately NO play history (history lives only on the server).
+/// file. Play history lives on the server; the only history kept here is the
+/// `pending_history` outbox of plays/skips the server hasn't accepted yet.
 /// All access is serialized through one private queue. Methods log and swallow
 /// errors rather than throwing, so a transient DB hiccup never breaks playback.
-public final class LocalDatabase {
+//
+// @unchecked Sendable: the only mutable state, the connection, is used solely on
+// the private serial queue.
+public final class LocalDatabase: @unchecked Sendable {
 
     private var db: OpaquePointer?
     private let queue = DispatchQueue(label: "djukebox-local-database")
@@ -31,6 +35,14 @@ public final class LocalDatabase {
                 audio_bitrate TEXT, sample_rate TEXT, track_number TEXT, genre TEXT,
                 year TEXT, original_date TEXT, downloaded_at REAL NOT NULL);
               """)
+            if ok {
+                ok = exec("""
+                  CREATE TABLE IF NOT EXISTS pending_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, sha1 TEXT NOT NULL,
+                    time INTEGER NOT NULL, fully_played INTEGER NOT NULL);
+                  CREATE INDEX IF NOT EXISTS pending_history_sha1 ON pending_history(sha1);
+                  """)
+            }
             if ok { migrateLegacyColumnNames() }
         }
         if !ok { return nil }
@@ -133,8 +145,74 @@ public final class LocalDatabase {
         }
     }
 
+    /// Empties the track catalog. Pending history is deliberately kept: clearing
+    /// the audio cache must not lose plays the server hasn't heard about.
     public func clear() {
         queue.sync { _ = exec("DELETE FROM local_tracks;") }
+    }
+
+    // MARK: - pending history
+
+    /// Stores a play/skip to be uploaded later. False if it could not be stored.
+    @discardableResult
+    public func appendPendingHistory(_ entry: ServerHistoryEntry) -> Bool {
+        queue.sync {
+            guard let stmt = prepare(
+              "INSERT INTO pending_history (sha1, time, fully_played) VALUES (?,?,?);")
+            else { return false }
+            defer { sqlite3_finalize(stmt) }
+            bind(stmt, 1, entry.hash)
+            sqlite3_bind_int64(stmt, 2, Int64(entry.time))
+            sqlite3_bind_int(stmt, 3, entry.fullyPlayed ? 1 : 0)
+            if sqlite3_step(stmt) != SQLITE_DONE {
+                Log.e("could not store pending history: \(String(cString: sqlite3_errmsg(db)))")
+                return false
+            }
+            return true
+        }
+    }
+
+    /// The pending entry that should be uploaded next, with its row id.
+    public func oldestPendingHistory() -> (id: Int64, entry: ServerHistoryEntry)? {
+        queue.sync {
+            guard let stmt = prepare("""
+              SELECT id, sha1, time, fully_played FROM pending_history
+              ORDER BY time, id LIMIT 1;
+              """) else { return nil }
+            defer { sqlite3_finalize(stmt) }
+            guard sqlite3_step(stmt) == SQLITE_ROW, let sha1 = text(stmt, 1) else { return nil }
+            return (id: sqlite3_column_int64(stmt, 0),
+                    entry: ServerHistoryEntry(hash: sha1,
+                                              time: Int(sqlite3_column_int64(stmt, 2)),
+                                              fullyPlayed: sqlite3_column_int(stmt, 3) != 0))
+        }
+    }
+
+    /// False if the row could not be deleted.
+    @discardableResult
+    public func deletePendingHistory(id: Int64) -> Bool {
+        queue.sync {
+            guard let stmt = prepare("DELETE FROM pending_history WHERE id=?;") else { return false }
+            defer { sqlite3_finalize(stmt) }
+            sqlite3_bind_int64(stmt, 1, id)
+            if sqlite3_step(stmt) != SQLITE_DONE {
+                Log.e("could not delete pending history: \(String(cString: sqlite3_errmsg(db)))")
+                return false
+            }
+            return true
+        }
+    }
+
+    public func hasPendingHistory(sha1: String, fullyPlayed: Bool) -> Bool {
+        queue.sync {
+            guard let stmt = prepare(
+              "SELECT 1 FROM pending_history WHERE sha1=? AND fully_played=? LIMIT 1;")
+            else { return false }
+            defer { sqlite3_finalize(stmt) }
+            bind(stmt, 1, sha1)
+            sqlite3_bind_int(stmt, 2, fullyPlayed ? 1 : 0)
+            return sqlite3_step(stmt) == SQLITE_ROW
+        }
     }
 
     /// Renames columns left over from before the Credit/Artist rename (formerly

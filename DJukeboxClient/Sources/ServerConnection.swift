@@ -42,9 +42,11 @@ public enum ServerConnectionError: Error {
     // reaches a networking call offline, replacing the opaque
     // URLError(.unsupportedURL) that a scheme-less empty URL used to produce.
     case notConnected
+    // The server answered with a non-2xx HTTP status.
+    case badStatus(Int)
 }
 
-public struct ServerHistoryEntry: Codable {
+public struct ServerHistoryEntry: Codable, Equatable, Sendable {
     public let hash: String
     public let time: Int
     public let fullyPlayed: Bool
@@ -115,7 +117,8 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         _ = try await URLSession.shared.data(for: request)
     }
 
-    internal func post(body: Data, toPath path: String) async throws {
+    @discardableResult
+    internal func post(body: Data, toPath path: String) async throws -> URLResponse {
         guard hasServer else { throw ServerConnectionError.notConnected }
         guard let url = URL(string: "\(serverUrl)/\(path)") else {
             throw URLError(.badURL)
@@ -127,7 +130,8 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         request.timeoutInterval = 60.0
         request.httpBody = body
 
-        _ = try await URLSession.shared.data(for: request)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        return response
     }
 
     internal func requestJson<T>(atPath path: String) async throws -> T where T: Decodable {
@@ -161,7 +165,13 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
     public func post(history: ServerHistoryEntry) async throws {
         let encoder = JSONEncoder()
         let jsonString = try encoder.encode(history)
-        try await self.post(body: jsonString, toPath: "history")
+        let response = try await self.post(body: jsonString, toPath: "history")
+        // an HTTP error is not a thrown URLSession error, but the entry was not
+        // recorded: the caller must keep it
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else {
+            throw ServerConnectionError.badStatus(status)
+        }
     }
 
     public func listTracks() async throws -> [AudioTrack] {
