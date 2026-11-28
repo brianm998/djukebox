@@ -17,7 +17,7 @@ public struct PlayButton: View {
                     let success = try await self.audioPlayer.player?.resumePlaying()
                     Log.d("play: \(success)")
                 } catch {
-                    Log.e("DOH \(error)")
+                    Log.w("DOH \(error)")
                 }
             }
         }) {
@@ -47,7 +47,7 @@ public struct PauseButton: View {
                     let success = try await self.audioPlayer.player?.pausePlaying()
                     Log.d("pause: \(success)")
                 } catch {
-                    Log.e("DOH \(error)")
+                    Log.w("DOH \(error)")
                 }
             }
         }) {
@@ -79,7 +79,7 @@ public struct SkipCurrentTrackButton: View {
                         atIndex: -1)
                     Log.d("skip: \(success)")
                 } catch {
-                    Log.e("DOH \(error)")
+                    Log.w("DOH \(error)")
                 }
                 self.trackFetcher.refreshQueue()
             }
