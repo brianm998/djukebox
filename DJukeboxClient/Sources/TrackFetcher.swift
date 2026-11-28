@@ -67,8 +67,15 @@ public class TrackFetcher: ObservableObject {
             // observers directly — the offline/local UI keys off this flag
             objectWillChange.send()
             refreshTracks()
+            if oldValue != useLocalContentOnly {
+                onLocalContentOnlyChange?(useLocalContentOnly)
+            }
         }
     }
+
+    // called when useLocalContentOnly actually changes; the owning Client uses
+    // it to close the /stream socket while offline and reopen it afterwards
+    public var onLocalContentOnlyChange: (@MainActor (Bool) -> Void)?
 
     var runtimeState: RuntimeState {
         return RuntimeState(isPaused: self.audioPlayer.player?.isPaused ?? false,
