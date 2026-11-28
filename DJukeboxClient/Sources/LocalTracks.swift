@@ -215,7 +215,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                             closure(false)
                         }
                     } catch {
-                        Log.e("error: \(error)")
+                        Log.w("error: \(error)")
                         closure(false)
                     }
                 }
@@ -236,7 +236,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
             }
         } else {
             closure(nil)
-            Log.w("no track for hash \(sha1Hash)")
+            Log.i("no track for hash \(sha1Hash)")
         }
     }
 
@@ -296,7 +296,7 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
                     closure(true)
                 }
             } else {
-                Log.e("couldn't download \(String(describing: track))")
+                Log.w("couldn't download \(String(describing: track))")
                 closure(false)
             }
         }

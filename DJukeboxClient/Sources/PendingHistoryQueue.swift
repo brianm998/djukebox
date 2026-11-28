@@ -56,7 +56,7 @@ actor PendingHistoryQueue {
         do {
             try await server.post(history: entry)
         } catch {
-            Log.e("could not write \(kind) of \(entry.hash): \(error)")
+            Log.w("could not write \(kind) of \(entry.hash): \(error)")
             return false
         }
         Log.d("wrote \(kind) of \(entry.hash)")

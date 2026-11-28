@@ -41,6 +41,7 @@ private final class StubServer: ServerType, @unchecked Sendable {
     func savedGain(forHash hash: String) async throws -> Double? { nil }
     func masterGain() async throws -> Double? { nil }
     func setMasterGain(_ decibels: Double) async throws {}
+    func serverVersion() async throws -> ServerVersionInfo { throw PostFailed() }
     var authHeaderValue: String { "token" }
     var url: String { "" }
 }

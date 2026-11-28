@@ -115,6 +115,11 @@ struct ServerStatusView: View {
             .djCard(padding: 4)
 
             Spacer()
+
+            // the mac windows already show this in their header bar
+            #if os(iOS)
+            VersionLabel()
+            #endif
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

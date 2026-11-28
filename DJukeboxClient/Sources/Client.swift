@@ -22,13 +22,37 @@ public class Client {
     // nonisolated(unsafe) escape hatch (same pattern as Pairing.swift).
     private var streamTask: Task<Void, Never>?
 
+    // The latest connect/disconnect request for streamSocket. Each one awaits the
+    // previous, so they reach the socket in the order they were made.
+    private var streamControl: Task<Void, Never>?
+
     // the 1s state-save / refresh loop; held so it can be torn down with the client
     private var refreshTask: Task<Void, Never>?
 
     deinit {
         refreshTask?.cancel()
         streamTask?.cancel()
-        streamSocket?.disconnectSync()
+        if let socket = streamSocket {
+            // queued behind any pending connect, so that one can't reopen it
+            Task { [previous = streamControl] in
+                await previous?.value
+                await socket.disconnect()
+            }
+        }
+    }
+
+    // Connect or disconnect the /stream socket, after any earlier request.
+    @MainActor
+    private func setStream(connected: Bool) {
+        guard let socket = streamSocket else { return }
+        streamControl = Task { [previous = streamControl] in
+            await previous?.value
+            if connected {
+                await socket.connect()
+            } else {
+                await socket.disconnect()
+            }
+        }
     }
 
     public func copy() -> Client {
@@ -139,7 +163,8 @@ public class Client {
         let monitor = AudioLevelMonitor(localMeter: levelMeter, trackFetcher: trackFetcher)
         self.levelMonitor = monitor
 
-        // Open the single push connection and route each frame type. The server
+        // Route each frame type from the single push connection (opened below,
+        // once we know we're not in local-only mode). The server
         // pushes only on change (or while playing), so this replaces the per-second
         // polling of /levels, /queue and /history. Consumers are captured weakly;
         // the socket is owned here.
@@ -157,7 +182,6 @@ public class Client {
         self.streamSocket = socket
         if let socket {
             self.streamTask = Task { @MainActor [weak monitor, weak fetcher, weak history] in
-                await socket.connect()
                 for await frame in socket.frames {
                     if let levels = frame.levels {
                         monitor?.ingestRemoteLevels(levels)
@@ -183,6 +207,19 @@ public class Client {
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
 
         trackFetcher.initialize(with: runtimeState)
+
+        // The stream is only open while online. Decided after initialize(), which
+        // may restore offline mode, so that case never attempts a connection.
+        // Coming back online also uploads what was recorded meanwhile.
+        fetcher.onLocalContentOnlyChange = { [weak self] localOnly in
+            self?.setStream(connected: !localOnly)
+            if !localOnly {
+                historyWriter.drainPending()
+            }
+        }
+        if !fetcher.useLocalContentOnly {
+            setStream(connected: true)
+        }
 
         // upload anything left over from offline use (a reconnect builds a new
         // Client, so this covers both that and app start)

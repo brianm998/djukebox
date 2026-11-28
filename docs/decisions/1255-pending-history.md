@@ -14,4 +14,4 @@
 
 - An entry the server always rejects would hold back the ones after it.
 - There is no retry timer. A failed upload is retried at the next online
-  play/skip or the next `Client` start.
+  play/skip, on leaving local-only mode, or at the next `Client` start.

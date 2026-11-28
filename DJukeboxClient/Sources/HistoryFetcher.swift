@@ -166,7 +166,7 @@ public class HistoryFetcher: ObservableObject {
                     self.all = self.all.merge(with: history)
                     self.updateRecent()
                 } catch {
-                    Log.e("could not refresh history: \(error)")
+                    Log.w("could not refresh history: \(error)")
                 }
             }
         } else {
@@ -178,7 +178,7 @@ public class HistoryFetcher: ObservableObject {
                     self.all = self.all.merge(with: history)
                     self.updateRecent()
                 } catch {
-                    Log.e("could not refresh history: \(error)")
+                    Log.w("could not refresh history: \(error)")
                 }
             }
         }

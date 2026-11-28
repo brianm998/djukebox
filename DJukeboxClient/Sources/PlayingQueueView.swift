@@ -49,7 +49,7 @@ public struct PlayingQueueView: View {
                         self.trackFetcher.update(playingQueue: queue)
                     }
                 } catch {
-                    Log.e("could not move playing track: \(error)")
+                    Log.w("could not move playing track: \(error)")
                 }
             }
         } else if startIndex > endIndex {
@@ -65,7 +65,7 @@ public struct PlayingQueueView: View {
                         self.trackFetcher.update(playingQueue: queue)
                     }
                 } catch {
-                    Log.e("could not move playing track: \(error)")
+                    Log.w("could not move playing track: \(error)")
                 }
             }
         } else {

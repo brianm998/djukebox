@@ -22,7 +22,7 @@ struct PanelWindowRoot: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DJHeaderBar()
+            DJHeaderBar(server: browser.currentClient?.serverConnection)
                 .contentShape(Rectangle())
                 .help("Drag onto another window to combine them")
                 // Drag the DJukebox header onto another window to merge this whole
