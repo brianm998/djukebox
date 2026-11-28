@@ -17,6 +17,7 @@ fi
 rm -f "$PLIST"
 rm -rf "$BIN_DIR"
 echo "djukebox launch agent removed."
-echo "kept: the database (wherever --db pointed; by default djukebox_server/db.sqlite in your checkout)"
+echo "kept: the database (wherever --db pointed; by default djukebox_server/db.sqlite in your checkout,"
+echo "      or $HOME/Library/Application Support/DJukebox/db.sqlite for a release tarball install)"
 echo "kept: logs in $HOME/Library/Logs/djukebox"
 exit 0
