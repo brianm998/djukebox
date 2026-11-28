@@ -110,8 +110,6 @@ public final class NowPlayingCoordinator {
             // ServerAudioPlayer.isPaused is a cache the server pushes never
             // update; the playing queue carries the real state
             return trackFetcher.playingQueue?.isPaused ?? true
-        case nil:
-            return true
         }
     }
 

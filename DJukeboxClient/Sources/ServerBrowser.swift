@@ -112,10 +112,9 @@ public class ServerBrowser: ObservableObject {
     // later scan/reconnect can put it back. No-op if we're already offline.
     public func rememberCurrentPlayLocal() {
         if let client = currentClient,
-           !client.trackFetcher.useLocalContentOnly,
-           let queueType = client.trackFetcher.queueType
+           !client.trackFetcher.useLocalContentOnly
         {
-            rememberedQueueType = queueType
+            rememberedQueueType = client.trackFetcher.queueType
         }
     }
 
