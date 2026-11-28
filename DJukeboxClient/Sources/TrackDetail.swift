@@ -66,7 +66,7 @@ public struct TrackDetail: View {
                           let track = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: self.track.SHA1)
                           Log.d("track \(track)")
                       } catch {
-                          Log.e("could not play track: \(error)")
+                          Log.w("could not play track: \(error)")
                       }
                       self.trackFetcher.refreshQueue()
                   }

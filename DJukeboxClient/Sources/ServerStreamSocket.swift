@@ -33,6 +33,12 @@ public actor ServerStreamSocket {
     private var task: URLSessionWebSocketTask?
     private var shouldConnect = false
 
+    // Seconds to wait before the next reconnect: doubles after each failure up
+    // to the cap, and drops back once a message arrives.
+    private var retryDelay = initialRetryDelay
+    private static let initialRetryDelay: Double = 1
+    private static let maxRetryDelay: Double = 60
+
     // The read loop (spawned by connect(), cancelled by disconnect()/deinit).
     // Held so disconnect() can stop it deterministically before tearing down
     // the underlying WebSocket task.
@@ -69,6 +75,7 @@ public actor ServerStreamSocket {
     public func connect() {
         guard !shouldConnect else { return }
         shouldConnect = true
+        retryDelay = Self.initialRetryDelay
         openIfNeeded()
     }
 
@@ -80,15 +87,6 @@ public actor ServerStreamSocket {
         task?.cancel(with: .goingAway, reason: nil)
         task = nil
         continuation.yield(unavailableFrame)
-    }
-
-    // Nonisolated, synchronous teardown for deinit (which can't await an actor
-    // method). Fires the same cancellation off without waiting for it to finish;
-    // Task is Sendable and cancellable from a nonisolated context, so no
-    // nonisolated(unsafe) escape hatch is needed (matches PairingMonitor's and
-    // PairingClient's deinit in Pairing.swift).
-    public nonisolated func disconnectSync() {
-        Task { await self.disconnect() }
     }
 
     deinit {
@@ -103,6 +101,8 @@ public actor ServerStreamSocket {
         // headroom (history is now pushed incrementally, so frames stay small).
         t.maximumMessageSize = 16 * 1024 * 1024
         task = t
+        // the token travels in a header, so the URL is safe to log
+        Log.i("ServerStreamSocket: connecting to \(request.url?.absoluteString ?? "?")")
         t.resume()
         readLoopTask = Task { [weak self] in
             await self?.readLoop(on: t)
@@ -115,6 +115,7 @@ public actor ServerStreamSocket {
         while shouldConnect && task === t {
             do {
                 let message = try await t.receive()
+                retryDelay = Self.initialRetryDelay
                 if case .string(let text) = message,
                    let data = text.data(using: .utf8),
                    let frame = try? JSONDecoder().decode(StreamFrame.self, from: data) {
@@ -125,8 +126,12 @@ public actor ServerStreamSocket {
                 task = nil
                 continuation.yield(unavailableFrame)   // drop the meter to rest
                 if shouldConnect {
-                    try? await Task.sleep(for: .seconds(1))
-                    guard shouldConnect else { return }
+                    let delay = retryDelay
+                    retryDelay = min(delay * 2, Self.maxRetryDelay)
+                    Log.i("ServerStreamSocket: connection failed (\(error.localizedDescription)), retrying in \(delay)s")
+                    try? await Task.sleep(for: .seconds(delay))
+                    // disconnect() cancels us; any later connect() opens its own
+                    guard shouldConnect, !Task.isCancelled else { return }
                     openIfNeeded()
                 }
                 return

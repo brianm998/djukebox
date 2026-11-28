@@ -25,7 +25,7 @@ public struct TrackList: View {
                             do {
                                 _ = try await self.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks)
                             } catch {
-                                Log.e("could not play all tracks: \(error)")
+                                Log.w("could not play all tracks: \(error)")
                             }
                             self.trackFetcher.refreshQueue()
                         }
@@ -49,7 +49,7 @@ public struct TrackList: View {
                               let playedTrack = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1)
                               Log.d("track \(playedTrack)")
                           } catch {
-                              Log.e("could not play track: \(error)")
+                              Log.w("could not play track: \(error)")
                           }
                           self.trackFetcher.refreshQueue()
                       }
@@ -86,7 +86,7 @@ public struct TrackList: View {
                                 do {
                                     _ = try await self.client.trackFetcher.audioPlayer.player?.playTracks(self.trackFetcher.tracks.sorted())
                                 } catch {
-                                    Log.e("could not play all tracks: \(error)")
+                                    Log.w("could not play all tracks: \(error)")
                                 }
                                 self.client.trackFetcher.refreshQueue()
                             }
@@ -112,7 +112,7 @@ public struct TrackList: View {
                               let playedTrack = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1)
                               Log.d("track \(playedTrack)")
                           } catch {
-                              Log.e("could not play track: \(error)")
+                              Log.w("could not play track: \(error)")
                           }
                           self.trackFetcher.refreshQueue()
                       }
