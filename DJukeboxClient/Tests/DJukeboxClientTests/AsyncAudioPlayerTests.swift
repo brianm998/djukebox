@@ -9,6 +9,7 @@ struct AsyncAudioPlayerTests {
     private func makePlayer(tracks: [AudioTrack]) -> (AsyncAudioPlayer, FakeAudioPlayer, TrackFetcher) {
         let fetcher = makeFetcher(tracks: tracks)
         let fake = FakeAudioPlayer()
+        fake.retainedFetcher = fetcher
         let history = HistoryFetcher(withServer: OfflineServer(), trackFetcher: fetcher)
         return (AsyncAudioPlayer(player: fake, fetcher: fetcher, history: history), fake, fetcher)
     }
