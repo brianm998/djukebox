@@ -60,8 +60,35 @@ public class Client {
         let fetcher = TrackFetcher(withServer: serverConnection)
         self.trackFetcher = fetcher
 
+        // this allows clients to keep some tracks locally (i.e. offline).
+        // Wired up before initialize(): setting useLocalContentOnly there fires
+        // refreshTracks() via its didSet, which needs localTracks in place when
+        // restoring offline mode. (An explicit refreshTracks() used to follow as
+        // a workaround, fetching the whole catalog from the server a second time.)
+        let localTracks = LocalTracks(trackFinder: self.trackFetcher.catalog)
+        localTracks.fetcher = fetcher
+        trackFetcher.localTracks = localTracks
+
         // an observable object for keeping the history up to date from the server
-        self.historyFetcher = HistoryFetcher(withServer: serverConnection, trackFetcher: fetcher)
+        self.historyFetcher = HistoryFetcher(withServer: serverConnection,
+                                             trackFetcher: fetcher,
+                                             pendingHistory: localTracks.pendingHistoryStore)
+
+        // records local plays/skips, holding them in the local database until
+        // the server has them
+        let history = historyFetcher
+        let historyWriter = ServerHistoryWriter(
+            server: serverConnection,
+            store: localTracks.pendingHistoryStore,
+            // Same weak-fetcher / MainActor-hop pattern as savedGainForHash
+            // below: don't POST play/skip history while in offline mode (it can
+            // only time out).
+            isOffline: { [weak fetcher] in
+                await MainActor.run { fetcher?.useLocalContentOnly ?? false }
+            },
+            onPosted: { [weak history] entry in
+                await history?.noteUploaded(entry)
+            })
 
         // which queue do we play to?
         var audioPlayer: AsyncAudioPlayerType!
@@ -81,14 +108,7 @@ public class Client {
 
         let server = serverConnection
         let player = AVDoghouseAudioPlayer(trackFinder: trackFetcher.catalog,
-                                           historyWriter: ServerHistoryWriter(
-                                               server: serverConnection,
-                                               // Same weak-fetcher / MainActor-hop pattern as
-                                               // savedGainForHash below: don't POST play/skip
-                                               // history while in offline mode (it can only time out).
-                                               isOffline: { [weak fetcher] in
-                                                   await MainActor.run { fetcher?.useLocalContentOnly ?? false }
-                                               }),
+                                           historyWriter: historyWriter,
                                            savedGainForHash: { [weak fetcher] hash in
                                                // Called from AVDoghouseAudioPlayer's own Task (it's
                                                // non-isolated, so it awaits us rather than reading
@@ -133,7 +153,6 @@ public class Client {
         // here is what makes ingest(_:) callable at all. Unifying onto one stream
         // consumed on the main actor is therefore strictly simpler, not a behavior
         // change for any of the three.
-        let history = historyFetcher
         let socket = ServerStreamSocket(baseURL: serverURL, token: token)
         self.streamSocket = socket
         if let socket {
@@ -163,16 +182,11 @@ public class Client {
 
         let runtimeState = RuntimeState.saved(defaultPlayingQueue: initialQueue)
 
-        // this allows clients to keep some tracks locally (i.e. offline).
-        // Wired up before initialize(): setting useLocalContentOnly there fires
-        // refreshTracks() via its didSet, which needs localTracks in place when
-        // restoring offline mode. (An explicit refreshTracks() used to follow as
-        // a workaround, fetching the whole catalog from the server a second time.)
-        let localTracks = LocalTracks(trackFinder: self.trackFetcher.catalog)
-        localTracks.fetcher = fetcher
-        trackFetcher.localTracks = localTracks
-
         trackFetcher.initialize(with: runtimeState)
+
+        // upload anything left over from offline use (a reconnect builds a new
+        // Client, so this covers both that and app start)
+        historyWriter.drainPending()
 
         // (no historyFetcher.refresh() here: its init already fetched the full
         // history once, and the /stream push keeps it current thereafter)

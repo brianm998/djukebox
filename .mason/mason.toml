@@ -45,10 +45,7 @@ command = "swift test --package-path djukebox_server 2>&1"
 parser = "xctest"
 min_tests = 1
 
-# DJukeboxClient has no tests yet, so this only checks that it builds.
 [suite.swift-client]
-command = '''if swift build --package-path DJukeboxClient 2>&1; then echo "test client_builds ... ok"; else echo "test client_builds ... FAILED"; exit 1; fi'''
-parser = "regex"
-pass_regex = "^test (.+) \\.\\.\\. ok$"
-fail_regex = "^test (.+) \\.\\.\\. FAILED$"
+command = "swift test --package-path DJukeboxClient 2>&1"
+parser = "swift-testing"
 min_tests = 1
