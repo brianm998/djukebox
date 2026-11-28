@@ -1,6 +1,18 @@
+import DJukeboxCommon
 import Foundation
 import Testing
 @testable import DJukeboxClient
+
+// Test-only: AsyncAudioPlayer holds its TrackFetcher weakly (in the app the
+// fetcher owns the player), so keep it alive for the test's lifetime.
+private final class FetcherRetainingAsyncAudioPlayer: AsyncAudioPlayer {
+    private let retainedFetcher: TrackFetcher
+
+    override init(player: AudioPlayerType, fetcher: TrackFetcher, history: HistoryFetcher) {
+        self.retainedFetcher = fetcher
+        super.init(player: player, fetcher: fetcher, history: history)
+    }
+}
 
 @MainActor
 struct AsyncAudioPlayerTests {
@@ -8,7 +20,8 @@ struct AsyncAudioPlayerTests {
         let fetcher = makeFetcher(tracks: tracks)
         let fake = FakeAudioPlayer()
         let history = HistoryFetcher(withServer: OfflineServer(), trackFetcher: fetcher)
-        return (AsyncAudioPlayer(player: fake, fetcher: fetcher, history: history), fake)
+        return (FetcherRetainingAsyncAudioPlayer(player: fake, fetcher: fetcher, history: history),
+                fake)
     }
 
     @Test func playTrackQueuesItAndResumes() async throws {
