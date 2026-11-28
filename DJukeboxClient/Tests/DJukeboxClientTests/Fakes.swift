@@ -25,6 +25,7 @@ struct OfflineServer: ServerType {
     func savedGain(forHash hash: String) async throws -> Double? { throw ServerConnectionError.notConnected }
     func masterGain() async throws -> Double? { throw ServerConnectionError.notConnected }
     func setMasterGain(_ decibels: Double) async throws { throw ServerConnectionError.notConnected }
+    func serverVersion() async throws -> ServerVersionInfo { throw ServerConnectionError.notConnected }
 }
 
 // Records what it is asked to do; plays no audio. `play` only appends to the
