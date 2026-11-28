@@ -24,9 +24,29 @@ switch or `swift build` in a checkout does not change what the agent runs.
    not be moved or deleted. A missing database is an error unless you pass
    `--new-db`.
 
+### From a release tarball
+
+No Xcode or checkout is needed:
+
+```
+tar -xzf djukebox-server-macos-<version>.tar.gz
+djukebox-server-macos-<version>/scripts/install_launch_agent.sh \
+    --music-dir /path/to/music --history-dir /path/to/music/playing_history --new-db
+```
+
+The installer sees `bin/Run` beside `scripts/`, skips the build and keeps the
+release signatures. The default database is
+`~/Library/Application Support/DJukebox/db.sqlite`; leave `--new-db` off once it
+exists, and pass `--db` to keep using a database from a checkout. To try the
+server without installing it, run
+`djukebox-server-macos-<version>/bin/Run serve -H 0.0.0.0 -p 8080` with
+`DJUKEBOX_MUSIC_DIR` and `DJUKEBOX_DB_PATH` set.
+
 Options: `--db`, `--music-dir` (default `/qp/mp3/`), `--history-dir`
 (default `/qp/mp3/playing_history`), `--port` (8080), `--sign-identity`
-(default `-`, ad hoc), `--new-db`, `--dry-run DIR` (only writes the plist into
+(default for a source install `-`, ad hoc; a tarball install does not re-sign
+unless this is given), `--prebuilt DIR` (install `DIR/bin` without building),
+`--new-db`, `--dry-run DIR` (only writes the plist into
 `DIR`; no build, no launchctl).
 
 The agent sets `DJUKEBOX_REQUIRE_MUSIC_DIR=1`: if the music directory is

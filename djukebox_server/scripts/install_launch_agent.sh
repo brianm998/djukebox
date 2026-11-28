@@ -1,5 +1,7 @@
 #!/bin/bash
 # Install (or upgrade) the djukebox server as a per-user launch agent.
+# From a source checkout it builds first; from an extracted release tarball
+# (bin/Run beside scripts/) it installs those files as they are.
 # bash 3.2 compatible. See LAUNCH_AGENT.md.
 set -u
 
@@ -8,17 +10,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TEMPLATE="$SERVER_DIR/launchd/$LABEL.plist.template"
 
-DB="$SERVER_DIR/db.sqlite"
+. "$SCRIPT_DIR/server_payload.sh" || exit 1
+
+INSTALL_DIR="$HOME/Library/Application Support/DJukebox"
+DB=""
 MUSIC_DIR=/qp/mp3/
 HISTORY_DIR=/qp/mp3/playing_history
 PORT=8080
-IDENTITY=-
+IDENTITY=""
+PREBUILT=""
 NEW_DB=0
 DRY_RUN=""
 
 usage() {
   echo "usage: $0 [--db FILE] [--music-dir DIR] [--history-dir DIR] [--port N]"
-  echo "          [--sign-identity ID] [--new-db] [--dry-run DIR]"
+  echo "          [--sign-identity ID] [--new-db] [--prebuilt DIR] [--dry-run DIR]"
 }
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -30,6 +36,7 @@ while [ $# -gt 0 ]; do
     --port) [ $# -ge 2 ] || die "--port needs a value"; PORT="$2"; shift 2;;
     --sign-identity) [ $# -ge 2 ] || die "--sign-identity needs a value"; IDENTITY="$2"; shift 2;;
     --new-db) NEW_DB=1; shift;;
+    --prebuilt) [ $# -ge 2 ] || die "--prebuilt needs a directory"; PREBUILT="$2"; shift 2;;
     --dry-run) [ $# -ge 2 ] || die "--dry-run needs a directory"; DRY_RUN="$2"; shift 2;;
     -h|--help) usage; exit 0;;
     *) usage >&2; die "unknown option: $1";;
@@ -48,6 +55,20 @@ abspath() {
     *) echo "$PWD/$1";;
   esac
 }
+# an extracted release tarball has the binary and no sources
+if [ -z "$PREBUILT" ] && [ -x "$SERVER_DIR/bin/Run" ] && [ ! -f "$SERVER_DIR/Package.swift" ]; then
+  PREBUILT="$SERVER_DIR"
+fi
+if [ -n "$PREBUILT" ]; then
+  PREBUILT="$(abspath "$PREBUILT")"
+  [ -x "$PREBUILT/bin/Run" ] || die "no bin/Run in $PREBUILT"
+  # not in the extracted directory, which is likely to be deleted
+  [ -n "$DB" ] || DB="$INSTALL_DIR/db.sqlite"
+else
+  # a source install is ad hoc signed unless told otherwise
+  [ -n "$IDENTITY" ] || IDENTITY=-
+  [ -n "$DB" ] || DB="$SERVER_DIR/db.sqlite"
+fi
 DB="$(abspath "$DB")"
 MUSIC_DIR="$(abspath "$MUSIC_DIR")"
 HISTORY_DIR="$(abspath "$HISTORY_DIR")"
@@ -56,7 +77,6 @@ if [ ! -f "$DB" ] && [ "$NEW_DB" -ne 1 ]; then
   die "database $DB does not exist. Pass --db to point at the real one, or --new-db to start empty."
 fi
 
-INSTALL_DIR="$HOME/Library/Application Support/DJukebox"
 BIN_DIR="$INSTALL_DIR/bin"
 BINARY="$BIN_DIR/Run"
 LOG_DIR="$HOME/Library/Logs/djukebox"
@@ -86,9 +106,18 @@ if [ -n "$DRY_RUN" ]; then
   render_plist "$OUT"
   plutil -lint "$OUT" >/dev/null || die "rendered plist is invalid"
   echo "dry run: wrote $OUT"
-  echo "would: swift build -c release --package-path $SERVER_DIR"
+  if [ -n "$PREBUILT" ]; then
+    echo "would: install the prebuilt files in $PREBUILT/bin (no build)"
+  else
+    echo "would: swift build -c release --package-path $SERVER_DIR"
+  fi
   echo "would: boot out gui/$(id -u)/$LABEL if loaded; stop if port $PORT is in use"
-  echo "would: copy Run, *.bundle, libswiftCompatibilitySpan.dylib to $BIN_DIR and codesign (identity: $IDENTITY)"
+  echo "would: copy Run, *.bundle, $SERVER_PAYLOAD_DYLIB to $BIN_DIR"
+  if [ -n "$IDENTITY" ]; then
+    echo "would: codesign them (identity: $IDENTITY)"
+  else
+    echo "would: keep the signatures they came with"
+  fi
   echo "would: install plist to $PLIST, bootstrap it, wait for port $PORT"
   echo "database: $DB"
   echo "music dir: $MUSIC_DIR"
@@ -100,10 +129,16 @@ SVC="$DOMAIN/$LABEL"
 is_loaded() { launchctl print "$SVC" >/dev/null 2>&1; }
 port_listener() { lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -Fpc 2>/dev/null; }
 
-# 1. build
-swift build -c release --package-path "$SERVER_DIR" || die "build failed; installed agent (if any) left as it is"
-PRODUCTS="$(swift build -c release --package-path "$SERVER_DIR" --show-bin-path)" || die "cannot find build products"
-[ -x "$PRODUCTS/Run" ] || die "no Run binary in $PRODUCTS"
+# 1. build, unless the files came prebuilt
+if [ -n "$PREBUILT" ]; then
+  PRODUCTS="$PREBUILT/bin"
+  PAYLOAD_MODE=prebuilt
+else
+  swift build -c release --package-path "$SERVER_DIR" || die "build failed; installed agent (if any) left as it is"
+  PRODUCTS="$(swift build -c release --package-path "$SERVER_DIR" --show-bin-path)" || die "cannot find build products"
+  [ -x "$PRODUCTS/Run" ] || die "no Run binary in $PRODUCTS"
+  PAYLOAD_MODE=source
+fi
 
 # 2. stop a loaded agent
 WAS_LOADED=0
@@ -130,30 +165,12 @@ if [ -n "$L" ]; then
 fi
 
 # 4. copy
-mkdir -p "$BIN_DIR" || die "cannot create $BIN_DIR"
-cp -f "$PRODUCTS/Run" "$BINARY" || die "copy of Run failed"
-for b in "$PRODUCTS"/*.bundle; do
-  [ -e "$b" ] || continue
-  rm -rf "$BIN_DIR/$(basename "$b")"
-  cp -R "$b" "$BIN_DIR/" || die "copy of $b failed"
-done
-if otool -L "$BINARY" | grep -q libswiftCompatibilitySpan; then
-  TOOLCHAIN_USR="$(dirname "$(dirname "$(xcrun --find swift)")")"
-  SPAN="$TOOLCHAIN_USR/lib/swift-5.5/macosx/libswiftCompatibilitySpan.dylib"
-  [ -f "$SPAN" ] || SPAN="$(find "$TOOLCHAIN_USR/lib" -name libswiftCompatibilitySpan.dylib 2>/dev/null | head -1)"
-  if [ -n "$SPAN" ] && [ -f "$SPAN" ]; then
-    cp -f "$SPAN" "$BIN_DIR/" || die "copy of libswiftCompatibilitySpan.dylib failed"
-  else
-    echo "warning: binary links libswiftCompatibilitySpan.dylib but it was not found in the toolchain" >&2
-  fi
-fi
+server_payload_stage "$PRODUCTS" "$BIN_DIR" "$PAYLOAD_MODE" || die "copy to $BIN_DIR failed"
 
-# 5. sign
-for f in "$BIN_DIR"/*.dylib "$BIN_DIR"/*.bundle; do
-  [ -e "$f" ] || continue
-  codesign --force --sign "$IDENTITY" "$f" || die "codesign failed for $f"
-done
-codesign --force --sign "$IDENTITY" --identifier com.brianm998.djukebox.server "$BINARY" || die "codesign failed"
+# 5. sign (a prebuilt payload keeps its signatures unless an identity was given)
+if [ -n "$IDENTITY" ]; then
+  server_payload_sign "$BIN_DIR" "$IDENTITY" || die "signing failed"
+fi
 
 # 6. plist and bootstrap
 mkdir -p "$LOG_DIR" "$HOME/Library/LaunchAgents" || die "cannot create directories"

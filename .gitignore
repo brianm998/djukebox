@@ -14,3 +14,4 @@ DerivedData/
 db.sqlite*
 .swiftpm
 
+dist/
