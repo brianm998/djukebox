@@ -1,5 +1,4 @@
 import SwiftUI
-import DJukeboxCommon
 import DJukeboxClient
 
 // Replaces the old "Offline" toggle. In offline mode (no server) it offers to

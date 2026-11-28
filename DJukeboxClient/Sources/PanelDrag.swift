@@ -63,8 +63,11 @@ public extension View {
     }
 }
 #else
+// No-ops off macOS; the parameters keep the call sites identical on both.
 public extension View {
+    // periphery:ignore:parameters artist
     func artistTearOut(artist: String) -> some View { self }
+    // periphery:ignore:parameters artist,album
     func albumTearOut(artist: String, album: String?) -> some View { self }
 }
 #endif

@@ -19,13 +19,10 @@ public enum DJTheme {
     public static let background     = Color(djHex: 0x0B0620)
     /// A panel/surface sitting on the background.
     public static let panel          = Color(djHex: 0x160C34)
-    /// A raised panel / selected row.
-    public static let panelElevated  = Color(djHex: 0x211149)
 
     public static let neonMagenta = Color(djHex: 0xEF0FFD)
     public static let neonViolet  = Color(djHex: 0xC131F0)
     public static let neonIndigo  = Color(djHex: 0x351DCA)
-    public static let neonBlue    = Color(djHex: 0x2E6BFF)
     public static let neonCyan    = Color(djHex: 0x12DBFF)
 
     /// Bright primary text.
@@ -108,21 +105,6 @@ public extension View {
     /// Paint the neon-jukebox screen gradient behind this view, edge to edge.
     func djScreenBackground() -> some View {
         background(DJTheme.screenGradient.ignoresSafeArea())
-    }
-
-    /// Wrap the content in a dark panel with a neon gradient border.
-    func djPanel(cornerRadius: CGFloat = 14, lineWidth: CGFloat = 1.5) -> some View {
-        let radius = DJTheme.cornerRadius(cornerRadius)
-        return background(RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .fill(DJTheme.panel))
-        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .strokeBorder(DJTheme.neonGradient, lineWidth: lineWidth))
-    }
-
-    /// Add just the neon gradient border (no fill).
-    func djNeonBorder(cornerRadius: CGFloat = 14, lineWidth: CGFloat = 1.5) -> some View {
-        overlay(RoundedRectangle(cornerRadius: DJTheme.cornerRadius(cornerRadius), style: .continuous)
-            .strokeBorder(DJTheme.neonGradient, lineWidth: lineWidth))
     }
 
     /// Make a `List` blend into the neon background: transparent scroll area and

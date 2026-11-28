@@ -1,5 +1,4 @@
 import Vapor
-import DJukeboxCommon
 
 // MARK: - wire types
 

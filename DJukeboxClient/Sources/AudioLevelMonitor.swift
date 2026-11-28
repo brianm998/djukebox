@@ -66,11 +66,6 @@ public final class AudioLevelMonitor: ObservableObject {
         }
     }
 
-    public func stop() {
-        tickTask?.cancel()
-        tickTask = nil
-    }
-
     private func tick() {
         let isRemote = (trackFetcher?.queueType == .remote)
         let paused = trackFetcher?.audioPlayer.isPaused ?? true

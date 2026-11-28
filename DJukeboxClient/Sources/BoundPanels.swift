@@ -13,12 +13,10 @@ import SwiftUI
 import DJukeboxCommon
 
 public struct BoundAlbumList: View {
-    let client: Client
     @ObservedObject var trackFetcher: TrackFetcher
     let artist: String
 
     public init(_ client: Client, artist: String) {
-        self.client = client
         self.trackFetcher = client.trackFetcher
         self.artist = artist
     }
@@ -43,13 +41,11 @@ public struct BoundAlbumList: View {
 }
 
 public struct BoundTrackList: View {
-    let client: Client
     @ObservedObject var trackFetcher: TrackFetcher
     let artist: String
     let album: String?
 
     public init(_ client: Client, artist: String, album: String?) {
-        self.client = client
         self.trackFetcher = client.trackFetcher
         self.artist = artist
         self.album = album

@@ -3,7 +3,6 @@ import DJukeboxClient
 import DJukeboxCommon
 
 public struct NaviAlbumList: View {
-    var client: Client
     // Observe the fetcher and derive the album list from the live catalog, keyed
     // by artist name, rather than freezing a snapshot at navigation time — otherwise
     // a catalog change (e.g. switching to local/offline) can't refresh this view.
@@ -12,7 +11,6 @@ public struct NaviAlbumList: View {
     let title: String
 
     public init(_ client: Client, artist: String, title: String) {
-        self.client = client
         self.trackFetcher = client.trackFetcher
         self.artist = artist
         self.title = title

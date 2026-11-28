@@ -1,5 +1,4 @@
 import SwiftUI
-import DJukeboxCommon
 
 public struct SearchView: View {
     @ObservedObject var trackFetcher: TrackFetcher

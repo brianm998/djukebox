@@ -1,16 +1,4 @@
 import Vapor
-import DJukeboxCommon
-
-public protocol HistoryType {
-    var plays: [String: [Double]] { get }
-    var skips: [String: [Double]] { get }
-
-    func recordPlay(of hash: String, at time: Date)
-    func recordSkip(of hash: String, at time: Date)
-    func recordPlay(of hash: String, at time: Double)
-    func recordSkip(of hash: String, at time: Double)
-    func find(atFilePath path: String)
-}
 
 // In-RAM fast read path over the play history. The database (JukeboxDatabase)
 // is the persistent store of record; this mirror is loaded from it at startup
@@ -18,7 +6,7 @@ public protocol HistoryType {
 // by a lock because the dictionaries are read by request handlers on event-loop
 // threads while the audio player writes from its own thread.
 // @unchecked Sendable: all mutable dictionary state is guarded by `lock`.
-public final class History: HistoryType, @unchecked Sendable {
+public final class History: @unchecked Sendable {
 
     private var _plays: [String: [Double]] = [:]
     private var _skips: [String: [Double]] = [:]
@@ -33,7 +21,6 @@ public final class History: HistoryType, @unchecked Sendable {
     }
 
     public var plays: [String: [Double]] { withLock { _plays } }
-    public var skips: [String: [Double]] { withLock { _skips } }
 
     /// Monotonic counter that increments whenever a play/skip is recorded.
     public var version: Int { withLock { _version } }
@@ -81,16 +68,6 @@ public final class History: HistoryType, @unchecked Sendable {
 
     public func recordPlay(of hash: String, at time: Date) {
         self.recordPlay(of: hash, at: time.timeIntervalSince1970)
-    }
-
-    public func find(atFilePath path: String) {
-        for event in History.legacyEvents(inDirectory: path) {
-            if event.fullyPlayed {
-                self.recordPlay(of: event.sha1, at: event.time)
-            } else {
-                self.recordSkip(of: event.sha1, at: event.time)
-            }
-        }
     }
 
     /// Parses the legacy on-disk history format — one `sha1,unixTime,flag` per

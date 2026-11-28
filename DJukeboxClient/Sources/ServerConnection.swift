@@ -11,8 +11,6 @@ public protocol ServerType: Sendable {
 
     // persist / read the per-track/album/artist playback gains the server applies
     func setVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws
-    func clearVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws
-    func listVolumeAdjustments() async throws -> [VolumeAdjustment]
     // the saved gain (dB) for a track, for pre-filling the volume control; nil
     // means there is no adjustment on record (not an error)
     func savedGain(forHash hash: String) async throws -> Double?
@@ -146,12 +144,6 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
         try await self.requestJson(atPath: "tracks")
     }
 
-    // XXX no callers anywhere in the repo; kept for parity with the server's
-    // /info/<hash> endpoint in case a caller shows up.
-    func trackInfo(forHash hash: String) async throws -> AudioTrack {
-        try await self.requestJson(atPath: "info/\(hash)")
-    }
-
     public func listHistory() async throws -> PlayingHistory {
         try await self.requestJson(atPath: "history")
     }
@@ -163,15 +155,6 @@ public class ServerConnection: ObservableObject, ServerType, @unchecked Sendable
     public func setVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws {
         let body = try JSONEncoder().encode(adjustment)
         try await self.post(body: body, toPath: "volume")
-    }
-
-    public func clearVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws {
-        let body = try JSONEncoder().encode(adjustment)
-        try await self.post(body: body, toPath: "volume/clear")
-    }
-
-    public func listVolumeAdjustments() async throws -> [VolumeAdjustment] {
-        try await self.requestJson(atPath: "volume")
     }
 
     // The server always resolves an effective (default 0 dB) gain server-side, so

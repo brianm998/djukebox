@@ -9,7 +9,6 @@
 import UIKit
 import AVFoundation
 import DJukeboxCommon
-import DJukeboxClient
 
 // The app's entry point is now DJukeboxApp (SwiftUI App lifecycle). This
 // AppDelegate survives only as an @UIApplicationDelegateAdaptor target (see

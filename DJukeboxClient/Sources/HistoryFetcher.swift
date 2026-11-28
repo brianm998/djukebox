@@ -66,33 +66,10 @@ public class HistoryFetcher: ObservableObject {
         refresh()
     }
 
-    func eventCount(for hash: String) -> Int {
-        let playsCount = self.plays(for: hash).count
-        let skipsCount = self.skips(for: hash).count
-        return playsCount + skipsCount
-    }
-    
-    func plays(for hash: String) -> [Double] {
-        if let plays = self.all.plays[hash] {
-            return plays
-        } else {
-            return []
-        }
-    }
-
     public func hasPlay(for hash: String) -> Bool {
         return self.all.plays[hash] != nil
     }
     
-    func skips(for hash: String) -> [Double] {
-        if let skips = self.all.skips[hash]
-        {
-            return skips
-        } else {
-            return []
-        }
-    }
-
     public func hasSkip(for hash: String) -> Bool {
         return self.all.skips[hash] != nil
     }

@@ -7,7 +7,6 @@ public protocol LogHandler: Sendable {
              with data: LogData?,
              at logLevel: Log.Level)
 
-    var dispatchQueue: DispatchQueue { get }
     // read-only: handlers set their level once, at init (the setter was never used)
     var level: Log.Level? { get }
 }

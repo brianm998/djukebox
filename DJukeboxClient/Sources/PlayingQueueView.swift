@@ -17,21 +17,10 @@ public struct PlayingQueueView: View {
             }
               .onDelete(perform: delete)
               .onMove(perform: move)
-              //.onInsert(of: ["public.url"], perform: drop) // XXX doesn't work
         }
         .djListChrome()
     }
-    private func drop(at index: Int, _ items: [NSItemProvider]) {
-        for item in items {
-            _ = item.loadObject(ofClass: URL.self) { url, error in
-                Log.d("url \(url) error \(error)")
-                //DispatchQueue.main.async {
-                    //url.map { self.links.insert($0, at: index) }
-            //}
-            }
-        }
-    }
-    
+
     private func move(source: IndexSet, destination: Int) {
         let startIndex = source.sorted()[0]
         let endIndex = destination
