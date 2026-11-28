@@ -178,39 +178,45 @@ public class AVDoghouseAudioPlayer: NSObject, AudioPlayerType, @unchecked Sendab
         levelMeter.reset()
     }
 
+    // Both indexes must be inside the queue. The caller's list can be stale (the
+    // queue advances underneath it), so a fromIndex that now holds another track
+    // is resolved by hash; false if the track is no longer queued.
     public func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {
-        if fromIndex < 0,
-           toIndex < 0,
-           fromIndex >= trackQueue.count,
-           toIndex >= trackQueue.count,
-           trackQueue[fromIndex] != track.SHA1
-        {
-            return false
-        }
-        self.trackQueue.remove(at: fromIndex)
-        self.trackQueue.insert(track.SHA1, at: toIndex)
+        guard trackQueue.indices.contains(fromIndex),
+              trackQueue.indices.contains(toIndex),
+              let index = queueIndex(of: track.SHA1, expectedAt: fromIndex)
+        else { return false }
+        trackQueue.remove(at: index)
+        trackQueue.insert(track.SHA1, at: toIndex)
         return true
     }
     
+    // An index of -1 means the playing track. Any other index is a queue position,
+    // resolved by hash if it is stale.
     public func stopPlaying(sha1Hash: String, atIndex index: Int) {
         Log.d("should stop playing \(sha1Hash) trackQueue.count \(trackQueue.count)");
 
-        if index == -1,
-           let playingTrack = playingTrack,
-           playingTrack.SHA1 == sha1Hash
-        {
-            self.skip()
-        } else {
-            for (trackIndex, hash) in trackQueue.enumerated() {
-                Log.d("index \(trackIndex) hash \(sha1Hash)")
-                if hash == sha1Hash,
-                   index == trackIndex
-                {
-                    Log.d("index \(index) needs to be removed")
-                    self.trackQueue.remove(at: index)
-                }
+        if index == -1 {
+            if playingTrack?.SHA1 == sha1Hash {
+                self.skip()
             }
+        } else if index >= 0,
+                  let queueIndex = queueIndex(of: sha1Hash, expectedAt: index)
+        {
+            Log.d("index \(queueIndex) needs to be removed")
+            trackQueue.remove(at: queueIndex)
         }
+    }
+
+    // where this hash is in trackQueue: the expected index if it still matches,
+    // otherwise its first occurrence
+    private func queueIndex(of sha1Hash: String, expectedAt index: Int) -> Int? {
+        if trackQueue.indices.contains(index),
+           trackQueue[index] == sha1Hash
+        {
+            return index
+        }
+        return trackQueue.firstIndex(of: sha1Hash)
     }
 
     // Keyed by the player item (object identity) rather than its AVAsset: AVAsset

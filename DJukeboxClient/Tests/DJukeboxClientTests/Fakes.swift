@@ -38,12 +38,18 @@ final class FakeAudioPlayer: AudioPlayerType {
     var playingTrackPosition: TimeInterval?
 
     func play(sha1Hash: String) { trackQueue.append(sha1Hash) }
-    func stopPlaying(sha1Hash: String, atIndex index: Int) {}
+    var stoppedIndexes: [Int] = []
+    var moves: [[Int]] = []   // [fromIndex, toIndex]
+
+    func stopPlaying(sha1Hash: String, atIndex index: Int) { stoppedIndexes.append(index) }
     func skip() {}
     func pause() { isPaused = true }
     func resume() { isPaused = false }
     func clearQueue() { trackQueue = [] }
-    func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool { false }
+    func move(track: AudioTrackType, fromIndex: Int, toIndex: Int) -> Bool {
+        moves.append([fromIndex, toIndex])
+        return true
+    }
     func shuffleQueue() {}
 }
 

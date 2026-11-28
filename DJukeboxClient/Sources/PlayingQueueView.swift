@@ -76,7 +76,8 @@ public struct PlayingQueueView: View {
     func delete (at offsets: IndexSet) {
         Log.d("delete @ \(offsets)")
 
-        offsets.forEach { index in
+        // highest first, so a removal doesn't shift the ones still to be removed
+        offsets.reversed().forEach { index in
             Log.d("index \(index)")
             trackFetcher.removeItemFromPlayingQueue(at: index)
         }

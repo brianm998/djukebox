@@ -58,8 +58,17 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
 
     public func stopPlayingTrack(withHash hash: String,
                           atIndex index: Int) async throws -> Bool {
-        player.stopPlaying(sha1Hash: hash, atIndex: index)
+        // a negative index means the playing track, not a pending one
+        player.stopPlaying(sha1Hash: hash,
+                           atIndex: index < 0 ? index : index + pendingTracksOffset)
         return true
+    }
+
+    // The UI's pending tracks are playingQueue.tracks minus the first. With no
+    // playing track (an empty AVQueuePlayer) that first one is the head of
+    // trackQueue, so pending index i is trackQueue index i + 1.
+    private var pendingTracksOffset: Int {
+        return player.playingTrack is AudioTrack ? 0 : 1
     }
 
     fileprivate var playingQueue: PlayingQueue {
@@ -83,8 +92,13 @@ public class AsyncAudioPlayer: AsyncAudioPlayerType {
     public func movePlayingTrack(withHash hash: String,
                                  fromIndex: Int,
                                  toIndex: Int) async throws -> PlayingQueue {
-        guard let track = fetcher?.trackMap[hash],
-              player.move(track: track, fromIndex: fromIndex, toIndex: toIndex)
+        let offset = pendingTracksOffset
+        guard fromIndex >= 0,
+              toIndex >= 0,
+              let track = fetcher?.trackMap[hash],
+              player.move(track: track,
+                          fromIndex: fromIndex + offset,
+                          toIndex: toIndex + offset)
         else {
             throw AudioPlayerError.moveFailed
         }

@@ -82,4 +82,41 @@ struct AsyncAudioPlayerTests {
         #expect(queue.tracks.isEmpty)
         #expect(fake.trackQueue.isEmpty)
     }
+
+    @Test func pendingIndexesAreQueueIndexesWhileATrackIsPlaying() async throws {
+        let tracks = [makeTrack("a"), makeTrack("b"), makeTrack("c")]
+        let (player, fake) = makePlayer(tracks: tracks)
+        fake.playingTrack = tracks[0]
+        fake.trackQueue = ["b", "c"]
+
+        _ = try await player.movePlayingTrack(withHash: "c", fromIndex: 1, toIndex: 0)
+        _ = try await player.stopPlayingTrack(withHash: "c", atIndex: 1)
+        _ = try await player.stopPlayingTrack(withHash: "a", atIndex: -1)
+
+        #expect(fake.moves == [[1, 0]])
+        #expect(fake.stoppedIndexes == [1, -1])
+    }
+
+    @Test func pendingIndexesSkipTheQueueHeadWhenNothingIsPlaying() async throws {
+        let tracks = [makeTrack("a"), makeTrack("b"), makeTrack("c")]
+        let (player, fake) = makePlayer(tracks: tracks)
+        fake.trackQueue = ["a", "b", "c"]
+
+        _ = try await player.movePlayingTrack(withHash: "c", fromIndex: 1, toIndex: 0)
+        _ = try await player.stopPlayingTrack(withHash: "c", atIndex: 1)
+        _ = try await player.stopPlayingTrack(withHash: "a", atIndex: -1)
+
+        #expect(fake.moves == [[2, 1]])
+        #expect(fake.stoppedIndexes == [2, -1])
+    }
+
+    @Test func negativePendingIndexIsNotMoved() async {
+        let (player, fake) = makePlayer(tracks: [makeTrack("a"), makeTrack("b")])
+        fake.trackQueue = ["a", "b"]
+
+        await #expect(throws: AudioPlayerError.moveFailed) {
+            _ = try await player.movePlayingTrack(withHash: "a", fromIndex: -1, toIndex: 0)
+        }
+        #expect(fake.moves.isEmpty)
+    }
 }
