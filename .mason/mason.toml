@@ -49,3 +49,11 @@ min_tests = 1
 command = "swift test --package-path DJukeboxClient 2>&1"
 parser = "swift-testing"
 min_tests = 1
+
+# MASON files a ticket when the CI workflow (.github/workflows/ci.yml) goes red on develop, and a
+# red gate freezes landing until it is green again. Needs a github-actions [ci] section in the
+# machine's project file. Agreement and long-red rules are MASON's defaults.
+[watch.ci]
+enabled = true
+gate = "CI"
+exclude = []
