@@ -28,10 +28,11 @@ external_codable_protocols:
 # Properties that are assigned and never read because they exist to keep an object
 # alive: the in-flight pairing client (ServerBrowser), the iOS lock-screen
 # coordinator (Client), and the server's Bonjour advertiser with its NetService
-# and run-loop thread.
+# and run-loop thread, and the tracks fetcher a test fake holds for its lifetime.
 retain_assign_only_property_types:
   - "PairingClient?"
   - "NowPlayingCoordinator?"
+  - "TrackFetcher?"
   - "ServiceAdvertiser?"
   - "NetService?"
   - "Thread?"
