@@ -73,7 +73,10 @@ public class RuntimeState: LocalCache, Encodable, Decodable {
     static func decoded(from data: Data) throws -> RuntimeState {
         let ret = try RuntimeState.decoder.decode(RuntimeState.self, from: data)
         // one extra step required to keep swift Double? working
-        if ret.playingTrackPosition?.isNaN ?? false { ret.playingTrackPosition = nil }
+        // (infinities aren't usable positions either)
+        if let position = ret.playingTrackPosition, !position.isFinite {
+            ret.playingTrackPosition = nil
+        }
         return ret
     }
 

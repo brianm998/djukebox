@@ -157,11 +157,13 @@ public final class AudioTrack: Decodable,
     }
 
     public var timeIntervalString: String {
-        if let amount = self.timeInterval {
+        if let amount = self.timeInterval,
+           let seconds = Int(exactly: amount.rounded(.towardZero))
+        {
             if amount < 60 {
-                return "\(Int(amount))s"
+                return "\(seconds)s"
             } else {
-                return Swift.Duration.seconds(Int(amount)).formatted(.time(pattern: .minuteSecond))
+                return Swift.Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond))
             }
         } else {
             return ""
@@ -182,7 +184,8 @@ public final class AudioTrack: Decodable,
                 ret += minutes * 60
                 ret += hours * 60 * 60
             }
-            return ret
+            // Double() also parses "inf" and "nan"
+            return ret.isFinite ? ret : nil
         }
         return nil
     }
