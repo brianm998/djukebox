@@ -43,4 +43,23 @@ struct TrackFetcherTests {
         #expect(fetcher.totalDuration == 0)
         #expect(fetcher.progressBarLevel == nil)
     }
+
+    // The wait is on an unstructured task: a continuation that is never resumed
+    // can't be cancelled, so awaiting it directly could outlast the time limit.
+    @Test(.timeLimit(.minutes(1)))
+    func cachingWithoutALocalStoreCompletes() async throws {
+        let fetcher = makeFetcher()
+        var finished = false
+        Task {
+            await fetcher.cacheSequentially(tracks: [makeTrack("a"), makeTrack("b")])
+            finished = true
+        }
+
+        let deadline = Date(timeIntervalSinceNow: 10)
+        while !finished && Date() < deadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+
+        #expect(finished)
+    }
 }
