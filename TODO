@@ -61,8 +61,6 @@ split out the server into separate sections:
 on startup the server could support any combination of these
 
 server should support an api to announce:
- - its name
- - its version
  - features supported [tracks, history, playing queue]
 
 

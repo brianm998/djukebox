@@ -137,6 +137,26 @@ final class AppTests: XCTestCase {
         }
     }
 
+    // In-memory testing has no remote address, so the request is not trusted as
+    // loopback and carries no token: it only succeeds if /version needs no auth.
+    func testVersionEndpoint() async throws {
+        let app = try await Application.make(.testing)
+        try configure(app)
+
+        try await app.testable().test(.GET, "version") { res async throws in
+            XCTAssertEqual(res.status, .ok)
+            let info = try res.content.decode(VersionInfo.self)
+            XCTAssertEqual(info.name, "DJukebox")
+            XCTAssertEqual(info.version, DJukeboxVersion.current)
+        }
+        // the control for the above: a protected route refuses the same caller
+        try await app.testable().test(.GET, "queue") { res async in
+            XCTAssertEqual(res.status, .unauthorized)
+        }
+
+        try await app.asyncShutdown()
+    }
+
     func testPairingRoundTrip() async throws {
         try await withApp(loopback: true) { tester, _ in
             let requestId = try await self.requestPairing(tester)

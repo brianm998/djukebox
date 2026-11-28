@@ -16,6 +16,31 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # ── Version: the Xcode projects must agree with DJukeboxVersion.current ────
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check MARKETING_VERSION matches scripts/version.sh
+        run: |
+          V=$(scripts/version.sh)
+          status=0
+          for P in ios_client/DJukeboxiOS/DJukeboxiOS.xcodeproj/project.pbxproj \
+                   mac_client/DJukeboxMac/DJukeboxMac.xcodeproj/project.pbxproj; do
+            FOUND=$(sed -n 's/^[[:space:]]*MARKETING_VERSION = "\{0,1\}\([^";]*\)"\{0,1\};.*/\1/p' "$P")
+            if [[ -z "$FOUND" ]]; then
+              echo "::error file=$P::MARKETING_VERSION is not set"
+              status=1
+            elif grep -qvxF "$V" <<<"$FOUND"; then
+              echo "::error file=$P::MARKETING_VERSION ($(echo $FOUND)) differs from scripts/version.sh ($V)"
+              status=1
+            fi
+          done
+          exit $status
+
   # ── Vapor server: build + test ────────────────────────────────────────────
   server:
     name: Server
