@@ -39,6 +39,9 @@ public class LocalTracks: LocalCache, LocalTrackType, @unchecked Sendable {
     let trackFinder: TrackCatalog
     private var db: LocalDatabase?
 
+    // The same database also holds plays/skips waiting to be uploaded.
+    public var pendingHistoryStore: LocalDatabase? { db }
+
     // Weak back-reference to the owning TrackFetcher, used ONLY to nudge its
     // @Published cache-status UI to refresh after a download/reconcile/clear
     // (fetcher.refreshTracks() / cacheDidChange()). Set by Client after both are
