@@ -77,8 +77,12 @@ public final class TrackCatalog: TrackFinderType, @unchecked Sendable {
             return (track, url)
         }
 
+        // The offline client has an empty serverURL, which would make a relative
+        // URL that can never load, so require a host.
         if let track = trackMap[sha1Hash],
-           let url = URL(string: "\(serverURL)/stream/\(authHeaderValue)/\(sha1Hash)")
+           !serverURL.isEmpty,
+           let url = URL(string: "\(serverURL)/stream/\(authHeaderValue)/\(sha1Hash)"),
+           url.host != nil
         {
             return (track, url)
         }
