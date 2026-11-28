@@ -202,9 +202,9 @@ public final class AudioTrack: Decodable,
     public let Year: String?
     public let OriginalDate: String?
 
-    // Wire-compatible with the server's AudioTrack (and the .json sidecars
-    // written by mp3.pl): those keys predate the Credit/Artist rename, so
-    // they're pinned here rather than renamed.
+    // Wire-compatible with the server's AudioTrack (and the .json sidecar
+    // files): those keys predate the Credit/Artist rename, so they're pinned
+    // here rather than renamed.
     private enum CodingKeys: String, CodingKey {
         case Credit = "Artist"
         case Artist = "Band"
