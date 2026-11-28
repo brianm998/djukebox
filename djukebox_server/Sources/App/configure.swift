@@ -32,14 +32,16 @@ nonisolated(unsafe) var serviceAdvertiser: ServiceAdvertiser?
 let pairingService = PairingService(database: jukeboxDatabase,
                                     tokenHashes: (try? jukeboxDatabase.loadPairedTokenHashes()) ?? [])
 
+// nonisolated(unsafe) var: only so tests can swap in a fake that never plays
+// audio; the server itself never reassigns it.
 #if os(Linux)
-let audioPlayer: any AudioPlayerType & Sendable = LinuxAudioPlayer(trackFinder: trackFinder,
-                                                                   historyWriter: historyWriter,
-                                                                   volumeSource: volumeAdjustments)
+nonisolated(unsafe) var audioPlayer: any AudioPlayerType & Sendable = LinuxAudioPlayer(trackFinder: trackFinder,
+                                                                                       historyWriter: historyWriter,
+                                                                                       volumeSource: volumeAdjustments)
 #else
-let audioPlayer: any AudioPlayerType & Sendable = MacAudioPlayer(trackFinder: trackFinder,
-                                                                 historyWriter: historyWriter,
-                                                                 volumeSource: volumeAdjustments)
+nonisolated(unsafe) var audioPlayer: any AudioPlayerType & Sendable = MacAudioPlayer(trackFinder: trackFinder,
+                                                                                     historyWriter: historyWriter,
+                                                                                     volumeSource: volumeAdjustments)
 #endif
 
 // where the music (and its *.json sidecars) live

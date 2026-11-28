@@ -51,9 +51,9 @@ public struct AudioTrack: Content, AudioTrackType {
     public let Year: String?
     public let OriginalDate: String?
 
-    // Wire-compatible with the .json sidecars written by mp3.pl (and every
-    // existing file on disk): those keys predate the Credit/Artist rename, so
-    // they're pinned here rather than renamed.
+    // Wire-compatible with the .json sidecar files (every existing one on
+    // disk): those keys predate the Credit/Artist rename, so they're pinned
+    // here rather than renamed.
     private enum CodingKeys: String, CodingKey {
         case Credit = "Artist"
         case Artist = "Band"
@@ -192,7 +192,7 @@ func trackServingRoutes(_ protected: any RoutesBuilder) throws {
     }
 
     // stream a track by hash, with auth on the path
-    // curl localhost:8080/stream/0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
+    // curl localhost:8080/stream/<token>/8ba165d9fe8f1050687dfa0f34ab42df6a29e72c
     protected.get("stream", ":auth", ":sha1") { req async throws -> Response in
         let authControl = AuthController(pairing: pairingService, trackFinder: trackFinder)
         return try await authControl.trackFromPath(from: req) { _, filepath in
@@ -209,7 +209,7 @@ func trackServingRoutes(_ protected: any RoutesBuilder) throws {
         }
     }
 
-    // curl -H 'Authorization: 0a50261ebd1a390fed2bf326f2673c145582a6342d523204973d0219337f81616a8069b012587cf5635f6925f1b56c360230c19b273500ee013e030601bf2425' -H 'Path: /Volumes/Temp/mp3' http://127.0.0.1:8080/discover
+    // curl -H 'Authorization: <token>' -H 'Path: /Volumes/Temp/mp3' http://127.0.0.1:8080/discover
     // F32: the worst offender — a full recursive directory walk (FileManager
     // enumerator), a JSON decode of every sidecar, and a DB transaction. Auth is
     // gated by AuthMiddleware ahead of this handler; the actual ingest is

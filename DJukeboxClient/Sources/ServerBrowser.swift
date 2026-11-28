@@ -411,7 +411,7 @@ public class ServerBrowser: ObservableObject {
             return
         }
         state = .failed(reason)
-        Log.w("server discovery failed: \(reason)")
+        Log.i("server discovery failed: \(reason)")
     }
 
     private func cancelAll() {

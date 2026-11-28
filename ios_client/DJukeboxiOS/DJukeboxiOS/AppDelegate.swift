@@ -25,7 +25,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
           [
             .console: ConsoleLogHandler(at: .debug),
             .file   : FileLogHandler(at: .debug),
-            .alert  : AlertLogHandler(at: .warn),
+            .alert  : AlertLogHandler(at: .error),
           ]
 #else
         Log.handlers =
