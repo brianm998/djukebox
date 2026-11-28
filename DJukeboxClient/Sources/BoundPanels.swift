@@ -66,7 +66,7 @@ public struct BoundTrackList: View {
                             do {
                                 _ = try await self.trackFetcher.audioPlayer.player?.playTracks(tracks)
                             } catch {
-                                Log.e("could not play all tracks: \(error)")
+                                Log.w("could not play all tracks: \(error)")
                             }
                             self.trackFetcher.refreshQueue()
                         }
@@ -84,7 +84,7 @@ public struct BoundTrackList: View {
                           do {
                               _ = try await self.trackFetcher.audioPlayer.player?.playTrack(withHash: track.SHA1)
                           } catch {
-                              Log.e("could not play track: \(error)")
+                              Log.w("could not play track: \(error)")
                           }
                           self.trackFetcher.refreshQueue()
                       }

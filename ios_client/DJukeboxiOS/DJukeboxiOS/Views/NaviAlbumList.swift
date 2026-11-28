@@ -37,7 +37,7 @@ public struct NaviAlbumList: View {
                               do {
                                   _ = try await self.trackFetcher.audioPlayer.player?.playNewRandomTrack(forArtist: self.artist)
                               } catch {
-                                  Log.e("could not play new random track: \(error)")
+                                  Log.w("could not play new random track: \(error)")
                               }
                               self.trackFetcher.refreshQueue()
                           }
@@ -49,7 +49,7 @@ public struct NaviAlbumList: View {
                               do {
                                   _ = try await self.trackFetcher.audioPlayer.player?.playRandomTrack(forArtist: self.artist)
                               } catch {
-                                  Log.e("could not play random track: \(error)")
+                                  Log.w("could not play random track: \(error)")
                               }
                               self.trackFetcher.refreshQueue()
                           }
