@@ -56,7 +56,8 @@ public class HistoryFetcher: ObservableObject {
     }
     
     let server: ServerType
-    let trackFetcher: TrackFetcher
+    // weak: the local player (owned by TrackFetcher) holds this object strongly
+    weak var trackFetcher: TrackFetcher?
     
     var lastUpdateTime: Date?
 
@@ -104,7 +105,7 @@ public class HistoryFetcher: ObservableObject {
         var history: [HistoryEntry] = []
 
         for (track, times) in recent.plays {
-            if let audioTrack = trackFetcher.trackMap[track] { // XXX global trackFetcher
+            if let audioTrack = trackFetcher?.trackMap[track] { // XXX global trackFetcher
                 for time in times {
                     history.append(HistoryEntry(track: audioTrack,
                                                 when: Date(timeIntervalSince1970: time),
@@ -113,7 +114,7 @@ public class HistoryFetcher: ObservableObject {
             }
         }
         for (track, times) in recent.skips {
-            if let audioTrack = trackFetcher.trackMap[track] { // XXX global trackFetcher
+            if let audioTrack = trackFetcher?.trackMap[track] { // XXX global trackFetcher
                 for time in times {
                     history.append(HistoryEntry(track: audioTrack,
                                                 when: Date(timeIntervalSince1970: time),
