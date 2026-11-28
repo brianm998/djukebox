@@ -97,8 +97,23 @@ public class TrackFetcher: ObservableObject {
 
             // only restore saved state into the local player; the server manages its own queue
             guard queueType == .local else { return }
-            audioPlayer.player?.update(with: initialRuntimeState)
+            audioPlayer.player?.update(with: playable(initialRuntimeState))
         }
+    }
+
+    // saved hashes can outlive their tracks (evicted from the cache, removed from
+    // the server), so drop the ones the catalog no longer knows
+    private func playable(_ state: RuntimeState) -> RuntimeState {
+        func isKnown(_ hash: String) -> Bool { catalog.audioTrack(forHash: hash) != nil }
+        let playingTrack = state.playingTrack.flatMap { isKnown($0) ? $0 : nil }
+        // a saved position belongs to the saved track; don't seek another one to it
+        let lostPlayingTrack = state.playingTrack != nil && playingTrack == nil
+        return RuntimeState(isPaused: state.isPaused,
+                            isOffline: state.isOffline,
+                            playingQueue: state.playingQueue,
+                            playingTrack: playingTrack,
+                            playingTrackPosition: lostPlayingTrack ? nil : state.playingTrackPosition,
+                            pendingTracks: state.pendingTracks.filter(isKnown))
     }
     
     func initialize(with runtimeState: RuntimeState) {
@@ -112,17 +127,19 @@ public class TrackFetcher: ObservableObject {
                 if let playingTrack = runtimeState.playingTrack {
                     self.currentTrack = self.catalog.audioTrack(forHash: playingTrack) as? AudioTrack
                 }
-                self.pendingTracks = runtimeState.pendingTracks.map {
-                    self.catalog.audioTrack(forHash: $0) as! AudioTrack
+                self.pendingTracks = runtimeState.pendingTracks.compactMap {
+                    self.catalog.audioTrack(forHash: $0) as? AudioTrack
                 }
             }
         }
-        self.useLocalContentOnly = runtimeState.isOffline
+        // before useLocalContentOnly: going offline loads the catalog synchronously,
+        // which restores the saved state into whichever queue is being watched
         do {
             try self.watch(queue: runtimeState.playingQueue)
         } catch {
             Log.e("can't watch queue: \(error)") // XXX handle this better
         }
+        self.useLocalContentOnly = runtimeState.isOffline
     }
     
     // what is shown on the artists list
@@ -187,7 +204,7 @@ public class TrackFetcher: ObservableObject {
 
     @Published public var audioPlayer: ViewObservableAudioPlayer
 
-    @Published public var queueType: PlayingQueueType!
+    @Published public var queueType: PlayingQueueType = .local
     
     var desiredArtist: String?
     var desiredAlbum: String?
