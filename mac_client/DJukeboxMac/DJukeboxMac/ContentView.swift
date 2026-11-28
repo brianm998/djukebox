@@ -18,7 +18,7 @@ struct ContentView: View {
         // Branding bar (app-icon badge + neon wordmark) stays pinned to the top-left,
         // above both the connection/search screen and the connected UI.
         VStack(spacing: 0) {
-            DJHeaderBar()
+            DJHeaderBar(server: browser.currentClient?.serverConnection)
             DJNeonDivider()
             ServerConnectionView(browser) { client in
                 // PairingApprovalHost surfaces incoming pair requests from other devices
