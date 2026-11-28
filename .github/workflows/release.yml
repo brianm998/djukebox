@@ -73,6 +73,10 @@ jobs:
         run: swift test
         working-directory: DJukeboxCommon
 
+      - name: Test DJukeboxClient
+        run: swift test
+        working-directory: DJukeboxClient
+
       - name: Build the iOS app (unsigned)
         run: |
           xcodebuild build \
