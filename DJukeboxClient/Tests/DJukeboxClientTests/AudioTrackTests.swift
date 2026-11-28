@@ -18,4 +18,16 @@ struct AudioTrackTests {
         #expect(track.timeInterval == nil)
         #expect(track.timeIntervalString == "")
     }
+
+    @Test(arguments: ["", " ", "nan:nan:nan", "1:2", "inf:0:0", "0:-1:00",
+                      "1e308:0:0", "0:07:xx", "(approx)"])
+    func unparseableDurationIsUnknown(_ duration: String) {
+        let track = makeTrack("a", duration: duration)
+        #expect(track.timeInterval == nil)
+        #expect(track.timeIntervalString == "")
+    }
+
+    @Test func hugeDurationIsNotFormatted() {
+        #expect(makeTrack("a", duration: "1e300:0:0").timeIntervalString == "")
+    }
 }
