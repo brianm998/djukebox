@@ -36,9 +36,9 @@ final class FakeAudioPlayer: AudioPlayerType {
     var playingTrack: AudioTrackType?
     var playingTrackDuration: TimeInterval?
     var playingTrackPosition: TimeInterval?
-    // keeps the TrackFetcher alive: AsyncAudioPlayer and HistoryFetcher only
-    // reference it weakly
-    var fetcherOwner: AnyObject?
+    // AsyncAudioPlayer holds its fetcher weakly, and holds this fake strongly, so
+    // this keeps the fetcher alive for as long as the player (test-only).
+    var retainedFetcher: TrackFetcher?
 
     func play(sha1Hash: String) { trackQueue.append(sha1Hash) }
     var stoppedIndexes: [Int] = []
