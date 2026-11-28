@@ -88,6 +88,19 @@ public class TrackFetcher: ObservableObject {
 
     fileprivate var initialRuntimeState: RuntimeState?
 
+    // true while a saved local queue is still waiting for the track list
+    var isAwaitingSavedState: Bool { initialRuntimeState != nil }
+
+    // Save runtimeState, unless a restore is pending: the player is still empty
+    // then, and saving would overwrite the only copy of the saved queue.
+    func persistRuntimeState() {
+        guard !isAwaitingSavedState else {
+            Log.d("saved state not yet restored; not saving")
+            return
+        }
+        runtimeState.save()
+    }
+
     // this is called after we get the track list from the server to put the client in the same place as before
     fileprivate func maybeDoInitialSetup() {
         Log.i(self.initialRuntimeState)

@@ -267,13 +267,14 @@ public class Client {
         // The remote queue and the history now arrive over /stream (pushed), so this
         // only saves runtime state and refreshes the LOCAL queue — a purely on-device
         // computation (no network) that advances the local-playback progress bar.
-        // Pinned to @MainActor: trackFetcher is @MainActor (F30) and runtimeState.save()
+        // Nothing is saved while a saved queue is still waiting for the track list.
+        // Pinned to @MainActor: trackFetcher is @MainActor (F30) and persistRuntimeState()
         // does a synchronous disk write that should stay off the cooperative pool.
         self.refreshTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 guard !Task.isCancelled, let self else { return }
-                self.trackFetcher.runtimeState.save()
+                self.trackFetcher.persistRuntimeState()
                 if self.trackFetcher.queueType == .local {
                     self.trackFetcher.refreshQueue()
                 }
