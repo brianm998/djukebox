@@ -759,12 +759,20 @@ extension TrackFetcher {
         }
     }
 
-    private func cacheSequentially(tracks: [AudioTrack]) async {
+    func cacheSequentially(tracks: [AudioTrack]) async {
+        guard localTracks != nil else {
+            Log.w("cannot cache \(tracks.count) tracks: no local store")
+            return
+        }
         for track in tracks {
             Log.d("caching track \(track.SHA1)")
             _ = await withCheckedContinuation { continuation in
-                localTracks?.keepLocal(sha1Hash: track.SHA1) { success in
-                    continuation.resume(returning: success)
+                if let localTracks {
+                    localTracks.keepLocal(sha1Hash: track.SHA1) { success in
+                        continuation.resume(returning: success)
+                    }
+                } else {
+                    continuation.resume(returning: false)
                 }
             }
         }
