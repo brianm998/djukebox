@@ -1,0 +1,46 @@
+# Settings for scripts/periphery-scan.sh (it passes the index stores itself,
+# so this file names no project or schemes).
+
+# Sources that are not ours: dependency checkouts and generated build output.
+index_exclude:
+  - "**/.build/**"
+  - "**/DerivedData/**"
+
+# Findings that are not dead code. (A parameter that a signature requires but the
+# body ignores is named `_` in the source.)
+
+# Access-level advice ("public, but not used outside its module"), not unused code.
+disable_redundant_public_analysis: true
+
+# SwiftUI #Preview / PreviewProvider code is used only by Xcode's canvas.
+retain_swift_ui_previews: true
+
+# Target/action methods and delegates reached through the Objective-C runtime or
+# Interface Builder (Main.storyboard, LaunchScreen.storyboard).
+retain_objc_accessible: true
+
+# Properties of wire and file formats are read by the encoder/decoder, not by
+# Swift code. Vapor's `Content` is a Codable protocol Periphery cannot see into.
+retain_codable_properties: true
+external_codable_protocols:
+  - Content
+
+# Properties that are assigned and never read because they exist to keep an object
+# alive: the in-flight pairing client (ServerBrowser), the iOS lock-screen
+# coordinator (Client), and the server's Bonjour advertiser with its NetService
+# and run-loop thread, and the tracks fetcher a test fake holds for its lifetime.
+retain_assign_only_property_types:
+  - "PairingClient?"
+  - "NowPlayingCoordinator?"
+  - "TrackFetcher?"
+  - "ServiceAdvertiser?"
+  - "NetService?"
+  - "Thread?"
+
+retain_files:
+  # The server's player under `#if os(Linux)`: configure.swift only references it
+  # there, so a scan on macOS sees no use. Check changes with a Linux build.
+  - "**/App/LinuxAudioPlayer.swift"
+  # The logger's API: every level (debug/d, info/i, warn/w, error/e) offers the
+  # same overloads, kept complete whether or not each one has a caller today.
+  - "**/logging/Log.swift"

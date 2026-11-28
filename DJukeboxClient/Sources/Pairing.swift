@@ -46,10 +46,6 @@ public enum PairingStore {
         }
     }
 
-    public static func clear() {
-        if let url { try? FileManager.default.removeItem(at: url) }
-    }
-
     /// A friendly default name for this device, shown in the pair request.
     @MainActor
     public static var defaultDeviceName: String {
@@ -216,8 +212,6 @@ public class PairingClient: ObservableObject {
         requestId = nil
         start()
     }
-
-    public func cancel() { stopPolling() }
 
     // MARK: - polling
 

@@ -2,11 +2,9 @@ import SwiftUI
 import DJukeboxCommon
 
 public struct AlbumList: View {
-    let client: Client
     @ObservedObject var trackFetcher: TrackFetcher
 
     public init(_ client: Client) {
-        self.client = client
         self.trackFetcher = client.trackFetcher
     }
 

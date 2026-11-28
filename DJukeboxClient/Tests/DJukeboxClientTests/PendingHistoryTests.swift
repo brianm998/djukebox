@@ -1,6 +1,5 @@
 import Foundation
 import Testing
-import DJukeboxCommon
 @testable import DJukeboxClient
 
 private struct PostFailed: Error {}
@@ -36,8 +35,6 @@ private final class StubServer: ServerType, @unchecked Sendable {
     func listHistory() async throws -> PlayingHistory { PlayingHistory() }
     func listHistory(since: Int) async throws -> PlayingHistory { PlayingHistory() }
     func setVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws {}
-    func clearVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws {}
-    func listVolumeAdjustments() async throws -> [VolumeAdjustment] { [] }
     func savedGain(forHash hash: String) async throws -> Double? { nil }
     func masterGain() async throws -> Double? { nil }
     func setMasterGain(_ decibels: Double) async throws {}

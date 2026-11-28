@@ -5,16 +5,8 @@ import Testing
 private struct FakeTrack: AudioTrackType {
     let SHA1: String
     var Credit: String { "credit" }
-    var Album: String? { nil }
     var Title: String { SHA1 }
-    var Filename: String { "\(SHA1).mp3" }
-    var Duration: String? { nil }
     var timeInterval: Double? { nil }
-    var AudioBitrate: String? { nil }
-    var SampleRate: String? { nil }
-    var TrackNumber: String? { nil }
-    var Genre: String? { nil }
-    var OriginalDate: String? { nil }
 }
 
 private struct FakeTrackFinder: TrackFinderType {

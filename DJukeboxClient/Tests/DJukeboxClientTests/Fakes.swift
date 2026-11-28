@@ -20,8 +20,6 @@ struct OfflineServer: ServerType {
     func listHistory(since: Int) async throws -> PlayingHistory { throw ServerConnectionError.notConnected }
     func post(history: ServerHistoryEntry) async throws { throw ServerConnectionError.notConnected }
     func setVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws { throw ServerConnectionError.notConnected }
-    func clearVolumeAdjustment(_ adjustment: VolumeAdjustment) async throws { throw ServerConnectionError.notConnected }
-    func listVolumeAdjustments() async throws -> [VolumeAdjustment] { throw ServerConnectionError.notConnected }
     func savedGain(forHash hash: String) async throws -> Double? { throw ServerConnectionError.notConnected }
     func masterGain() async throws -> Double? { throw ServerConnectionError.notConnected }
     func setMasterGain(_ decibels: Double) async throws { throw ServerConnectionError.notConnected }

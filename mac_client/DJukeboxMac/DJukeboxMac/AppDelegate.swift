@@ -206,11 +206,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         panelController?.addPanel(kind)
     }
 
-    @objc private func newPanelWindow(_ sender: Any?) {
+    @objc private func newPanelWindow(_: Any?) {
         panelController?.newWindow(root: .defaultLayout())
     }
 
-    @objc private func resetLayout(_ sender: Any?) {
+    @objc private func resetLayout(_: Any?) {
         panelController?.resetToDefault()
         theWindow = panelController?.primaryWindow
     }

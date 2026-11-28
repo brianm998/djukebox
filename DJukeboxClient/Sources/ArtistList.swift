@@ -1,14 +1,11 @@
 import SwiftUI
-import DJukeboxCommon
 
 public struct ArtistList: View {
     @ObservedObject var trackFetcher: TrackFetcher
     @State private var searchQuery: String = ""
-    var client: Client
 
     public init(_ client: Client) {
         self.trackFetcher = client.trackFetcher
-        self.client = client
     }
 
     public var body: some View {

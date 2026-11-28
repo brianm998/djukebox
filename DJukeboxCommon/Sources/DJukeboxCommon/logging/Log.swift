@@ -763,37 +763,6 @@ fileprivate extension Log {
 // guarantees strict FIFO ordering of enqueued blocks, which an actor's task
 // scheduling does not — swapping this (or the per-handler queues below) for
 // actors risks reordering log lines under concurrent logging, which matters
-// for a logging system. dispatchQueue is also a public LogHandler requirement
-// LOG_ABORT() relies on to sequence its abort after pending prints. See
-// docs/modernization-audit.md F47 for the fuller writeup of this decision.
+// for a logging system. See docs/modernization-audit.md F47 for the fuller
+// writeup of this decision.
 fileprivate let logQueue = DispatchQueue(label: "logging")
-#if !os(macOS)
-//fileprivate var backgroundTask: BackgroundTask?
-#endif
-
-// after here is all testing code
-
-#if DEBUG
-// this is helpful when testing logging, to see a few test lines, and then avoid further spew 
-public func LOG_ABORT() {
-    logQueue.async {
-        Log.handlers[.console]?.dispatchQueue.async {
-            print("\n\n")
-            print("☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️")
-            print("☠️☠️☠️ was asked to abort ☠️☠️☠️")
-            print("☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️☠️")
-            print("\n\n")
-            abort()
-        }
-    }
-}
-
-fileprivate struct LogTest: Codable {
-    let foo: String
-    let bar: Int?
-}
-    
-#else
-public func LOG_ABORT() {}
-#endif
-

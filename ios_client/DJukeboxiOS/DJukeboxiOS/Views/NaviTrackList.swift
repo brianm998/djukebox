@@ -3,7 +3,6 @@ import DJukeboxClient
 import DJukeboxCommon
 
 public struct NaviTrackList: View {
-    var client: Client
     // Observe the fetcher and derive the song list from the live catalog for this
     // artist/album, rather than freezing a snapshot at navigation time — otherwise a
     // catalog change (e.g. switching to local/offline) can't refresh this view.
@@ -15,7 +14,6 @@ public struct NaviTrackList: View {
     @State private var fuck: String = ""
 
     public init(_ client: Client, album: AudioTrack, title: String) {
-        self.client = client
         self.trackFetcher = client.trackFetcher
         self.album = album
         self.title = title

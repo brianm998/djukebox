@@ -30,10 +30,6 @@ public enum CacheStatus {
     }
 }
 
-public struct LocalTrackCache {
-    var tracks: [String: URL]
-}
-
 // this is a view model used to update SwiftUI
 //
 // @MainActor: this is a SwiftUI view model. It used to also have to be the

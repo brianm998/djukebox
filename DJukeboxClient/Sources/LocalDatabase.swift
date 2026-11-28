@@ -114,15 +114,6 @@ public final class LocalDatabase: @unchecked Sendable {
         }
     }
 
-    public func delete(sha1: String) {
-        queue.sync {
-            guard let stmt = prepare("DELETE FROM local_tracks WHERE sha1=?;") else { return }
-            defer { sqlite3_finalize(stmt) }
-            bind(stmt, 1, sha1)
-            _ = sqlite3_step(stmt)
-        }
-    }
-
     /// Deletes many tracks in one transaction. Used to prune rows whose audio file
     /// is no longer on disk, which can be the whole catalog — so do it in a single
     /// prepared-statement loop rather than one transaction per row.

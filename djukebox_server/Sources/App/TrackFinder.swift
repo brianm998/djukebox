@@ -44,53 +44,5 @@ public final class TrackFinder: TrackFinderType, @unchecked Sendable {
             return nil
         }
     }
-    
-    public func find(atFilePath path: String) {
-        find(at: URL(fileURLWithPath: path))
-    }
-
-    fileprivate func find(at url: URL) {
-        Log.d("find at: \(url.absoluteString)")
-        do {
-            let urls = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
-            for url in urls {
-                if url.hasDirectoryPath {
-                    find(at: url)
-                } else if url.absoluteString.hasSuffix(".json") {
-                    Log.d("path \(url.absoluteString)")
-                    let decoder = JSONDecoder()
-                    do {
-                        let data = try Data(contentsOf: url)
-                        let audioTrack = try decoder.decode(AudioTrack.self, from: data).sanitized
-                        
-                        let trackUrl = url.deletingLastPathComponent()
-                          .appendingPathComponent(audioTrack.Filename, isDirectory: false)
-
-                        if try trackUrl.checkResourceIsReachable() {
-                            // NOTE: previously `if var (_, existingTracks) =
-                            // tracks[...] { existingTracks.append(...) }`, which
-                            // mutated a discarded copy, so a sha1 seen at more
-                            // than one path kept only the first path. Append in
-                            // place to the stored array.
-                            lock.lock()
-                            if _tracks[audioTrack.SHA1] != nil {
-                                _tracks[audioTrack.SHA1]!.1.append(trackUrl)
-                            } else {
-                                _tracks[audioTrack.SHA1] = (audioTrack, [trackUrl])
-                            }
-                            lock.unlock()
-                        } else {
-                            Log.d("FAILED ON \(trackUrl)")
-                        }
-                    } catch {
-                        Log.e("DOH \(url) \(error)")
-                    }
-                }
-            }
-        } catch {
-            Log.e("DOH \(url) \(error)")
-        }
-        Log.d("done finding at: \(url.absoluteString)")
-    }    
 }
 

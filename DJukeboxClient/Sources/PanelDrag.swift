@@ -63,8 +63,9 @@ public extension View {
     }
 }
 #else
+// No-ops off macOS; the parameters keep the call sites identical on both.
 public extension View {
-    func artistTearOut(artist: String) -> some View { self }
-    func albumTearOut(artist: String, album: String?) -> some View { self }
+    func artistTearOut(artist _: String) -> some View { self }
+    func albumTearOut(artist _: String, album _: String?) -> some View { self }
 }
 #endif

@@ -57,21 +57,6 @@ public struct VerticalPlayingTimeRemainingView: View {
     }
 }
 
-public struct HorizontalPlayingTimeRemainingView: View {
-    @ObservedObject var trackFetcher: TrackFetcher
-
-    public init(trackFetcher: TrackFetcher) {
-        self.trackFetcher = trackFetcher
-    }
-
-    public var body: some View {
-        return HStack {
-            Text(format(duration: trackFetcher.totalDuration))
-            Text(string(forTime: trackFetcher.completionTime))
-        }
-    }
-}
-
 public struct BigButtonView: View {
     @ObservedObject var trackFetcher: TrackFetcher
     let onScan: () -> Void

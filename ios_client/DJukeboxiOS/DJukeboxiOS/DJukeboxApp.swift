@@ -8,7 +8,6 @@
 
 import SwiftUI
 import DJukeboxClient
-import DJukeboxCommon
 
 // The server is discovered on the local network via mDNS / Bonjour (see
 // ServerBrowser). There's no shared password anymore: an iOS device always
